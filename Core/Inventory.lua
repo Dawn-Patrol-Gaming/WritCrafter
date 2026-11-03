@@ -13,6 +13,8 @@ local GENERIC_LINK = "|H1:item:%d:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0|h|h"
 local stock = {}
 local dirty = true
 
+-- The game only lets players lock equippable gear, so for materials, consumables and glyphs
+-- this is only ever true through an FCO ItemSaver mark.
 local function IsSlotLocked(bagId, slotIndex)
     if bagId == BAG_VIRTUAL then
         return false
