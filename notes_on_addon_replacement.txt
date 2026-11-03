@@ -1,0 +1,23 @@
+D:\Documents\Elder Scrolls Online\live\AddOns\DailyAlchemy
+D:\Documents\Elder Scrolls Online\live\AddOns\DailyProvisioning
+D:\Documents\Elder Scrolls Online\live\AddOns\DolgubonsLazyWritCreator
+D:\Documents\Elder Scrolls Online\live\AddOns\LibLazyCrafting
+D:\Documents\Elder Scrolls Online\live\AddOns\LibMarify
+D:\Documents\Elder Scrolls Online\live\AddOns\LibRecipe
+D:\Documents\Elder Scrolls Online\live\AddOns\PotionMaker
+D:\Documents\Elder Scrolls Online\live\AddOns\WritWorthy
+
+
+Extra libraries:
+LibAddonMenu-2.0
+LibCustomMenu
+LibAlchemy
+LibItemLink
+LibAlchemyStation
+LibAsync
+LibCustomMenu
+LibMainMenu-2.0
+LibLazyCrafting
+LibPrice
+LibCharacterKnowledge
+LibSets
