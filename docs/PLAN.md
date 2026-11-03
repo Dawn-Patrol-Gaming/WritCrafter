@@ -1,0 +1,414 @@
+# WritCrafter — Design Plan (v2, after first round of answers)
+
+One addon that crafts everything your journal's crafting writs need (daily and master),
+refuses writs it shouldn't do, and always spends the materials you have the most of.
+
+Replaces: **DailyAlchemy, DailyProvisioning, DolgubonsLazyWritCreator, LibLazyCrafting,
+LibMarify, LibRecipe, PotionMaker, WritWorthy.** All eight are fully replaced; the crafting
+engine (LibLazyCrafting's job) is built into WritCrafter.
+
+Target: PC/Mac, NA server data, APIVersion `101051 101052` (Update 51, released 2026-09-28).
+
+### Decisions so far
+| Q | Answer |
+|---|---|
+| LibLazyCrafting | **Absorb** into WritCrafter (own crafting engine). |
+| Acceptable reagents | **Overland plants only**: the 18 classic plant/fungus nodes plus Nightshade and Crimson Nirnroot. |
+| "Expensive" | **List + price ceiling**, any item can be marked "too expensive" in settings, and the defaults come from your current price data (§5). |
+| Optional v1 features | **Writ reward handling**, the **potion search UI**, and **WritWorthy's master writ queue window** (§2.6.1). Not in v1: pre-craft multiplier. |
+
+---
+
+## 1. Core behaviour
+
+| # | Requirement | How it's handled |
+|---|---|---|
+| R1 | Auto-craft items for every crafting writ in the journal, daily and master | Read quest conditions at each station, queue crafts, craft on station open (toggle per craft). |
+| R2 | Auto-decline alchemy writs needing reagents that aren't overland plants (no chest-only reagents) | Reagent source table (§4). Daily writs can't be previewed, so a rejected one is **abandoned right after you accept it**, with a chat line saying why. Sealed master writs are **never auto-accepted** and get a red tooltip line. |
+| R3 | User-configurable rejection; expensive or hard-to-find items rejected by default | Per-category price ceiling plus a per-item override (Allow / Too expensive / Default), seeded from your price data (§5). |
+| R4 | Exclude gold (legendary) master writs, per craft type | 7 checkboxes (BS / CL / WW / JW / EN / AL / PR). Excluded writs are never auto-accepted or queued. |
+| R5 | Reject writs needing hard-to-find components (prismatic glyphs, rare jewelry traits, …) | Rare-component rules (§6), each one a toggle, on by default. |
+| R6 | Use the components you have the most of first | Every choice point (reagent combo, style stone, trait gem when there's a choice, rune stack) picks the option with the highest **minimum stock** across its inputs. Stock = backpack + craft bag + bank. Ties go to the cheapest. |
+| R7 | Up to date with current recipes (Update 51) | §3. Reagent traits are read from the game API at load and checked against a static U51 table. |
+| R8 | Work with the Grand Master Crafting Stations | §2.6.2. |
+| R9 | Never craft items that already exist for current writs in bag or bank | §2.6.3: inventory scan plus a reservation ledger; only the shortfall is crafted. |
+| R10 | Inventory icon on each writ that's already crafted | §2.6.4: plus queued, rejected and reserved-item icons, each toggleable. |
+
+---
+
+## 2. Feature inventory of each replaced addon
+
+Legend: **Keep** = in v1 · **Merge** = kept, folded into a shared feature · **Later** = not in v1, could be added · **Skip** = dropped
+
+### 2.1 Dolgubon's Lazy Writ Creator (4.0.5.7.9)
+
+| Feature | Verdict | Notes |
+|---|---|---|
+| Daily writ autocraft for all 7 crafts, per-craft on/off | **Keep** | Core. |
+| Alchemy mode `Off / All / Skip Autocraft` | **Merge** | Becomes the per-craft toggle plus R2/R3 rules. |
+| Show craft window / AutoCraft on station open / keybind "Craft items" | **Keep** | A simple "what will be made" panel and a keybind. |
+| Exit crafting window when done / hide window when done | **Keep** | |
+| Master writ crafting from active quests | **Keep** | |
+| Right-click sealed writ → craft (LibCustomMenu) | **Keep** | Adds "Accept", "Queue", "Always ignore". |
+| Queue all sealed writs | **Merge** | Into the queue window's "Enqueue All" (§2.6.1). |
+| Withdraw writ items from bank, auto bank dialog, despawn banker | **Keep** | One shared bank module. |
+| Style stones used (list) / "lowest amount first" | **Merge** | Flipped to **most first** (R6). The per-style allow list stays. |
+| Mimic stones for master writs (never / always / if no stone / if price > 1k / > 3k) | **Keep** | Default "if style material is too expensive" (§5.5). |
+| Automatic quest dialog (boards, turn-ins, "Accept the contract") | **Keep** | |
+| Abandon "deliver \<item\>" writs | **Merge** | One case of the general reject engine. |
+| Craft multiplier / smart multiplier (3-day cycle) | **Later** | Not picked for v1. |
+| Consumable multiplier (single / full stack) | **Merge** | With the DA/DP "bulk creation" option. |
+| **Writ reward handling**: per reward type × per craft: Leave in bag / Deposit / Junk / Destroy / Deconstruct. Types: mats, surveys, master writs, repair kits, ornate, intricate, soul gems, glyphs, recipes, Psijic fragments, gold mats (non-ESO+) | **Keep** | You picked it. "Destroy" is an option that's off unless you choose it per type. |
+| Loot reward containers on receipt / open on login / keep "new" status | **Keep** | Part of reward handling. |
+| Loot Anniversary / Zenithar boxes | **Keep** | Part of reward handling. |
+| Valuable reward alert | **Keep** | Part of reward handling. |
+| Reticle colour at stations | **Later** | |
+| Status bar (icons, inventory tracker, colours, position) | **Later** | |
+| Hireling mail loot/delete | **Skip** | Not writ crafting. |
+| Daily reset warning, stealing protection, easy jewelry-writ DELETE, hide quest announcements, quest buffer, port to crafting house | **Skip** | |
+| Writ stats window / reward statistics | **Skip** | |
+| Count unearned vouchers / count surveys | **Merge** | Voucher count joins `/wc vouchers`; surveys skipped. |
+| Account-wide vs character settings | **Keep** | |
+| Skins, onomatopoeia, April Fools quest, tutorial, changelog popup, feedback/donate | **Skip** | |
+| Console/gamepad UI | **Skip** | PC only. |
+| 7 translations | **Later** | English first; all strings in one table. |
+
+### 2.2 LibLazyCrafting (4.042): absorbed
+
+Only the parts writs need are rebuilt (written fresh, using LLC only as an API reference; it ships with no license):
+
+| LLC capability | Verdict | Notes |
+|---|---|---|
+| Request queue, per-station dispatch, craft-complete events, retry on failure | **Keep** | Core of `Engine/`. |
+| Smithing: create by level / CP + pattern + style + trait + set | **Keep** | Daily and master writs. |
+| Smithing: improve to target quality | **Keep** | Master writs (purple/gold). |
+| Smithing: deconstruct | **Keep** | Needed by the "Deconstruct" reward action. |
+| Enchanting: glyph by potency + essence + aspect IDs | **Keep** | |
+| Alchemy: craft by solvent + reagent item IDs | **Keep** | |
+| Provisioning: craft by recipe / result item | **Keep** | |
+| Furniture crafting | **Skip** | |
+| Glyph-to-gear attach, CraftSmithingItemFromLink helpers, set tables | **Skip** | The set index comes from the game API; LibSets is optional. |
+| LLC's public API for other addons | **Skip** | WritCrafter won't be a library. |
+
+### 2.3 DailyAlchemy (1.6.0, already U51)
+
+| Feature | Verdict | Notes |
+|---|---|---|
+| Daily alchemy writ solve and craft | **Keep** | |
+| Master alchemy writ ("A Masterful Concoction") | **Keep** | |
+| Witches Festival writ | **Keep** | |
+| Reagent priority: stock / MM / TTC / ATT / manual | **Merge** | Stock first (R6), price breaks ties; the manual order becomes the allow/expensive overrides. |
+| Bulk creation + quantity | **Merge** | Consumable multiplier. |
+| Retrieve from bank + delay | **Merge** | Shared bank module. |
+| Auto exit station | **Merge** | |
+| Don't use locked items (FCOItemSaver) | **Keep** | Optional dependency. |
+| Context menu craft/cancel sealed writ | **Merge** | |
+| Log / debug log toggles | **Merge** | One log-level setting. |
+
+### 2.4 DailyProvisioning (1.5.3, APIVersion 101038)
+
+| Feature | Verdict | Notes |
+|---|---|---|
+| Daily provisioning writ / master ("A Masterful Feast") / Witches Festival | **Keep** | |
+| Bulk, bank retrieve, auto exit | **Merge** | |
+| Disable if recipe unknown | **Merge** | Into the reject engine. |
+| Static FoodAndDrink recipe table | **Skip** | Uses the game API instead. |
+
+### 2.5 PotionMaker (5.11.0): potion search UI kept
+
+| Feature | Verdict | Notes |
+|---|---|---|
+| Potion search tab at the alchemy station (LibAlchemyStation) | **Keep** | Pick 1–3 traits → list reagent combos you can make. |
+| Async search (LibAsync) | **Keep** | |
+| Results sorted by stock (R6), with your allowed / too-expensive flags shown | **Keep** | New; ties the UI to the same rules. |
+| Filters: use selected reagents only, include missing reagents, include unknown traits, quest-condition potions only, need solvent | **Keep** | |
+| Favorites (mark combo, list by reagents / potion / traits) | **Keep** | Cheap to keep. |
+| Auto-switch potion/poison tab | **Keep** | |
+| ItemSaver / FCOItemSaver protection | **Merge** | Shared lock check. |
+| Reagents sorted by quantity | **Merge** | Always on (R6). |
+| Main menu entry (LibMainMenu-2.0) | **Keep (optional)** | Only if LibMainMenu-2.0 is installed. |
+| Training mode (unknown traits only), fake 3rd slot | **Later** | |
+| Show alchemy XP messages, hide new-trait popup, same window coords | **Skip** | |
+
+### 2.6 WritWorthy (7.5.9)
+
+| Feature | Verdict | Notes |
+|---|---|---|
+| Sealed writ tooltip: materials, total cost, gold per voucher | **Keep** | Plus our accept/reject verdict and the reasons. |
+| Tooltip warnings: motif / trait / recipe / skill missing, set trait count | **Keep** | Feed the reject engine. |
+| Max gold per voucher | **Keep** | Reject rule, off by default. |
+| Include writs from the bank | **Keep** | Default off. |
+| Auto-accept writ quests from inventory | **Keep** | With R4/R5 filters. |
+| **Master writ queue window** | **Keep** | You picked it. See §2.6.1. |
+| Material list window (have / buy / price for queued writs) | **Later** | Shopping list for everything queued. |
+| HomeStationMarker integration (marks house stations with queued work) | **Skip** | Not installed. |
+| Material list in chat | **Skip** | |
+| AGS cost-per-voucher | **Later** | |
+| Force EN, station colours, duplicate CMW tooltips, profiler, discover/forget/port | **Skip** | |
+
+#### 2.6.1 Master writ queue window (from WritWorthy)
+
+The time saver: **craft every sealed writ in your bag without accepting any of them**, then accept and turn them all in at once.
+
+Workflow:
+1. Open the window (`/wc` or a keybind). Every sealed writ in your bag is listed (bank too, if that setting is on).
+2. **Enqueue All**, or tick individual rows.
+3. Visit each station. Queued items for that station craft automatically, and you're dropped out of the station when it's done.
+4. Stand at Rolis Hlaalu and press **Accept & Turn In**. Each crafted writ is opened, accepted and handed in one after another, with no dialog clicking.
+
+What's in the window:
+
+| Part | Behaviour |
+|---|---|
+| Columns | Queued ☐, Mimic ☐, type, item / glyph / potion / food, quality, detail columns (trait, set, motif, …), vouchers, material cost, cost per voucher. All sortable. |
+| Row state | Not queued / Queued / Completed / Can't queue. A row that can't be queued shows the reason when you hover it. |
+| Enqueue All / Dequeue All | Enqueue All only takes rows that pass every rule (R2–R5, knowledge, max gold per voucher). |
+| Manual override (new) | A row rejected only by *policy* (too expensive, gold writ excluded, rare component) can still be ticked by hand, after a confirm. Enqueue All never does this. "Can't craft" rows (unknown motif, recipe or trait) can't be overridden. |
+| Mimic ☐ per row | Defaults from the global mimic policy; you can flip it per writ. |
+| Sort by Station | Groups rows in station order so you walk the stations once. |
+| Max gold per voucher | Edit box in the window, same setting as the tooltip rule. |
+| Summary bar | Queued: writs, vouchers, mat cost, cost per voucher. Completed: the same four. |
+| Persistence | Queued and completed state is saved per character, keyed by each writ's unique ID, so it survives reloads, logouts and moving writs to the bank. |
+| Stock-first | Crafts drawn from the queue still follow R6 (most-stocked reagents and style stones first). |
+
+#### 2.6.2 Grand Master Crafting Stations ("master crafter tables")
+
+Added in Update 40: one furnishing per craft (Blacksmithing, Clothing, Woodworking, Jewelry). You feed it attuned set stations, and it can then craft every set it has consumed (80 attunable sets). In the API this is the **consolidated station**: `GetCraftingInteractionMode() == CRAFTING_INTERACTION_MODE_CONSOLIDATED_STATION`, plus `GetNumConsolidatedSmithingSets`, `GetConsolidatedSmithingItemSetIdByIndex`, `IsConsolidatedSmithingItemSetIdUnlocked`, `SetActiveConsolidatedSmithingSetByIndex` and `GetActiveConsolidatedSmithingItemSetId`.
+
+**Why WritWorthy struggles there.** WritWorthy does all its crafting through LibLazyCrafting 4.042. From reading the code (not yet reproduced in game):
+1. **Pattern offsets disagree.** The "can I craft this?" check uses no set-pattern offset at a Grand Master station (`Smithing.lua:448`), but the actual craft call always adds the set-station offset for set items (`Smithing.lua:1295-1298`). One of the two is wrong at these stations, so items either fail as uncraftable or the request is built with the wrong pattern.
+2. **Set switching is done by clicking the UI.** On keyboard, LLC changes the active set by clearing the search box and selecting a tree node (`Smithing.lua:1258-1261`), and doesn't wait for the switch before crafting. Only the gamepad/console path calls `SetActiveConsolidatedSmithingSetByIndex`. Result: it crafts with the previous set still active, or fails.
+3. **Wrong-station false positives.** `canCraftItemHere` (`Smithing.lua:546-549`) says yes whenever the set is unlocked in your Grand Master station, even at an ordinary single-set station.
+4. **Set probe can error.** `GetCurrentSetInteractionIndex` (`Smithing.lua:515-537`) probes with set-station pattern numbers. At a Grand Master station that can return "no set", and it then indexes `SetIndexes[nil]`, which throws a Lua error.
+5. **WritWorthy's own check** (`WritWorthy_Window.lua:1439`) treats every set except the currently selected one as "wrong station", and **Sort by Station** doesn't know Grand Master stations exist.
+
+**How WritCrafter handles them (first-class, not bolted on):**
+| Area | Design |
+|---|---|
+| Where can this be made? | Every smithing request records its options: *Grand Master* (set unlocked there), *the set's own station* (name and zone), or *any station* (no set). |
+| Crafting at a Grand Master station | Takes every queued request whose set is unlocked there, grouped by set. Switches sets through `SetActiveConsolidatedSmithingSetByIndex` and **waits until `GetActiveConsolidatedSmithingItemSetId()` confirms the switch** before crafting. Restores your previous selection when done. |
+| Patterns | No hardcoded offsets. Pattern indexes are found at runtime by probing `GetSmithingPatternResultLink` + `GetItemLinkSetInfo` at the current station. The result link is checked for the right set, item and trait before every craft. |
+| Ordinary set station | Crafts only that station's set; never assumes Grand Master unlocks apply. |
+| No-set items (daily writs) and improvement at a Grand Master station | Supported if the station allows them (check in game). Otherwise skipped with a chat line telling you which station to use. |
+| Knowing your unlocked sets away from the station | The unlocked-set list is cached per account each time you use a Grand Master station, so tooltips and the queue window know about it anywhere. |
+| Queue window | A **Station** column shows *Grand Master*, the set station and zone, or *Any*. **Sort by Station** puts all Grand Master rows together, so one visit per craft clears them. |
+| Tooltips | "Craftable at your Grand Master station" vs "Needs the \<set\> station in \<zone\>". |
+| Universal deconstruction station | Used for the "Deconstruct" reward action (`CRAFTING_INTERACTION_MODE_UNIVERSAL_DECONSTRUCTION`). |
+
+**In-game checklist for milestone 3.** For each of the four crafts at a Grand Master station: craft a set item; switch sets mid-queue; craft a no-set item; improve to purple/gold. Then at an ordinary set station, confirm it only crafts that set.
+
+#### 2.6.3 Never re-craft what's already made
+
+Before anything is queued or crafted, WritCrafter checks whether a matching item **already exists** in your backpack, bank or ESO+ bank, whether it was made by WritCrafter, another addon or by hand. It only crafts the shortfall.
+
+| Writ | What counts as "already made" |
+|---|---|
+| Daily writ (in the journal) | Any item where `DoesItemLinkFulfillJournalQuestCondition` passes for that condition. Its count is subtracted from what's needed. Matching items in the bank are withdrawn instead of crafted. |
+| Sealed master writ, smithing | Same base item and material level (CP150/160), set, trait, motif, quality, crafted by a player. |
+| Sealed master writ, enchanting | Same glyph, potency level and quality. |
+| Sealed master writ, alchemy | Same potion or poison, read by its effects and solvent level from the link (works for the new U51 potion types too). |
+| Sealed master writ, provisioning | Same result item and quantity. |
+
+**Reservations.** Each matching item (or each unit of a stack) is **assigned to one writ**. Two identical writs need two items; one item never counts for both. Assignments are rebuilt from a fresh inventory scan on login, on bag/bank changes and when the queue window opens, so selling, deconstructing or using an item un-assigns it automatically. The queue window's saved "completed" state is a hint only: the scan decides.
+
+**Protection.** Items assigned to a writ are never touched by WritCrafter's own reward actions (deposit, junk, destroy, deconstruct). They also get a small "reserved for a writ" icon (see §2.6.4), so you don't sell them by mistake.
+
+**Turn-in.** A crafted item has to be in your backpack when you accept its sealed writ. **Accept & Turn In** first lists any assigned items still in the bank, and withdraws them when a bank is open.
+
+#### 2.6.4 Writ status icons in your inventory
+
+A small icon is drawn next to each sealed master writ in the backpack, bank, ESO+ bank and house storage lists:
+
+| Icon | Meaning | Default |
+|---|---|---|
+| ✔ green | **Crafted**: an item for this writ is already in your bag or bank (§2.6.3) | On (you asked for this) |
+| ⏳ yellow | **Queued** in the queue window, not crafted yet | On |
+| ✖ red | **Rejected** or can't be crafted (hover the writ for the reason) | On |
+| 🔒 on the crafted item itself | **Reserved** for a writ | On |
+
+Each icon has its own on/off setting, plus an icon position nudge (left/right offset). That keeps it from overlapping icons from other addons you run, such as FCOItemSaver, IIfA, CraftStore or AdvancedFilters. Hovering a writ shows the same status as a tooltip line (e.g. "Crafted — item is in your bank").
+Implementation: a post-hook on the inventory list row setup for each bag's list view, reusing one texture control per row. Row status comes from the reservation ledger (§2.6.3), so it's an O(1) lookup while scrolling.
+
+### 2.7 LibMarify / 2.8 LibRecipe: **Skip** (game API + ~50 lines of our own helpers)
+
+### 2.9 Library dependencies (revised)
+
+| Library | Verdict | Why |
+|---|---|---|
+| LibAddonMenu-2.0 | **Required** | Settings panel |
+| LibCustomMenu | **Required** | Right-click actions on sealed writs and items |
+| LibPrice | **Required** | MM / TTC / ATT live prices |
+| LibAlchemyStation | **Required** | Potion search tab |
+| LibAsync | **Required** | Potion search + alchemy solver off the main frame |
+| LibEsoHubPrices | **Optional** | Read directly; LibPrice has no ESO-Hub source, and it's the best-covered source in your data |
+| LibMainMenu-2.0 | **Optional** | Main-menu button for potion search |
+| LibSets | **Optional** | Set names / trait counts in tooltips |
+| LibCharacterKnowledge | **Optional** | "An alt can craft this" in tooltips |
+| FCOItemSaver | **Optional** | Locked-item protection |
+| LibLazyCrafting | **Dropped** | Absorbed |
+| LibAlchemy | **Dropped** | Optimises by price, not stock; its U51 DB is only a cross-check |
+| LibItemLink, LibMarify, LibRecipe | **Dropped** | Unused or replaced by the game API |
+
+---
+
+## 3. Update 51 crafting changes to build in
+
+Source: UESP's copy of the Update 51 patch notes. News post 70379 is the Update 51 alchemy-changes post, confirmed by the "Addon formulas for alchemy changes" session, which updated your DailyAlchemy for it.
+
+- Increase Spell Power + Increase Weapon Power → **Increase Power**; Spell + Weapon Critical → **Critical**
+- **Maim removed** (old Maim potions became Cowardice); **Enervation** now counters **Force**
+- New traits: **Mending, Vexation, Damage Shield, Heal Absorption**
+- New reagents: Cultivated Cryptpods 224357 (solo dungeons), Daedra-Blood Maggots 224358 (IC sewers), Fossilized Verminous Bones 224359 (treasure maps), Winter's Grave Tongue 224360 (icy zones, wood/undead)
+- 14 reagents with changed traits: Blue Entoloma, Stinkhorn, Namira's Rot, White Cap, Blessed Thistle, Lady's Smock, Bugloss, Nirnroot, Water Hyacinth, Torchbug Thorax, Spider Egg, Butterfly Wing, Scrib Jelly, Powdered Mother of Pearl
+- Master writs with impossible combos were rewritten. **Known bug**: the poison writ asking for Cowardice + Hindrance + Detection can't be done, so it's auto-rejected with a "hold this writ" note.
+- No provisioning, enchanting or equipment recipe changes were found in the U51 notes.
+
+### 3.1 Lessons from the DailyAlchemy Update 51 update (earlier session)
+- **Reagent data source.** Use the reagent tables in the installed addons, not UESP's list. Dolgubon's `Alchemy.lua` (`reagentInfo`), `WritWorthy_Alchemy.lua` and `LibAlchemy_Database.lua` agree on the traits of all 38 reagents, and they show **17** reagents changed, against the 14 in UESP's patch-note list. WritCrafter's static table is cross-checked against all three, and against the game API at load.
+- **Effect IDs** pair up: odd = effect, even = its counter (… 33/34 Damage Shield / Heal Absorption, 35/36 Force / Enervation, 37/38 Mending / Vexation). Old IDs 13, 14, 17, 18 still resolve to Increase Power, Cowardice, Critical, Enervation. Heroism's counter is **Timidity** (DailyAlchemy had it wrong on three reagents).
+- **Potion naming changed.** Update 51 names a potion by a new trait priority, so a combo that *contains* the requested effect can produce a differently named potion. Daily writs therefore only use **two-reagent combos whose result has exactly the requested effect and nothing else**. All 34 effects still have 3–24 such combos.
+- **Check the result before crafting.** At the station, `GetAlchemyResultingItemLink` must match the writ (and `DoesItemLinkFulfillJournalQuestCondition` must pass). Any combo that would make the wrong item is skipped.
+- **Master writs** read their three effects straight from the sealed writ's item-link fields, which works in every client language.
+- **Known gap: no item IDs for the new potion types** (Essence of Force, Mending, Vexation, Damage Shield, Heal Absorption and their poisons). Outside a station, tooltips, the queue window and potion search show these by trait names and price them from their reagents. The real potion name only comes from the station's result link.
+
+---
+
+## 4. Reagent source categories (R2)
+
+| Category | Reagents | Default |
+|---|---|---|
+| **Overland plants** (20) | Blessed Thistle, Blue Entoloma, Bugloss, Columbine, Corn Flower, Crimson Nirnroot, Dragonthorn, Emetic Russula, Imp Stool, Lady's Smock, Luminous Russula, Mountain Flower, Namira's Rot, Nightshade, Nirnroot, Stinkhorn, Violet Coprinus, Water Hyacinth, White Cap, Wormwood | Allowed, unless too expensive (§5.1) |
+| Critter / animal parts | Beetle Scuttle, Butterfly Wing, Fleshfly Larva, Mudcrab Chitin, Scrib Jelly, Spider Egg, Torchbug Thorax | Rejected |
+| Zone-specific creatures | Clam Gall, Powdered Mother of Pearl, Chaurus Egg, Vile Coagulant, Dragon's Blood, Dragon's Bile, Dragon Rheum | Rejected |
+| U51 special sources | Cultivated Cryptpods, Daedra-Blood Maggots, Fossilized Verminous Bones, Winter's Grave Tongue | Rejected |
+
+Any reagent can be overridden in settings.
+
+---
+
+## 5. "Too expensive" defaults from your price data
+
+**Method.** Unit price = ESO-Hub NA *suggested sale price* (LibEsoHubPrices data dated 2026-11-02), cross-checked against the median per-unit price in your own MasterMerchant sales history (GS00–GS17, 4,818 items). Where the two disagree, ESO-Hub wins because it has thousands of sales against MM's handful (e.g. Winter's Grave Tongue: one MM sale at 60,000g vs ESO-Hub ~325g).
+
+**Ceilings are per category** because writs use very different quantities of each. Every ceiling sits in a natural price gap in your data, so the default list is stable against normal price drift:
+
+| Category | Default ceiling | Gap it sits in |
+|---|---|---|
+| Alchemy reagents | **300g** | Bugloss ~185 → Violet Coprinus ~480 |
+| Enchanting runes | **500g** | Oko ~225 → Indeko ~860 |
+| Trait materials | **1,000g** | Cobalt ~370 → Titanium ~2,030 |
+| Provisioning ingredients | **300g** | Bervez Juice ~45 → Cyrodiil Citrus ~650 |
+| Style materials | **1,000g** → use a mimic stone instead of rejecting | Ancient Sandstone ~830 → Funerary Wrappings ~1,075 |
+| Improvement mats (temper/resin/tannin/plating) | not price-filtered | Covered by the gold-writ toggles (R4) |
+
+The shipped default list is fixed from today's snapshot. A setting **"Re-check against live prices"** (default off) re-applies the ceilings on login.
+
+### 5.1 Alchemy reagents marked too expensive (allowed plants only)
+| Reagent | ESO-Hub | Your MM |
+|---|---|---|
+| Columbine | ~750 | 735 |
+| Violet Coprinus | ~480 | 549 |
+
+Allowed plants for comparison: Bugloss ~185, Mountain Flower ~138, Crimson Nirnroot ~125, everything else under 100g.
+(All non-plant reagents are already rejected by §4: Dragon Rheum ~1,825, Dragon's Blood ~1,500, Fossilized Bones ~1,495, Mudcrab Chitin ~740, …)
+
+### 5.2 Enchanting runes marked too expensive
+| Rune | ESO-Hub | Your MM | Effect |
+|---|---|---|---|
+| Hakeijo | ~14,800 | 16,000 | Prismatic Defense / Onslaught glyphs |
+| Kuta | ~5,000 | 5,000 | Gold (legendary) aspect |
+| Indeko | ~860 | 400 | |
+
+### 5.3 Trait materials marked too expensive
+| Material | Trait | ESO-Hub | Your MM |
+|---|---|---|---|
+| Aurbic Amber | Jewelry Infused | ~37,000 | 37,448 |
+| Potent Nirncrux | Weapon Nirnhoned | ~11,000 | 13,500 |
+| Dibellium | Jewelry Harmony | ~6,750 | 8,500 |
+| Dawn-Prism | Jewelry Triune | ~5,450 | 6,325 |
+| Fortified Nirncrux | Armor Nirnhoned | ~4,500 | 5,000 |
+| Gilding Wax | Jewelry Swift | ~3,650 | 3,850 |
+| Slaughterstone | Jewelry Bloodthirsty | ~3,275 | 3,583 |
+| Titanium | Jewelry Protective | ~2,030 | 2,000 |
+
+Allowed: Cobalt (Arcane) ~370, Zinc (Robust) ~237, Antimony (Healthy) ~190, and all weapon/armor trait gems (< 10g).
+
+### 5.4 Provisioning ingredients marked too expensive
+Aetherial Dust ~145,500 · Rubyblossom Extract ~90,000 · Perfect Roe ~37,500 · Diminished Aetherial Dust ~30,800 · Red Lichen ~3,000 · Cyrodiil Citrus ~650
+
+### 5.5 Style materials over the ceiling (use a mimic stone)
+Dragon Bone ~5,900 · Pristine Daedric Heart ~3,750 · Stendarr Stamp ~4,400 · Ivory Brigade Clasp ~4,500 · Shimmering Sand ~3,000 · Culanda Lacquer ~2,300 · Vitrified Malondo ~2,200 · Arkthzand Sprocket ~1,800 · Tempered Brass ~1,400 · Funerary Wrappings ~1,075 · Voskrona Jade Clusters ~1,000
+
+### 5.6 Worth knowing
+- **Zircon Plating (~2,650)** is needed for *purple* jewelry master writs. It isn't price-filtered (improvement mats are exempt), so purple jewelry writs are allowed. Gold improvement mats (Chromium ~11,200, Tempering Alloy ~9,200, Dreugh Wax ~7,750, Rosin ~800) only matter for gold writs (R4).
+- The reagent prices in DailyAlchemy's built-in table run about double your data for cheap plants, so we don't reuse its numbers.
+
+---
+
+## 6. Rare-component rules (R5), all on by default
+
+| Craft | Rejected by default | Rule source |
+|---|---|---|
+| Enchanting | Prismatic Defense / Onslaught | Hakeijo is too expensive (§5.2) |
+| Enchanting | Gold glyphs | Kuta (§5.2) and the gold toggle (R4) |
+| Jewelry | Infused, Harmony, Triune, Swift, Bloodthirsty, Protective | §5.3 |
+| BS / CL / WW | Nirnhoned | §5.3 |
+| BS / CL / WW / JW | Motif unknown and mimic policy "never" | Can't craft |
+| Smithing sets | Set trait count not met / set unknown | Can't craft |
+| Provisioning | Recipe unknown; any ingredient too expensive | §5.4 |
+| Alchemy | Any combo needing a rejected reagent; known-impossible writ | §3, §4, §5.1 |
+| Any master writ | Gold per voucher above ceiling (off by default) | Carried over from WritWorthy |
+
+---
+
+## 7. Architecture
+
+```
+WritCrafter/
+  WritCrafter.addon        APIVersion 101051 101052
+                           DependsOn: LibAddonMenu-2.0 LibCustomMenu LibPrice LibAlchemyStation LibAsync
+                           OptionalDependsOn: LibEsoHubPrices LibMainMenu-2.0 LibSets LibCharacterKnowledge FCOItemSaver
+  Strings/en.lua
+  Data/Reagents.lua        U51 reagents: id, 4 traits, source category
+  Data/PriceDefaults.lua   §5 ceilings + default too-expensive item ids (snapshot 2026-11-02)
+  Core/                    Init, SavedVars, Log, Inventory (stock counts, locks), Bank, Price (LibPrice + ESO-Hub),
+                           Reservations (match existing items to writs, one item per writ)
+  Engine/                  Queue, Smithing (create / improve / deconstruct), Enchanting, Alchemy, Provisioning
+  Rules/                   Reject engine: evaluate(writ) → {ok, reasons[]}; per-category rules
+  Writs/                   Daily (journal parsing, auto-abandon), Master (sealed-writ link parsing, auto-accept, queue)
+  Solver/Alchemy.lua       valid combos → filter → max-min-stock → price tie-break
+  Rewards/                 container looting, per-type actions, valuable alerts
+  UI/                      Tooltip, InventoryIcons, StationPanel, ContextMenu, QueueWindow, PotionSearch (LibAlchemyStation tab), Settings
+```
+
+Every planned craft is checked with `DoesItemLinkFulfillJournalQuestCondition` before crafting, so a wrong guess never wastes materials.
+
+---
+
+## 8. Milestones
+
+1. **Scaffold**: manifest, settings skeleton, saved vars, logging, inventory counts, price lookups.
+2. **Rules, detection and read-only UI**: data tables, reject engine, sealed writ verdicts, already-crafted detection and reservations (§2.6.3), inventory status icons (§2.6.4). No crafting, so it's safe to check every verdict and icon in game against writs and items you already have.
+3. **Crafting engine**: queue, then provisioning → alchemy → enchanting → smithing create → improve → deconstruct, each verified at a station before the next. Smithing is tested at **Grand Master stations and ordinary set stations** from the start (§2.6.2 checklist).
+4. **Daily writs**: all 7 crafts, bank withdraw, auto-exit, quest dialog, alchemy auto-abandon.
+5. **Master writs**: sealed-writ parsing, the queue window (§2.6.1) with saved per-character state, crafting from the queue, Accept & Turn In at Rolis, mimic policy, voucher count.
+6. **Reward handling**.
+7. **Potion search UI**.
+8. **Migration**: warn if any replaced addon is still enabled (they'd fight over auto-dialog and autocraft).
+
+Testing: pure logic (solver, rules, link parsing, price defaults) gets offline Lua unit tests with stubbed game APIs. Anything touching stations, quests or the bank is checked by you in game at each milestone.
+
+---
+
+## 9. Defaults assumed unless you say otherwise
+- PC/Mac only, English only in v1.
+- Settings storage follows CharacterHomes: one account-wide table per megaserver (`WritCrafterVars[server][@account]["$AccountWide"]`). It holds a shared `settings` section and a `characters` table keyed by character ID (name stored alongside, so renames are safe). Default scope: **All my characters on this server**. A character can switch to **This character only**, which starts from a copy of the shared settings. Per-character writ state (queued/completed) goes in the same `characters` entry.
+- All code written fresh; the replaced addons are API references only (WritWorthy reserves rights and discourages forks; LibLazyCrafting has no license file; LibEsoHubPrices is CC BY-NC-ND, so we read its data at runtime but never copy it into our files).
+- Stock = backpack + craft bag + bank; house storage not counted.
+- Daily writ rejection = auto-abandon with a chat message.
+- Gold master writs: all types allowed until you tick an exclusion.
+- Reward handling: when a writ reward box is looted, each kind of item in it (crafting mats, surveys, sealed master writs, repair kits, ornate/intricate gear, soul gems, glyphs, recipes, Psijic fragments, gold, gold mats) gets one action: **Leave in bag**, **Deposit** (moved to the bank the next time you open it), **Junk** (marked to sell), **Destroy**, or **Deconstruct** (at the next matching station). Default for every kind: **Leave in bag**, so nothing happens to your loot until you pick an action. Dolgubon ships the same defaults. Reward boxes are auto-looted when received (Dolgubon's default too).
+- Name **WritCrafter**, slash command `/wc` (toggles the queue window); keybinds for the window, "Craft items" and "Accept & Turn In".
+
+## 10. Still open
+- Nothing. All questions answered and the §9 defaults accepted (2026-11-03).
