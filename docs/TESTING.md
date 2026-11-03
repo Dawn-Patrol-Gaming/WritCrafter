@@ -26,14 +26,15 @@ The self-test is the main check. It compares WritCrafter's backpack/bank/craft b
 | B6 | Bank more than ~240 slots full? Pick something deposited most recently and `/wc stock` it | Matches the bank window total. Items past the first 240 slots sit in the ESO+ bank bag; this checks it's counted. (Skip if your bank isn't that full.) |
 | B7 | `/wc stock 150671` (Dragon Rheum, or any ID you don't own) | Name shown, all zeros, no error |
 
-### C. Locked items
-Crafting materials can't be locked, so test with potions, food, glyphs or gear.
+### C. Locked gear
+Only equippable gear can be locked; materials, potions, poisons, food and glyphs can't. Locks matter later, for crafted master-writ gear and the reward deconstruct/junk/destroy actions.
 
 | # | Do | Expect |
 |---|---|---|
-| C1 | Lock one stack of potions in the backpack (right-click → Lock) and leave another stack of the same potion unlocked. Then `/wc stock <potion>` | `(N locked)` with N = the locked stack's size; Usable = total − N |
-| C2 | Settings → turn off **Don't use locked items** → `/wc stock` again | No "locked" part; Usable = total |
-| C3 | Turn it back on, unlock the stack, `/wc stock` again | No "locked" part |
+| C1 | Lock a piece of gear in the backpack (right-click → Lock), then `/wc stock <that gear>` | `1 backpack ... Usable: 0 (1 locked)` |
+| C2 | Settings → turn off **Leave locked gear alone** → `/wc stock` again | No "locked" part; Usable: 1 |
+| C3 | Turn it back on, unlock the gear, `/wc stock` again | No "locked" part; Usable: 1 |
+| C4 | `/wc stock` on any crafting material | Never shows a "locked" part |
 
 ### D. Prices
 | # | Do | Expect |
