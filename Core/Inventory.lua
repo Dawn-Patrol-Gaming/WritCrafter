@@ -9,7 +9,7 @@ local STOCK_BAGS = { BAG_BACKPACK, BAG_BANK, BAG_SUBSCRIBER_BANK, BAG_VIRTUAL }
 
 local GENERIC_LINK = "|H1:item:%d:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0|h|h"
 
--- [itemId] = { backpack, bank, craftBag, locked }
+-- [itemId] = { backpack, bank, craftBag, locked, link, stackable }
 local stock = {}
 local dirty = true
 
@@ -38,8 +38,18 @@ local function Rebuild()
                 local count, maxCount = GetSlotStackSize(bagId, slotIndex)
                 local entry = stock[itemId]
                 if not entry then
-                    entry = { backpack = 0, bank = 0, craftBag = 0, locked = 0 }
+                    entry = {
+                        backpack  = 0,
+                        bank      = 0,
+                        craftBag  = 0,
+                        locked    = 0,
+                        link      = GetItemLink(bagId, slotIndex),
+                        stackable = maxCount > 1,
+                    }
                     stock[itemId] = entry
+                elseif not entry.mixedLinks and GetItemLink(bagId, slotIndex) ~= entry.link then
+                    -- Same ID, different link (e.g. potions of different levels).
+                    entry.mixedLinks = true
                 end
                 if bagId == BAG_BACKPACK then
                     entry.backpack = entry.backpack + count
@@ -52,8 +62,8 @@ local function Rebuild()
                     entry.locked = entry.locked + count
                 end
                 -- Only stackables (materials, consumables) are worth remembering for price lookups.
-                if maxCount > 1 and not linkCache[itemId] then
-                    linkCache[itemId] = GetItemLink(bagId, slotIndex)
+                if entry.stackable and not linkCache[itemId] then
+                    linkCache[itemId] = entry.link
                 end
             end
             slotIndex = ZO_GetNextBagSlotIndex(bagId, slotIndex)
@@ -106,6 +116,31 @@ function Inventory.GetLink(itemId)
         Rebuild()
     end
     return WC.linkCache[itemId] or string.format(GENERIC_LINK, itemId)
+end
+
+-- Compares our per-bag counts with the game's own GetItemLinkStacks totals for every
+-- stackable item owned. The game counts per exact link and we count per item ID, so gear
+-- and IDs seen with more than one link are skipped. Returns checked, skipped, mismatches.
+function Inventory.SelfTest()
+    Rebuild()
+    local checked, skipped, mismatches = 0, 0, {}
+    for itemId, entry in pairs(stock) do
+        if not entry.stackable or entry.mixedLinks then
+            skipped = skipped + 1
+        else
+            checked = checked + 1
+            local gameBag, gameBank, gameCraftBag = GetItemLinkStacks(entry.link)
+            if gameBag ~= entry.backpack or gameBank ~= entry.bank or gameCraftBag ~= entry.craftBag then
+                mismatches[#mismatches + 1] = {
+                    itemId = itemId,
+                    link   = entry.link,
+                    ours   = { entry.backpack, entry.bank, entry.craftBag },
+                    game   = { gameBag, gameBank, gameCraftBag },
+                }
+            end
+        end
+    end
+    return checked, skipped, mismatches
 end
 
 -- Accepts an item link anywhere in the text, or a bare item ID. Returns itemId, link.
