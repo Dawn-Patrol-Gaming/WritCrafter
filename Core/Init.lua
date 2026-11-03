@@ -3,5 +3,5 @@ WritCrafter = {
     name        = "WritCrafter",
     displayName = "WritCrafter",
     version     = "0.1.0",
-    author      = "Kobayashi",
+    author      = "@g0thiCiCecReaM",
 }

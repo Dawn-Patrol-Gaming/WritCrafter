@@ -36,6 +36,26 @@ local function ShowPrice(rest)
     end
 end
 
+local SELFTEST_SHOWN = 10
+
+local function SelfTest()
+    local checked, skipped, mismatches = WC.Inventory.SelfTest()
+    if #mismatches == 0 then
+        WC.Log.Say(zo_strformat(SI_WRITCRAFTER_SELFTEST_OK, checked, skipped))
+        return
+    end
+    WC.Log.Say(zo_strformat(SI_WRITCRAFTER_SELFTEST_FAIL, #mismatches, checked))
+    local showAll = WC.settings.logLevel >= WC.Log.LEVEL_DEBUG
+    for i, m in ipairs(mismatches) do
+        if i > SELFTEST_SHOWN and not showAll then
+            WC.Log.Say(zo_strformat(SI_WRITCRAFTER_SELFTEST_MORE, #mismatches - SELFTEST_SHOWN))
+            break
+        end
+        WC.Log.Say(zo_strformat(SI_WRITCRAFTER_SELFTEST_ROW, ItemName(m.link), m.itemId,
+            m.ours[1], m.ours[2], m.ours[3], m.game[1], m.game[2], m.game[3]))
+    end
+end
+
 local function ToggleDebug()
     if WC.settings.logLevel >= WC.Log.LEVEL_DEBUG then
         WC.settings.logLevel = WC.Log.LEVEL_NORMAL
@@ -50,6 +70,7 @@ local COMMANDS = {
     settings = function() WC.Settings.Open() end,
     stock    = ShowStock,
     price    = ShowPrice,
+    selftest = SelfTest,
     debug    = ToggleDebug,
     help     = function() WC.Log.Say(GetString(SI_WRITCRAFTER_HELP)) end,
 }
