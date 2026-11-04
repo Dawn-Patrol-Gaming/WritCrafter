@@ -9,19 +9,36 @@
 ## Version: 0.1.0
 ## AddOnVersion: 100
 ## APIVersion: 101051 101052
-## DependsOn: LibAddonMenu-2.0>=43 LibPrice>=70530
-## OptionalDependsOn: LibEsoHubPrices LibDebugLogger FCOItemSaver
+## DependsOn: LibAddonMenu-2.0>=43 LibCustomMenu>=730 LibPrice>=70530 LibSets>=9040 LibCharacterKnowledge>=301020
+## OptionalDependsOn: LibEsoHubPrices LibDebugLogger FCOItemSaver AwesomeGuildStore
 ## SavedVariables: WritCrafterVars
 
 Strings/en.lua
 
 Core/Init.lua
+Data/Alchemy.lua
+Data/Smithing.lua
+Data/Enchanting.lua
+Data/PriceDefaults.lua
+
 Core/Log.lua
 Core/SavedVars.lua
 Core/Inventory.lua
 Core/Price.lua
+Core/Policy.lua
 
+Writs/Master.lua
+Solver/Alchemy.lua
+Rules/Evaluate.lua
+Core/Reservations.lua
+
+UI/ExclusionsWindow.xml
+UI/ExclusionsWindow.lua
 UI/Settings.lua
+UI/Tooltip.lua
+UI/InventoryIcons.lua
+UI/ContextMenu.lua
 
+Core/Perf.lua
 Core/Slash.lua
 Main.lua

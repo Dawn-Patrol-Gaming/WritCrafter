@@ -10,7 +10,13 @@ local function OnAddOnLoaded(_, addonName)
     WC.Log.Init()
     WC.Inventory.Init()
     WC.Price.Init()
+    WC.Rules.Init()
+    WC.Reservations.Init()
+    WC.ExclusionsWindow.Init()
     WC.Settings.Init()
+    WC.Tooltip.Init()
+    WC.InventoryIcons.Init()
+    WC.ContextMenu.Init()
     WC.Slash.Init()
 end
 
