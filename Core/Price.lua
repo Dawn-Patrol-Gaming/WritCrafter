@@ -15,11 +15,15 @@ local SOURCE_NAMES = {
 -- [link] = { gold or false, sourceKey }. Prices barely move within a session.
 local cache = {}
 
+-- Price libraries are called through pcall: prices feed inventory row setup, where one
+-- library error would break the whole list. Results are captured into locals first because
+-- a bare `return` gives no value at all, and tonumber() with no argument throws.
 local function FromEsoHub(link)
     if not (LibEsoHubPrices and LibEsoHubPrices.GetSimpleItemPrice) then
         return nil
     end
-    local gold = tonumber(LibEsoHubPrices.GetSimpleItemPrice(link))
+    local ok, result = pcall(LibEsoHubPrices.GetSimpleItemPrice, link)
+    local gold = ok and tonumber(result) or nil
     if gold and gold > 0 then
         return gold, "esohub"
     end
@@ -33,13 +37,13 @@ local function FromLibPrice(link, sourceKey)
     if not (LibPrice and LibPrice.ItemLinkToPriceGold) then
         return nil
     end
-    local gold, source
+    local ok, gold, source
     if sourceKey then
-        gold, source = LibPrice.ItemLinkToPriceGold(link, sourceKey)
+        ok, gold, source = pcall(LibPrice.ItemLinkToPriceGold, link, sourceKey)
     else
-        gold, source = LibPrice.ItemLinkToPriceGold(link, "mm", "att", "ttc")
+        ok, gold, source = pcall(LibPrice.ItemLinkToPriceGold, link, "mm", "att", "ttc")
     end
-    gold = tonumber(gold)
+    gold = ok and tonumber(gold) or nil
     if gold and gold > 0 then
         return gold, source
     end

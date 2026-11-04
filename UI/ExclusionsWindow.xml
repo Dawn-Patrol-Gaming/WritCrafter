@@ -1,0 +1,118 @@
+<GuiXml>
+    <Controls>
+        <!-- One material row. Rows are pooled by the scroll list, so only the visible ones exist. -->
+        <Control name="WritCrafterExclusionRow" virtual="true" mouseEnabled="true">
+            <Dimensions x="590" y="36" />
+            <OnMouseEnter>WritCrafter.ExclusionsWindow.OnRowEnter(self)</OnMouseEnter>
+            <OnMouseExit>WritCrafter.ExclusionsWindow.OnRowExit(self)</OnMouseExit>
+            <OnMouseUp>WritCrafter.ExclusionsWindow.OnRowMouseUp(self, button, upInside)</OnMouseUp>
+            <Controls>
+                <Texture name="$(parent)Check">
+                    <Dimensions x="24" y="24" />
+                    <Anchor point="LEFT" offsetX="8" />
+                </Texture>
+                <Texture name="$(parent)Icon">
+                    <Dimensions x="30" y="30" />
+                    <Anchor point="LEFT" relativeTo="$(parent)Check" relativePoint="RIGHT" offsetX="10" />
+                </Texture>
+                <Label name="$(parent)Price" font="ZoFontGame" horizontalAlignment="RIGHT" verticalAlignment="CENTER">
+                    <Dimensions x="90" y="36" />
+                    <Anchor point="RIGHT" offsetX="-10" />
+                </Label>
+                <Label name="$(parent)Count" font="ZoFontGame" horizontalAlignment="RIGHT" verticalAlignment="CENTER">
+                    <Dimensions x="90" y="36" />
+                    <Anchor point="RIGHT" relativeTo="$(parent)Price" relativePoint="LEFT" offsetX="-10" />
+                </Label>
+                <Label name="$(parent)Name" font="ZoFontGame" wrapMode="ELLIPSIS" verticalAlignment="CENTER">
+                    <Dimensions y="36" />
+                    <Anchor point="LEFT" relativeTo="$(parent)Icon" relativePoint="RIGHT" offsetX="10" />
+                    <Anchor point="RIGHT" relativeTo="$(parent)Count" relativePoint="LEFT" offsetX="-10" />
+                </Label>
+            </Controls>
+        </Control>
+
+        <TopLevelControl name="WritCrafterExclusionsWindow" hidden="true" mouseEnabled="true" movable="true" clampedToScreen="true">
+            <Dimensions x="640" y="680" />
+            <Anchor point="CENTER" />
+            <Controls>
+                <Backdrop name="$(parent)BG" inherits="ZO_DefaultBackdrop" />
+
+                <Label name="$(parent)Title" font="ZoFontWinH2">
+                    <Anchor point="TOPLEFT" offsetX="20" offsetY="14" />
+                </Label>
+                <Button name="$(parent)Close" inherits="ZO_CloseButton">
+                    <Anchor point="TOPRIGHT" offsetX="-12" offsetY="12" />
+                    <OnClicked>WritCrafter.ExclusionsWindow.Close()</OnClicked>
+                </Button>
+                <Label name="$(parent)Hint" font="ZoFontGame">
+                    <Dimensions x="600" />
+                    <Anchor point="TOPLEFT" offsetX="20" offsetY="50" />
+                </Label>
+
+                <Label name="$(parent)CategoryLabel" font="ZoFontGame">
+                    <Anchor point="TOPLEFT" offsetX="20" offsetY="106" />
+                </Label>
+                <Control name="$(parent)Category" inherits="ZO_ComboBox">
+                    <Dimensions x="210" y="28" />
+                    <Anchor point="LEFT" relativeTo="$(parent)CategoryLabel" relativePoint="RIGHT" offsetX="10" />
+                </Control>
+                <Label name="$(parent)ShowLabel" font="ZoFontGame">
+                    <Anchor point="LEFT" relativeTo="$(parent)Category" relativePoint="RIGHT" offsetX="24" />
+                </Label>
+                <Control name="$(parent)Show" inherits="ZO_ComboBox">
+                    <Dimensions x="150" y="28" />
+                    <Anchor point="LEFT" relativeTo="$(parent)ShowLabel" relativePoint="RIGHT" offsetX="10" />
+                </Control>
+
+                <Label name="$(parent)SearchLabel" font="ZoFontGame">
+                    <Anchor point="TOPLEFT" offsetX="20" offsetY="146" />
+                </Label>
+                <Backdrop name="$(parent)Search" inherits="ZO_SingleLineEditBackdrop_Keyboard">
+                    <Dimensions x="260" />
+                    <Anchor point="LEFT" relativeTo="$(parent)SearchLabel" relativePoint="RIGHT" offsetX="10" />
+                    <Controls>
+                        <EditBox name="$(parent)Box" inherits="ZO_DefaultEditForBackdrop">
+                            <OnTextChanged>WritCrafter.ExclusionsWindow.OnSearchChanged(self)</OnTextChanged>
+                        </EditBox>
+                    </Controls>
+                </Backdrop>
+
+                <!-- Sortable column headings (the game's ZO_SortHeader: click to sort, click again to reverse). -->
+                <Control name="$(parent)Headers">
+                    <Dimensions y="24" />
+                    <Anchor point="TOPLEFT" offsetX="96" offsetY="182" />
+                    <Anchor point="TOPRIGHT" offsetX="-50" offsetY="182" />
+                    <Controls>
+                        <Control name="$(parent)Price" inherits="ZO_SortHeader">
+                            <Dimensions x="90" y="24" />
+                            <Anchor point="TOPRIGHT" />
+                        </Control>
+                        <Control name="$(parent)Count" inherits="ZO_SortHeader">
+                            <Dimensions x="90" y="24" />
+                            <Anchor point="TOPRIGHT" relativeTo="$(parent)Price" relativePoint="TOPLEFT" offsetX="-10" />
+                        </Control>
+                        <Control name="$(parent)Name" inherits="ZO_SortHeader">
+                            <Dimensions y="24" />
+                            <Anchor point="TOPLEFT" />
+                            <Anchor point="TOPRIGHT" relativeTo="$(parent)Count" relativePoint="TOPLEFT" offsetX="-10" />
+                        </Control>
+                    </Controls>
+                </Control>
+
+                <Control name="$(parent)List" inherits="ZO_ScrollList">
+                    <Anchor point="TOPLEFT" offsetX="14" offsetY="212" />
+                    <Anchor point="BOTTOMRIGHT" offsetX="-14" offsetY="-56" />
+                </Control>
+
+                <Label name="$(parent)Summary" font="ZoFontGame">
+                    <Anchor point="BOTTOMLEFT" offsetX="20" offsetY="-20" />
+                </Label>
+                <Button name="$(parent)Reset" inherits="ZO_DefaultButton">
+                    <Dimensions x="220" y="30" />
+                    <Anchor point="BOTTOMRIGHT" offsetX="-16" offsetY="-14" />
+                    <OnClicked>WritCrafter.ExclusionsWindow.ResetCategory()</OnClicked>
+                </Button>
+            </Controls>
+        </TopLevelControl>
+    </Controls>
+</GuiXml>

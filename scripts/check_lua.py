@@ -2,9 +2,12 @@
 
 Not a full parser. It catches the mistakes that most often stop an ESO addon from loading:
   - unbalanced function/if/for/while/do/repeat blocks and brackets
+  - strings left open at the end of a line
   - C-style operators (!=, &&, ||) that Lua doesn't have
   - accidental globals (top-level assignments without `local`)
   - manifest entries that don't exist, and .lua files the manifest forgot
+  - SecurePostHook on a control (it only accepts tables)
+  - tonumber() wrapped directly around a call, which throws when the call returns nothing
 
 Usage: python -I scripts/check_lua.py
 """
@@ -23,6 +26,7 @@ TOKEN = re.compile(
   | (?P<comment>--[^\n]*)
   | (?P<longstring>\[(?P<lseq>=*)\[.*?\](?P=lseq)\])
   | (?P<string>"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*')
+  | (?P<badstring>["'])
   | (?P<badop>!=|&&|\|\|)
   | (?P<name>[A-Za-z_][A-Za-z0-9_]*)
   | (?P<bracket>[(){}\[\]])
@@ -52,7 +56,9 @@ def check_file(path):
         if kind == "newline":
             line += 1
             continue
-        if kind == "badop":
+        if kind == "badstring":
+            errors.append(f"{path.name}:{line}: string never closed on this line (write line breaks as \\n)")
+        elif kind == "badop":
             errors.append(f"{path.name}:{line}: '{value}' is not a Lua operator")
         elif kind == "bracket":
             if value in "({[":
@@ -87,11 +93,19 @@ def check_file(path):
     for char, opened in brackets:
         errors.append(f"{path.name}:{opened}: '{char}' is never closed")
 
-    # Top-level assignment to a bare name = a global.
     for number, raw in enumerate(text.splitlines(), 1):
+        # Top-level assignment to a bare name = a global.
         g = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*=[^=]", raw)
         if g and g.group(1) not in ALLOWED_GLOBALS:
             errors.append(f"{path.name}:{number}: global assignment to '{g.group(1)}'")
+        code = raw.split("--", 1)[0]
+        # SecurePostHook only takes tables; tooltips and other controls are userdata.
+        h = re.search(r"SecurePostHook\(\s*([A-Za-z_]\w*(?:Tooltip|Control|Window)\b)", code)
+        if h:
+            errors.append(f"{path.name}:{number}: SecurePostHook on control '{h.group(1)}'; use ZO_PostHook")
+        # A call that returns nothing (bare `return`, select() past the end) makes tonumber throw.
+        if re.search(r"\btonumber\(\s*[A-Za-z_][\w.:]*\(", code):
+            errors.append(f"{path.name}:{number}: tonumber() of a call result; capture it in a local first")
     return errors
 
 

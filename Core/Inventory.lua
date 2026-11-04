@@ -13,9 +13,13 @@ local GENERIC_LINK = "|H1:item:%d:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0|h|h"
 local stock = {}
 local dirty = true
 
+-- Whether the player has protected this item: locked in game, or marked with any FCO
+-- ItemSaver icon. Protected items are never handed in, deconstructed, junked, destroyed or
+-- spent, with no setting to turn that off. The game enforces its own lock, but FCO ItemSaver
+-- only guards the game's windows, so an addon calling the API directly has to check itself.
 -- The game only lets players lock equippable gear, so for materials, consumables and glyphs
 -- this is only ever true through an FCO ItemSaver mark.
-local function IsSlotLocked(bagId, slotIndex)
+function Inventory.IsProtected(bagId, slotIndex)
     if bagId == BAG_VIRTUAL then
         return false
     end
@@ -24,22 +28,29 @@ local function IsSlotLocked(bagId, slotIndex)
     end
     -- -1 asks FCO ItemSaver about every marker icon at once.
     if FCOIS and FCOIS.IsMarked then
-        return FCOIS.IsMarked(bagId, slotIndex, -1) == true
+        local ok, marked = pcall(FCOIS.IsMarked, bagId, slotIndex, -1)
+        return ok and marked == true
     end
     return false
 end
+local IsSlotLocked = Inventory.IsProtected
+
+local stackCount = 0
 
 local function Rebuild()
     ZO_ClearTable(stock)
+    stackCount = 0
     local linkCache = WC.linkCache
     for _, bagId in ipairs(STOCK_BAGS) do
         local slotIndex = ZO_GetNextBagSlotIndex(bagId)
         while slotIndex do
             local itemId = GetItemId(bagId, slotIndex)
             if itemId and itemId ~= 0 then
+                stackCount = stackCount + 1
                 local count, maxCount = GetSlotStackSize(bagId, slotIndex)
                 local entry = stock[itemId]
                 if not entry then
+                    -- The link is read once per item, not once per stack.
                     entry = {
                         backpack  = 0,
                         bank      = 0,
@@ -49,9 +60,6 @@ local function Rebuild()
                         stackable = maxCount > 1,
                     }
                     stock[itemId] = entry
-                elseif not entry.mixedLinks and GetItemLink(bagId, slotIndex) ~= entry.link then
-                    -- Same ID, different link (e.g. potions of different levels).
-                    entry.mixedLinks = true
                 end
                 if bagId == BAG_BACKPACK then
                     entry.backpack = entry.backpack + count
@@ -74,14 +82,39 @@ local function Rebuild()
     dirty = false
 end
 
-local function OnInventoryChanged()
+-- Forces a full stock scan now; returns the number of stacks read (for /wc perf).
+function Inventory.Rescan()
+    Rebuild()
+    return stackCount
+end
+
+local listeners = {}
+
+-- Single-slot updates pass the bag and slot on; a full update passes nothing.
+local function OnSlotChanged(_, bagId, slotIndex)
     dirty = true
+    for _, listener in ipairs(listeners) do
+        listener(bagId, slotIndex)
+    end
+end
+
+local function OnFullUpdate()
+    dirty = true
+    for _, listener in ipairs(listeners) do
+        listener()
+    end
+end
+
+-- Called on every bag change with (bagId, slotIndex), or with nothing for a full update.
+-- Listeners should only mark themselves dirty; real work happens later, when something asks.
+function Inventory.AddListener(listener)
+    listeners[#listeners + 1] = listener
 end
 
 function Inventory.Init()
     local namespace = WC.name .. "Inventory"
-    EVENT_MANAGER:RegisterForEvent(namespace, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, OnInventoryChanged)
-    EVENT_MANAGER:RegisterForEvent(namespace, EVENT_INVENTORY_FULL_UPDATE, OnInventoryChanged)
+    EVENT_MANAGER:RegisterForEvent(namespace, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, OnSlotChanged)
+    EVENT_MANAGER:RegisterForEvent(namespace, EVENT_INVENTORY_FULL_UPDATE, OnFullUpdate)
 end
 
 -- Bag events don't fire when FCO ItemSaver marks change, so callers that are about to plan
@@ -91,7 +124,7 @@ function Inventory.Invalidate()
 end
 
 -- Returns { backpack, bank, craftBag, locked, total, usable } for one item ID.
--- "locked" is only subtracted from "usable" when the Don't use locked items setting is on.
+-- "locked" counts protected items (see IsProtected) and is never part of "usable".
 function Inventory.GetStock(itemId)
     if dirty then
         Rebuild()
@@ -100,7 +133,7 @@ function Inventory.GetStock(itemId)
     local backpack = entry and entry.backpack or 0
     local bank     = entry and entry.bank or 0
     local craftBag = entry and entry.craftBag or 0
-    local locked   = (entry and WC.settings.respectLocks) and entry.locked or 0
+    local locked   = entry and entry.locked or 0
     local total    = backpack + bank + craftBag
     return {
         backpack = backpack,
@@ -112,11 +145,10 @@ function Inventory.GetStock(itemId)
     }
 end
 
--- Best link we know for an item ID: a real one seen in the inventory, else a bare one.
+-- Best link we know for an item ID: a real one seen in the inventory, else a bare one. The
+-- link cache is saved between sessions, so this never forces a scan; new items join it at the
+-- next stock scan.
 function Inventory.GetLink(itemId)
-    if dirty then
-        Rebuild()
-    end
     return WC.linkCache[itemId] or string.format(GENERIC_LINK, itemId)
 end
 
@@ -125,9 +157,22 @@ end
 -- and IDs seen with more than one link are skipped. Returns checked, skipped, mismatches.
 function Inventory.SelfTest()
     Rebuild()
+    -- Same ID, different link (e.g. potions of different levels): the game counts those apart.
+    -- Only the self-test needs this, so the normal scan doesn't pay for it.
+    local mixed = {}
+    for _, bagId in ipairs(STOCK_BAGS) do
+        local slotIndex = ZO_GetNextBagSlotIndex(bagId)
+        while slotIndex do
+            local entry = stock[GetItemId(bagId, slotIndex)]
+            if entry and GetItemLink(bagId, slotIndex) ~= entry.link then
+                mixed[entry] = true
+            end
+            slotIndex = ZO_GetNextBagSlotIndex(bagId, slotIndex)
+        end
+    end
     local checked, skipped, mismatches = 0, 0, {}
     for itemId, entry in pairs(stock) do
-        if not entry.stackable or entry.mixedLinks then
+        if not entry.stackable or mixed[entry] then
             skipped = skipped + 1
         else
             checked = checked + 1

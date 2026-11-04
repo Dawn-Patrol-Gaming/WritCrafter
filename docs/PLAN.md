@@ -53,7 +53,7 @@ Legend: **Keep** = in v1 · **Merge** = kept, folded into a shared feature · **
 | Queue all sealed writs | **Merge** | Into the queue window's "Enqueue All" (§2.6.1). |
 | Withdraw writ items from bank, auto bank dialog, despawn banker | **Keep** | One shared bank module. |
 | Style stones used (list) / "lowest amount first" | **Merge** | Flipped to **most first** (R6). The per-style allow list stays. |
-| Mimic stones for master writs (never / always / if no stone / if price > 1k / > 3k) | **Keep** | Default "if style material is too expensive" (§5.5). |
+| Mimic stones for master writs (never / always / if no stone / if price > 1k / > 3k) | **Keep** | Default "when needed": style material too expensive (§5.5) or none in stock. Never replaces an unknown motif. |
 | Automatic quest dialog (boards, turn-ins, "Accept the contract") | **Keep** | |
 | Abandon "deliver \<item\>" writs | **Merge** | One case of the general reject engine. |
 | Craft multiplier / smart multiplier (3-day cycle) | **Later** | Not picked for v1. |
@@ -101,7 +101,7 @@ Only the parts writs need are rebuilt (written fresh, using LLC only as an API r
 | Bulk creation + quantity | **Merge** | Consumable multiplier. |
 | Retrieve from bank + delay | **Merge** | Shared bank module. |
 | Auto exit station | **Merge** | |
-| Don't use locked items (FCOItemSaver) | **Keep** | Optional dependency. |
+| Don't use locked items (FCOItemSaver) | **Keep, always on** | No setting: game-locked and FCO ItemSaver-marked items are never handed in, spent, deconstructed, junked or destroyed. FCOIS only guards the game's windows, so WritCrafter checks marks itself. Optional dependency. |
 | Context menu craft/cancel sealed writ | **Merge** | |
 | Log / debug log toggles | **Merge** | One log-level setting. |
 
@@ -242,8 +242,8 @@ Implementation: a post-hook on the inventory list row setup for each bag's list 
 | LibAsync | **Required** | Potion search + alchemy solver off the main frame |
 | LibEsoHubPrices | **Optional** | Read directly; LibPrice has no ESO-Hub source, and it's the best-covered source in your data |
 | LibMainMenu-2.0 | **Optional** | Main-menu button for potion search |
-| LibSets | **Optional** | Set names / trait counts in tooltips |
-| LibCharacterKnowledge | **Optional** | "An alt can craft this" in tooltips |
+| LibSets | **Required** | Traits needed per crafted set (rejects writs you can't craft) |
+| LibCharacterKnowledge | **Required** | Motif knowledge from anywhere, not just at a station |
 | FCOItemSaver | **Optional** | Locked-item protection |
 | LibLazyCrafting | **Dropped** | Absorbed |
 | LibAlchemy | **Dropped** | Optimises by price, not stock; its U51 DB is only a cross-check |
@@ -353,7 +353,8 @@ Dragon Bone ~5,900 · Pristine Daedric Heart ~3,750 · Stendarr Stamp ~4,400 · 
 | Enchanting | Gold glyphs | Kuta (§5.2) and the gold toggle (R4) |
 | Jewelry | Infused, Harmony, Triune, Swift, Bloodthirsty, Protective | §5.3 |
 | BS / CL / WW | Nirnhoned | §5.3 |
-| BS / CL / WW / JW | Motif unknown and mimic policy "never" | Can't craft |
+| BS / CL / WW / JW | Motif unknown (a mimic stone only replaces the material of a known style) | Can't craft |
+| BS / CL / WW / JW | Style material too expensive and mimic policy "never" | Rejected |
 | Smithing sets | Set trait count not met / set unknown | Can't craft |
 | Provisioning | Recipe unknown; any ingredient too expensive | §5.4 |
 | Alchemy | Any combo needing a rejected reagent; known-impossible writ | §3, §4, §5.1 |
@@ -378,10 +379,32 @@ WritCrafter/
   Writs/                   Daily (journal parsing, auto-abandon), Master (sealed-writ link parsing, auto-accept, queue)
   Solver/Alchemy.lua       valid combos → filter → max-min-stock → price tie-break
   Rewards/                 container looting, per-type actions, valuable alerts
-  UI/                      Tooltip, InventoryIcons, StationPanel, ContextMenu, QueueWindow, PotionSearch (LibAlchemyStation tab), Settings
+  UI/                      Tooltip, InventoryIcons, StationPanel, ContextMenu, QueueWindow, PotionSearch (LibAlchemyStation tab), Settings,
+                           ExclusionsWindow (material exclusions: full per-category lists rebuilt on open, opened from the
+                           settings' category buttons or /wc exclusions; the settings panel keeps only non-item options)
 ```
 
 Every planned craft is checked with `DoesItemLinkFulfillJournalQuestCondition` before crafting, so a wrong guess never wastes materials.
+
+### 7.1 Only run when there's writ work
+WritCrafter is only for crafting writs, so with nothing writ-related in play it should cost next to nothing. **Writ work** means either of:
+- **sealed master writs** in the backpack or bank, or
+- **crafting writ quests** in the journal: daily writs (all seven crafts) and accepted master writs.
+
+With neither, WritCrafter stays idle: a bag change costs one item-type check of the changed slot (no bag scan, no list redraw), opening a crafting station does nothing, and craft bag changes are ignored outright (materials are never writ items). A single `HasWritWork()` check, kept current by bag changes for sealed writs and by `EVENT_QUEST_ADDED` / `EVENT_QUEST_REMOVED` / `EVENT_QUEST_COMPLETE` for quests, gates everything below.
+
+| Feature | Runs when |
+|---|---|
+| Writ tooltips | hovering a sealed writ (always on demand) |
+| Badges and already-crafted matching (M2) | sealed writs exist |
+| Already-crafted matching for daily writs (M4) | daily writ quests exist |
+| Crafting engine, station panel, auto-craft (M3–M5) | writ quests exist (daily or accepted master) |
+| Queue window (M5) | sealed writs or master writ quests exist |
+| Reward handling (M6) | writ reward containers arrive (turn-in), regardless of the above |
+
+Everything else stays on demand: rules, prices and the alchemy solver run only when a tooltip or plan asks; stock is scanned only when asked.
+
+**Status:** the sealed-writ half is built (M2: `Reservations` tracks the sealed writ count and ignores irrelevant bag changes). The quest half and `HasWritWork()` arrive with the quest code in M3/M4; M2 has no quest-driven features yet.
 
 ---
 
@@ -402,7 +425,7 @@ Testing: pure logic (solver, rules, link parsing, price defaults) gets offline L
 
 ## 9. Defaults assumed unless you say otherwise
 - PC/Mac only, English only in v1.
-- Settings storage follows CharacterHomes: one account-wide table per megaserver (`WritCrafterVars[server][@account]["$AccountWide"]`). It holds a shared `settings` section and a `characters` table keyed by character ID (name stored alongside, so renames are safe). Default scope: **All my characters on this server**. A character can switch to **This character only**, which starts from a copy of the shared settings. Per-character writ state (queued/completed) goes in the same `characters` entry.
+- Settings storage follows CharacterHomes: one account-wide table per megaserver (`WritCrafterVars[server][@account]["$AccountWide"]`). It holds a shared `settings` section and a `characters` table keyed by character ID (name stored alongside, so renames are safe). Default scope: **Account Wide** (all your characters on that server). A character can switch to **This character only**, which starts from a copy of the shared settings. Per-character writ state (queued/completed) goes in the same `characters` entry.
 - All code written fresh; the replaced addons are API references only (WritWorthy reserves rights and discourages forks; LibLazyCrafting has no license file; LibEsoHubPrices is CC BY-NC-ND, so we read its data at runtime but never copy it into our files).
 - Stock = backpack + craft bag + bank; house storage not counted.
 - Daily writ rejection = auto-abandon with a chat message.

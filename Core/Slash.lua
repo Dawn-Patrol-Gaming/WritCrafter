@@ -67,11 +67,13 @@ local function ToggleDebug()
 end
 
 local COMMANDS = {
-    settings = function() WC.Settings.Open() end,
+    settings   = function() WC.Settings.Open() end,
+    exclusions = function() WC.ExclusionsWindow.Open() end,
     stock    = ShowStock,
     price    = ShowPrice,
     selftest = SelfTest,
     debug    = ToggleDebug,
+    perf     = function() WC.Perf.Run() end,
     help     = function() WC.Log.Say(GetString(SI_WRITCRAFTER_HELP)) end,
 }
 
