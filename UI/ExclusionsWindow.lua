@@ -128,14 +128,14 @@ local function BuildMembers()
     for _, aspect in pairs(Enchanting.ASPECTS) do
         Add(CRAFTING_TYPE_ENCHANTING, aspect)
     end
-    -- Provisioning: ingredients of the purple and gold food and drink master writs ask for.
-    -- Recipe lists also hold furnishing plans, so only provisioning-station recipes count.
+    -- Provisioning: ingredients of every food and drink recipe, since master writs can ask for
+    -- any quality. Recipe lists also hold furnishing plans, so only provisioning-station
+    -- recipes count.
     for listIndex = 1, GetNumRecipeLists() do
         local _, numRecipes = GetRecipeListInfo(listIndex)
         for recipeIndex = 1, numRecipes or 0 do
             local _, _, numIngredients, _, _, _, station = GetRecipeInfo(listIndex, recipeIndex)
-            local quality = select(5, GetRecipeResultItemInfo(listIndex, recipeIndex))
-            if station == CRAFTING_TYPE_PROVISIONING and quality and quality >= ITEM_DISPLAY_QUALITY_ARTIFACT then
+            if station == CRAFTING_TYPE_PROVISIONING then
                 for ingredientIndex = 1, numIngredients or 0 do
                     local link = GetRecipeIngredientItemLink(listIndex, recipeIndex, ingredientIndex)
                     Add(CRAFTING_TYPE_PROVISIONING, GetItemLinkItemId(link))
@@ -241,7 +241,12 @@ local function SetupRow(row, entry)
     local link = WC.Inventory.GetLink(entry.itemId)
     row:GetNamedChild("Check"):SetTexture(WC.Policy.IsExcluded(entry.itemId) and CHECKED or UNCHECKED)
     row:GetNamedChild("Icon"):SetTexture(GetItemLinkIcon(link))
-    row:GetNamedChild("Name"):SetText(GetItemQualityColor(GetItemLinkDisplayQuality(link)):Colorize(entry.name))
+    local name = GetItemQualityColor(GetItemLinkDisplayQuality(link)):Colorize(entry.name)
+    local unknown = WC.Data.Alchemy.UndiscoveredTraits(entry.itemId)
+    if unknown > 0 then
+        name = name .. "|cFF9933" .. zo_strformat(SI_WRITCRAFTER_TT_UNDISCOVERED, unknown) .. "|r"
+    end
+    row:GetNamedChild("Name"):SetText(name)
     row:GetNamedChild("Count"):SetText(ZO_CommaDelimitNumber(WC.Inventory.GetStock(entry.itemId).total))
     local gold = WC.Price.Get(link)
     row:GetNamedChild("Price"):SetText(gold and WC.Price.Format(gold) or "-")

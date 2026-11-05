@@ -72,6 +72,29 @@ ZO_CreateStringId("SI_WRITCRAFTER_ICON_OFFSET_TOOLTIP",        "Move the icon if
 -- Right-click menu
 ZO_CreateStringId("SI_WRITCRAFTER_MENU_MARK_EXPENSIVE",        "WritCrafter: exclude material")
 ZO_CreateStringId("SI_WRITCRAFTER_MENU_UNMARK_EXPENSIVE",      "WritCrafter: stop excluding material")
+ZO_CreateStringId("SI_WRITCRAFTER_MENU_QUEUE",                 "WritCrafter: craft this writ")
+ZO_CreateStringId("SI_WRITCRAFTER_MENU_UNQUEUE",               "WritCrafter: don't craft this writ")
+
+-- Crafting
+ZO_CreateStringId("SI_WRITCRAFTER_HEADER_CRAFTING",            "Crafting")
+ZO_CreateStringId("SI_WRITCRAFTER_AUTOCRAFT",                  "Craft queued writs at stations")
+ZO_CreateStringId("SI_WRITCRAFTER_AUTOCRAFT_TOOLTIP",          "Right-click a sealed master writ and choose \"WritCrafter: craft this writ\". Its item is crafted the next time you open the matching crafting station, using materials from your craft bag, backpack and bank.")
+ZO_CreateStringId("SI_WRITCRAFTER_QUEUE_ADDED",                "Queued. It will be crafted the next time you use a <<1>> station.")
+ZO_CreateStringId("SI_WRITCRAFTER_CRAFTING",                   "Crafting <<1>> x <<t:2>>")
+ZO_CreateStringId("SI_WRITCRAFTER_CRAFT_DONE",                 "Done: crafted for <<1>> queued <<2>> writ(s).")
+ZO_CreateStringId("SI_WRITCRAFTER_CRAFT_CANT",                 "Can't craft a queued writ: <<1>>")
+ZO_CreateStringId("SI_WRITCRAFTER_CRAFT_SKIPPED",              "Skipped a queued writ: <<1>>")
+ZO_CreateStringId("SI_WRITCRAFTER_CRAFT_NOT_YET",              "<<1>> crafting isn't built yet; its queued writs stay queued.")
+ZO_CreateStringId("SI_WRITCRAFTER_CRAFT_FAILED",               "Crafting stopped: <<1>>")
+ZO_CreateStringId("SI_WRITCRAFTER_IMPROVING",                  "Improving <<1>> to <<2>>")
+ZO_CreateStringId("SI_WRITCRAFTER_CRAFT_CANT_IMPROVE",         "it can't be improved to a guaranteed 100% here")
+ZO_CreateStringId("SI_WRITCRAFTER_CRAFT_BOOSTERS",             "improving needs <<1>> x <<2>>, and you have <<3>>")
+ZO_CreateStringId("SI_WRITCRAFTER_CRAFT_SET_LOCKED",           "<<1>> isn't unlocked at this Grand Master station")
+ZO_CreateStringId("SI_WRITCRAFTER_CRAFT_WRONG_STATION",        "this station can't make <<1>> pieces; use that set's station or a Grand Master station with it unlocked")
+ZO_CreateStringId("SI_WRITCRAFTER_CRAFT_STATION_NOT_READY",    "the station didn't switch to the writ's set; try again")
+ZO_CreateStringId("SI_WRITCRAFTER_CRAFT_MISSING",              "you don't have any <<1>>")
+ZO_CreateStringId("SI_WRITCRAFTER_CRAFT_WRONG_RESULT",         "the item it would make doesn't match the writ, so nothing was crafted (please report this)")
+ZO_CreateStringId("SI_WRITCRAFTER_CRAFT_UNRECOGNIZED",         "Crafted for <<t:1>>, but the result doesn't match the writ. Stopped for that writ; please report this.")
 
 -- Settings: diagnostics
 ZO_CreateStringId("SI_WRITCRAFTER_HEADER_DIAGNOSTICS",         "Diagnostics")
@@ -109,6 +132,8 @@ ZO_CreateStringId("SI_WRITCRAFTER_TT_CRAFTED",                 "already crafted"
 ZO_CreateStringId("SI_WRITCRAFTER_TT_SET_ASIDE",               "Set aside: <<1>>")
 ZO_CreateStringId("SI_WRITCRAFTER_TT_IN_BACKPACK",             "<<1>> in backpack")
 ZO_CreateStringId("SI_WRITCRAFTER_TT_IN_BANK",                 "<<1>> in bank")
+ZO_CreateStringId("SI_WRITCRAFTER_TT_UNDISCOVERED",            " - <<1>> trait(s) undiscovered")
+ZO_CreateStringId("SI_WRITCRAFTER_TT_QUEUED",                  "Queued: crafted at the next <<1>> station")
 ZO_CreateStringId("SI_WRITCRAFTER_TT_PARTIAL",                 " (<<1>> of <<2>> made)")
 ZO_CreateStringId("SI_WRITCRAFTER_TT_NEEDED",                  " (<<1>> needed)")
 ZO_CreateStringId("SI_WRITCRAFTER_TT_MATERIAL",                "<<1>> x <<2>> (have <<3>>)")

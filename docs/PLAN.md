@@ -150,6 +150,8 @@ Only the parts writs need are rebuilt (written fresh, using LLC only as an API r
 
 The time saver: **craft every sealed writ in your bag without accepting any of them**, then accept and turn them all in at once.
 
+**Right-click queueing stays permanently** (decided 2026-11-04): right-clicking a sealed writ offers "craft this writ" / "don't craft this writ", sharing the same per-character queue as the window. The window adds bulk actions and overview; it doesn't replace the right-click.
+
 Workflow:
 1. Open the window (`/wc` or a keybind). Every sealed writ in your bag is listed (bank too, if that setting is on).
 2. **Enqueue All**, or tick individual rows.

@@ -87,6 +87,23 @@ Alchemy.SOLVENTS = {
 -- Known Update 51 bug: this combination can't be crafted. Hold such writs until ZOS fixes it.
 Alchemy.IMPOSSIBLE = { [12] = true, [21] = true, [24] = true }  -- Cowardice + Detection + Hindrance
 
+-- How many of a reagent's four traits this character hasn't discovered yet (0 for anything
+-- that isn't a reagent). Crafting with an undiscovered trait is limited to one batch at a time.
+function Alchemy.UndiscoveredTraits(itemId)
+    if not Alchemy.REAGENTS[itemId] then
+        return 0
+    end
+    local link = WC.Inventory.GetLink(itemId)
+    local unknown = 0
+    for index = 1, GetMaxTraits() do
+        local known = GetItemLinkReagentTraitInfo(link, index)
+        if not known then
+            unknown = unknown + 1
+        end
+    end
+    return unknown
+end
+
 -- Which effects three reagents produce. Each effect pair is summed (+1 effect, -1 counter);
 -- 2 or more on one side gives that effect, so opposing reagents cancel out.
 function Alchemy.Combine(r1, r2, r3)

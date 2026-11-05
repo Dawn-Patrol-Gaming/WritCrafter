@@ -145,6 +145,37 @@ function Inventory.GetStock(itemId)
     }
 end
 
+-- Where a material can be used from at a crafting station: the craft bag, the backpack and the
+-- bank (stations have always drawn on all three; the game uses the craft bag first, then the
+-- backpack, then the bank). Skips FCO ItemSaver-marked stacks. Returns the bag and slot to use,
+-- in that same order (the craft bag, else the largest backpack stack, else the largest bank
+-- stack), and the total usable at a station; nil when there's none. Craft bag items stay
+-- usable after ESO Plus lapses, so its count is read whatever the subscription.
+local STATION_BAGS = { BAG_BACKPACK, BAG_BANK, BAG_SUBSCRIBER_BANK }
+
+function Inventory.FindForStation(itemId)
+    local bestBag, bestSlot, bestCount, bestRank, total = nil, nil, 0, nil, 0
+    local craftBagCount = GetSlotStackSize(BAG_VIRTUAL, itemId) or 0
+    if craftBagCount > 0 then
+        bestBag, bestSlot, bestCount, bestRank, total = BAG_VIRTUAL, itemId, craftBagCount, 0, craftBagCount
+    end
+    for _, bagId in ipairs(STATION_BAGS) do
+        local rank = bagId == BAG_BACKPACK and 1 or 2
+        local slotIndex = ZO_GetNextBagSlotIndex(bagId)
+        while slotIndex do
+            if GetItemId(bagId, slotIndex) == itemId and not Inventory.IsProtected(bagId, slotIndex) then
+                local count = GetSlotStackSize(bagId, slotIndex)
+                total = total + count
+                if not bestRank or rank < bestRank or (rank == bestRank and count > bestCount) then
+                    bestBag, bestSlot, bestCount, bestRank = bagId, slotIndex, count, rank
+                end
+            end
+            slotIndex = ZO_GetNextBagSlotIndex(bagId, slotIndex)
+        end
+    end
+    return bestBag, bestSlot, total
+end
+
 -- Best link we know for an item ID: a real one seen in the inventory, else a bare one. The
 -- link cache is saved between sessions, so this never forces a scan; new items join it at the
 -- next stock scan.

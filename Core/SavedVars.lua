@@ -20,6 +20,7 @@ WC.DEFAULTS = {
     ceilings          = { reagent = 300, rune = 500, trait = 1000, ingredient = 300 },
     mimic             = "needed",   -- WC.Policy.MIMIC_*
     maxGoldPerVoucher = 0,          -- 0 = off
+    autoCraft         = true,       -- craft queued writs at stations
     tooltip           = true,
     tooltipMaterials  = true,
     iconCrafted       = true,

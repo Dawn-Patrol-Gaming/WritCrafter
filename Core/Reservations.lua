@@ -94,19 +94,40 @@ local function ChestCut(equip, armor, icon)
     return (icon or ""):find("robe", 1, true) and "robe" or "jerkin"
 end
 
+-- Gear key. anyQuality leaves the quality out (a freshly crafted piece is white and is then
+-- improved); prospective accepts the link a craft would produce, which isn't flagged crafted.
+local function GearItemKey(link, anyQuality, prospective)
+    -- Gear writs accept CP150 or CP160 (the writ names only the material tier, and both
+    -- tiers use it); WritCrafter crafts CP150, which costs a tenth of the material.
+    local cp = GetItemLinkRequiredChampionPoints(link)
+    if (not prospective and not IsItemLinkCrafted(link)) or (cp ~= 150 and cp ~= 160) then
+        return nil
+    end
+    local equip, armor = GetItemLinkEquipType(link), GetItemLinkArmorType(link)
+    local style = IsJewelry(equip) and 0 or GetItemLinkItemStyle(link)
+    return Key("gear", select(6, GetItemLinkSetInfo(link, false)), GetItemLinkTraitInfo(link),
+        anyQuality and "*" or GetItemLinkFunctionalQuality(link), style, equip, armor,
+        GetItemLinkWeaponType(link), ChestCut(equip, armor, GetItemLinkInfo(link)))
+end
+
+local function GearWritKey(writ, anyQuality)
+    local t = writ.template
+    if not t then
+        return nil
+    end
+    local shape = TemplateShape(t)
+    local style = t.chapter and writ.style or 0
+    local cut = "-"
+    if t.robe ~= nil then
+        cut = t.robe and "robe" or "jerkin"
+    end
+    return Key("gear", writ.setId, writ.trait, anyQuality and "*" or writ.quality, style,
+        shape.equip, shape.armor, shape.weapon, cut)
+end
+
 local ITEM_KEYS = {
     [WC.Master.KIND_SMITHING] = function(link)
-        -- Gear writs accept CP150 or CP160 (the writ names only the material tier, and both
-        -- tiers use it); WritCrafter crafts CP150, which costs a tenth of the material.
-        local cp = GetItemLinkRequiredChampionPoints(link)
-        if not IsItemLinkCrafted(link) or (cp ~= 150 and cp ~= 160) then
-            return nil
-        end
-        local equip, armor = GetItemLinkEquipType(link), GetItemLinkArmorType(link)
-        local style = IsJewelry(equip) and 0 or GetItemLinkItemStyle(link)
-        return Key("gear", select(6, GetItemLinkSetInfo(link, false)), GetItemLinkTraitInfo(link),
-            GetItemLinkFunctionalQuality(link), style, equip, armor, GetItemLinkWeaponType(link),
-            ChestCut(equip, armor, GetItemLinkInfo(link)))
+        return GearItemKey(link, false, false)
     end,
     [WC.Master.KIND_ENCHANTING] = function(link)
         local cp = GetItemLinkRequiredChampionPoints(link)
@@ -122,26 +143,15 @@ local ITEM_KEYS = {
         return Key("potion", itemType, unpack(PotionEffects(link)))
     end,
     [WC.Master.KIND_PROVISIONING] = function(link)
-        if GetItemLinkDisplayQuality(link) < ITEM_DISPLAY_QUALITY_ARTIFACT then
-            return nil   -- master writs ask for purple and gold food and drink
-        end
+        -- No quality filter: master writs also ask for blue food and drink (e.g. Orzorga's
+        -- Red Frothgar). The key is the exact item, so only the right dish ever matches.
         return Key("food", GetItemLinkItemId(link))
     end,
 }
 
 local WRIT_KEYS = {
     [WC.Master.KIND_SMITHING] = function(writ)
-        local t = writ.template
-        if not t then
-            return nil
-        end
-        local shape = TemplateShape(t)
-        local style = t.chapter and writ.style or 0
-        local cut = "-"
-        if t.robe ~= nil then
-            cut = t.robe and "robe" or "jerkin"
-        end
-        return Key("gear", writ.setId, writ.trait, writ.quality, style, shape.equip, shape.armor, shape.weapon, cut)
+        return GearWritKey(writ, false)
     end,
     [WC.Master.KIND_ENCHANTING] = function(writ)
         if not writ.level then
@@ -267,6 +277,28 @@ local function Rebuild()
     end
     writCount = #writs
     dirty = false
+end
+
+-- Whether an item link (e.g. the result a craft would produce) satisfies a writ. The crafting
+-- engine checks this before spending anything.
+function Reservations.Matches(link, writ)
+    local itemType = GetItemLinkItemType(link)
+    local kind = CANDIDATE_TYPES[itemType]
+    if kind ~= writ.kind then
+        return false
+    end
+    local key = ITEM_KEYS[kind](link, itemType)
+    return key ~= nil and key == WritKey(writ)
+end
+
+-- Gear only: whether a piece is the writ's item apart from its quality, i.e. the base piece to
+-- improve. prospective: the link is a craft's predicted result (not yet flagged crafted).
+function Reservations.MatchesBase(link, writ, prospective)
+    if writ.kind ~= WC.Master.KIND_SMITHING then
+        return false
+    end
+    local key = GearItemKey(link, true, prospective)
+    return key ~= nil and key == GearWritKey(writ, true)
 end
 
 -- Forces a full re-match now; returns the writ and candidate counts (for /wc perf).

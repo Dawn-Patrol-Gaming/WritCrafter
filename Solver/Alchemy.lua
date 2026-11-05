@@ -92,7 +92,9 @@ end
 --   blocked:     when best is nil, the possible combo needing the fewest disallowed reagents
 --   disallowed:  the disallowed reagents in that blocked combo
 --   anyPossible: whether any combination makes these effects at all
-function Solver.Choose(effects)
+-- stockOf (optional): itemId -> count to rank by; defaults to everything usable. The crafting
+-- engine passes what's usable at the station (backpack and craft bag).
+function Solver.Choose(effects, stockOf)
     local combos = AllCombos(effects)
     if #combos == 0 then
         return nil, nil, nil, false
@@ -101,7 +103,7 @@ function Solver.Choose(effects)
     local allowed, stock = {}, {}
     for itemId in pairs(WC.Data.Alchemy.REAGENTS) do
         allowed[itemId] = Policy.IsReagentAllowed(itemId)
-        stock[itemId] = Inventory.GetStock(itemId).usable
+        stock[itemId] = stockOf and stockOf(itemId) or Inventory.GetStock(itemId).usable
     end
     -- Prices are only looked up to break ties.
     local best, bestStock, bestPrice
