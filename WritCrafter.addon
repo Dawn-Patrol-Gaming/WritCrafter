@@ -39,6 +39,13 @@ UI/Tooltip.lua
 UI/InventoryIcons.lua
 UI/ContextMenu.lua
 
+Engine/Queue.lua
+Engine/Engine.lua
+Engine/Provisioning.lua
+Engine/Alchemy.lua
+Engine/Enchanting.lua
+Engine/Smithing.lua
+
 Core/Perf.lua
 Core/Slash.lua
 Main.lua

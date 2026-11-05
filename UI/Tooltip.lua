@@ -59,6 +59,10 @@ local function AddWritLines(control, link, uid)
         end
         control:AddLine(Color(GREY, zo_strformat(SI_WRITCRAFTER_TT_SET_ASIDE, table.concat(places, ", "))))
     end
+    if uid and WC.Queue.Has(uid) then
+        control:AddLine(Color(GOLD, zo_strformat(SI_WRITCRAFTER_TT_QUEUED,
+            zo_strformat("<<1>>", GetCraftingSkillName(writ.craft)))))
+    end
     local reasonColor = verdict.status == Rules.CANNOT and RED or ORANGE
     for _, reason in ipairs(verdict.reasons) do
         control:AddLine(Color(reasonColor, reason))
@@ -72,7 +76,12 @@ local function AddWritLines(control, link, uid)
         for _, mat in ipairs(verdict.materials) do
             local have = WC.Inventory.GetStock(mat.itemId).usable
             local color = have >= mat.count and GREY or ORANGE
-            lines[#lines + 1] = Color(color, zo_strformat(SI_WRITCRAFTER_TT_MATERIAL, mat.count, ItemName(mat.itemId), have))
+            local line = Color(color, zo_strformat(SI_WRITCRAFTER_TT_MATERIAL, mat.count, ItemName(mat.itemId), have))
+            local unknown = WC.Data.Alchemy.UndiscoveredTraits(mat.itemId)
+            if unknown > 0 then
+                line = line .. Color(ORANGE, zo_strformat(SI_WRITCRAFTER_TT_UNDISCOVERED, unknown))
+            end
+            lines[#lines + 1] = line
         end
         control:AddLine(table.concat(lines, "\n"))
     end

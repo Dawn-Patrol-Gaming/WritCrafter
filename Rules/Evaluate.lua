@@ -171,7 +171,16 @@ local function EvaluateAlchemy(verdict, writ, statusOnly)
         Fail(verdict, Rules.CANNOT, SI_WRITCRAFTER_REASON_NO_COMBO)
         return
     end
+    -- Batches from this character's real yield (skill passives) when the solvent is on hand;
+    -- otherwise the shipped estimate, which assumes maxed passives.
     local crafts = writ.solvent.crafts
+    local solventBag, solventSlot = WC.Inventory.FindForStation(writ.solvent.itemId)
+    if solventBag then
+        local perCraft = GetAlchemyResultQuantity(solventBag, solventSlot, 1)
+        if perCraft and perCraft > 0 then
+            crafts = zo_ceil(writ.required / perCraft)
+        end
+    end
     local combo = best or blocked
     if not best then
         Fail(verdict, Rules.REJECTED, SI_WRITCRAFTER_REASON_REAGENTS, NameList(disallowed))

@@ -182,6 +182,8 @@ end
 
 local function IconControls()
     return {
+        { type = "header", name = GetString(SI_WRITCRAFTER_HEADER_CRAFTING) },
+        Checkbox("autoCraft", SI_WRITCRAFTER_AUTOCRAFT, SI_WRITCRAFTER_AUTOCRAFT_TOOLTIP),
         { type = "header", name = GetString(SI_WRITCRAFTER_HEADER_ICONS) },
         Checkbox("iconCrafted", SI_WRITCRAFTER_ICON_CRAFTED, SI_WRITCRAFTER_ICON_CRAFTED_TOOLTIP),
         Checkbox("iconRejected", SI_WRITCRAFTER_ICON_REJECTED, SI_WRITCRAFTER_ICON_REJECTED_TOOLTIP),
