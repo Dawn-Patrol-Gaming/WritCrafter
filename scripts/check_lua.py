@@ -8,6 +8,7 @@ Not a full parser. It catches the mistakes that most often stop an ESO addon fro
   - manifest entries that don't exist, and .lua files the manifest forgot
   - SecurePostHook on a control (it only accepts tables)
   - tonumber() wrapped directly around a call, which throws when the call returns nothing
+  - `local a, b = x and f()`: and/or keep only a call's first value, so b is always nil
 
 Usage: python -I scripts/check_lua.py
 """
@@ -93,6 +94,24 @@ def check_file(path):
     for char, opened in brackets:
         errors.append(f"{path.name}:{opened}: '{char}' is never closed")
 
+    # A local function called on a line above its definition, with no forward declaration
+    # ("local Name" on its own) above the call: Lua resolves that call to a missing global.
+    lines = text.splitlines()
+    for number, raw in enumerate(lines, 1):
+        d = re.match(r"^\s*local\s+function\s+([A-Za-z_]\w*)\s*\(", raw)
+        if not d:
+            continue
+        name = d.group(1)
+        call = re.compile(r"(?<![\w.:])" + re.escape(name) + r"\s*\(")
+        declared = re.compile(r"^\s*local\s+" + re.escape(name) + r"\s*$")
+        for earlier, line_text in enumerate(lines[:number - 1], 1):
+            if declared.match(line_text):
+                break
+            code = line_text.split("--", 1)[0]
+            if call.search(code):
+                errors.append(f"{path.name}:{earlier}: calls local function '{name}' before it's defined (line {number})")
+                break
+
     for number, raw in enumerate(text.splitlines(), 1):
         # Top-level assignment to a bare name = a global.
         g = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*=[^=]", raw)
@@ -106,6 +125,10 @@ def check_file(path):
         # A call that returns nothing (bare `return`, select() past the end) makes tonumber throw.
         if re.search(r"\btonumber\(\s*[A-Za-z_][\w.:]*\(", code):
             errors.append(f"{path.name}:{number}: tonumber() of a call result; capture it in a local first")
+        # `a, b = x and f()`: and/or truncate the call to one value, so b is always nil.
+        m = re.match(r"^\s*(?:local\s+)?[A-Za-z_][\w.]*\s*,\s*[A-Za-z_][\w.,\s]*=\s*(.*)$", code)
+        if m and re.search(r"\b(?:and|or)\s+[A-Za-z_][\w.:]*\(", m.group(1)) and "{" not in m.group(1):
+            errors.append(f"{path.name}:{number}: several values from 'x and f()'; and/or keep only the first, use an if")
     return errors
 
 

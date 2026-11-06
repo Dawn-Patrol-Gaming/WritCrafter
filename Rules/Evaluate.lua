@@ -121,6 +121,7 @@ local function EvaluateSmithing(verdict, writ, statusOnly)
         AddMaterial(verdict, styleItemId, 1)
     end
     for _, mat in ipairs(WC.Data.Smithing.ImprovementMaterials(t.craft, writ.quality)) do
+        CheckExpensive(verdict, mat.itemId)
         AddMaterial(verdict, mat.itemId, mat.count)
     end
     verdict.setName = setName
@@ -222,9 +223,33 @@ local EVALUATORS = {
 -- Status-only cache for inventory icons, which redraw constantly while scrolling. A status
 -- depends on settings and character knowledge, not stock, so it's cleared on those changes.
 local statusCache = {}
+-- Materials each writ is short of, keyed by link. Depends on stock, so it's also cleared on
+-- every bag change (see Rules.Init).
+local shortCache = {}
 
 function Rules.ClearCache()
     ZO_ClearTable(statusCache)
+    ZO_ClearTable(shortCache)
+end
+
+-- Materials a writ needs that you don't have enough of, from its full material list (no
+-- prices): { { itemId, need, have }, ... }, empty when everything's on hand. Each writ is
+-- checked on its own, so two writs sharing one stack can each look covered.
+function Rules.Shortages(writ)
+    local hit = shortCache[writ.link]
+    if not hit then
+        local verdict = NewVerdict(writ)
+        EVALUATORS[writ.kind](verdict, writ, false)
+        hit = {}
+        for _, mat in ipairs(verdict.materials) do
+            local have = WC.Inventory.GetStock(mat.itemId).usable
+            if have < mat.count then
+                hit[#hit + 1] = { itemId = mat.itemId, need = mat.count, have = have }
+            end
+        end
+        shortCache[writ.link] = hit
+    end
+    return hit
 end
 
 function Rules.GetStatus(writ)
@@ -245,6 +270,13 @@ function Rules.Init()
     }) do
         EVENT_MANAGER:RegisterForEvent(namespace, event, Rules.ClearCache)
     end
+    -- Stock changed: forget shortages and redraw badges (only if any were worked out).
+    WC.Inventory.AddListener(function()
+        if next(shortCache) then
+            ZO_ClearTable(shortCache)
+            WC.InventoryIcons.OnWritItemsChanged()
+        end
+    end)
 end
 
 -- Full verdict for one sealed master writ: status, reasons, notes, materials and cost.

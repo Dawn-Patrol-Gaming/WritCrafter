@@ -183,10 +183,28 @@ end
 local function IconControls()
     return {
         { type = "header", name = GetString(SI_WRITCRAFTER_HEADER_CRAFTING) },
+        Checkbox("autoCraftDaily", SI_WRITCRAFTER_AUTOCRAFT_DAILY, SI_WRITCRAFTER_AUTOCRAFT_DAILY_TOOLTIP),
+        Checkbox("bankWithdraw", SI_WRITCRAFTER_BANK_WITHDRAW, SI_WRITCRAFTER_BANK_WITHDRAW_TOOLTIP),
+        Checkbox("craftNotice", SI_WRITCRAFTER_CRAFT_NOTICE, SI_WRITCRAFTER_CRAFT_NOTICE_TOOLTIP),
+        {
+            type     = "submenu",
+            name     = GetString(SI_WRITCRAFTER_SOUNDS_SUBMENU),
+            controls = {
+                Checkbox("soundStart", SI_WRITCRAFTER_SOUND_START, SI_WRITCRAFTER_SOUND_START_TOOLTIP),
+                Checkbox("soundDone", SI_WRITCRAFTER_SOUND_DONE, SI_WRITCRAFTER_SOUND_DONE_TOOLTIP),
+                Checkbox("soundProblem", SI_WRITCRAFTER_SOUND_PROBLEM, SI_WRITCRAFTER_SOUND_PROBLEM_TOOLTIP),
+                Checkbox("soundSlot", SI_WRITCRAFTER_SOUND_SLOT, SI_WRITCRAFTER_SOUND_SLOT_TOOLTIP),
+                Checkbox("soundRunes", SI_WRITCRAFTER_SOUND_RUNES, SI_WRITCRAFTER_SOUND_RUNES_TOOLTIP),
+                Checkbox("soundSuccess", SI_WRITCRAFTER_SOUND_SUCCESS, SI_WRITCRAFTER_SOUND_SUCCESS_TOOLTIP),
+            },
+        },
+        Checkbox("leaveStation", SI_WRITCRAFTER_LEAVE_STATION, SI_WRITCRAFTER_LEAVE_STATION_TOOLTIP),
         Checkbox("autoCraft", SI_WRITCRAFTER_AUTOCRAFT, SI_WRITCRAFTER_AUTOCRAFT_TOOLTIP),
         { type = "header", name = GetString(SI_WRITCRAFTER_HEADER_ICONS) },
         Checkbox("iconCrafted", SI_WRITCRAFTER_ICON_CRAFTED, SI_WRITCRAFTER_ICON_CRAFTED_TOOLTIP),
         Checkbox("iconRejected", SI_WRITCRAFTER_ICON_REJECTED, SI_WRITCRAFTER_ICON_REJECTED_TOOLTIP),
+        Checkbox("iconMissing", SI_WRITCRAFTER_ICON_MISSING, SI_WRITCRAFTER_ICON_MISSING_TOOLTIP),
+        Checkbox("iconQueued", SI_WRITCRAFTER_ICON_QUEUED, SI_WRITCRAFTER_ICON_QUEUED_TOOLTIP),
         Checkbox("iconReserved", SI_WRITCRAFTER_ICON_RESERVED, SI_WRITCRAFTER_ICON_RESERVED_TOOLTIP),
         OffsetSlider("iconOffsetX", SI_WRITCRAFTER_ICON_OFFSET_X),
         OffsetSlider("iconOffsetY", SI_WRITCRAFTER_ICON_OFFSET_Y),

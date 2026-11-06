@@ -78,6 +78,19 @@ Smithing.IMPROVE_MATS = {
 }
 Smithing.IMPROVE_COUNTS = { 2, 3, 4, 8 }
 
+-- [itemId] = craft, for every improvement material above.
+local improveCraft = {}
+for craft, ids in pairs(Smithing.IMPROVE_MATS) do
+    for _, itemId in ipairs(ids) do
+        improveCraft[itemId] = craft
+    end
+end
+
+-- The craft an improvement material belongs to, or nil if it isn't one.
+function Smithing.ImprovementCraft(itemId)
+    return improveCraft[itemId]
+end
+
 -- Required master writ quality (field 12) is a functional quality: 2 green .. 5 gold.
 -- Returns { {itemId, count}, ... } of improvement materials to reach it from white.
 function Smithing.ImprovementMaterials(craft, quality)

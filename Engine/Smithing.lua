@@ -9,6 +9,19 @@ local WC = WritCrafter
 --      chance.
 -- Everything is checked against the writ before anything is spent.
 
+local CREATE_GLOW = {
+    [CRAFTING_TYPE_BLACKSMITHING]   = SOUNDS.BLACKSMITH_CREATE_TOOLTIP_GLOW,
+    [CRAFTING_TYPE_CLOTHIER]        = SOUNDS.CLOTHIER_CREATE_TOOLTIP_GLOW,
+    [CRAFTING_TYPE_WOODWORKING]     = SOUNDS.WOODWORKER_CREATE_TOOLTIP_GLOW,
+    [CRAFTING_TYPE_JEWELRYCRAFTING] = SOUNDS.JEWELRYCRAFTER_CREATE_TOOLTIP_GLOW,
+}
+local IMPROVE_GLOW = {
+    [CRAFTING_TYPE_BLACKSMITHING]   = SOUNDS.BLACKSMITH_IMPROVE_TOOLTIP_GLOW_SUCCESS,
+    [CRAFTING_TYPE_CLOTHIER]        = SOUNDS.CLOTHIER_IMPROVE_TOOLTIP_GLOW_SUCCESS,
+    [CRAFTING_TYPE_WOODWORKING]     = SOUNDS.WOODWORKER_IMPROVE_TOOLTIP_GLOW_SUCCESS,
+    [CRAFTING_TYPE_JEWELRYCRAFTING] = SOUNDS.JEWELRYCRAFTER_IMPROVE_TOOLTIP_GLOW_SUCCESS,
+}
+
 local function ItemName(link)
     return zo_strformat("<<t:1>>", GetItemLinkName(link))
 end
@@ -57,12 +70,18 @@ local function Improve(writ, bagId, slotIndex, quality)
         return false, GetString(SI_WRITCRAFTER_CRAFT_CANT_IMPROVE)
     end
     local boosterName, _, have = GetSmithingImprovementItemInfo(craft, quality)
+    local boosterId = GetItemLinkItemId(GetSmithingImprovementItemLink(craft, quality))
+    if boosterId ~= 0 and WC.Policy.IsExcluded(boosterId) then
+        return false, zo_strformat(SI_WRITCRAFTER_REASON_EXPENSIVE, zo_strformat("<<t:1>>", boosterName or ""))
+    end
     if (have or 0) < boosters then
         return false, zo_strformat(SI_WRITCRAFTER_CRAFT_BOOSTERS, boosters, boosterName or "", have or 0)
     end
     local link = GetItemLink(bagId, slotIndex)
     WC.Log.Say(zo_strformat(SI_WRITCRAFTER_IMPROVING, ItemName(link),
-        GetString("SI_ITEMDISPLAYQUALITY", quality + 1)))
+        GetString("SI_ITEMDISPLAYQUALITY", quality + 1),
+        (boosters > 1 and (boosters .. " x ") or "") .. zo_strformat("<<t:1>>", boosterName or "")))
+    WC.Engine.CraftSounds({ SOUNDS.SMITHING_ITEM_TO_IMPROVE_PLACED }, IMPROVE_GLOW[craft])
     ImproveSmithingItem(bagId, slotIndex, boosters)
     return true
 end
@@ -150,7 +169,19 @@ local function CraftSmithing(writ, status)
     if not maxIterations or maxIterations == 0 then
         return false, GetString("SI_TRADESKILLRESULT", result)
     end
-    WC.Log.Say(zo_strformat(SI_WRITCRAFTER_CRAFTING, 1, GetItemLinkName(resultLink)))
+    local materials = {
+        { itemId = GetItemLinkItemId(GetSmithingPatternMaterialItemLink(patternIndex, materialIndex)), count = quantity },
+    }
+    if writ.trait ~= ITEM_TRAIT_TYPE_NONE then
+        materials[#materials + 1] = { itemId = GetItemLinkItemId(GetSmithingTraitItemLink(traitIndex)) }
+    end
+    if useMimic then
+        materials[#materials + 1] = { itemId = WC.Policy.MIMIC_STONE_ID }
+    elseif styleId then
+        materials[#materials + 1] = { itemId = GetItemLinkItemId(GetItemStyleMaterialLink(styleId)) }
+    end
+    WC.Engine.SayCrafting(1, resultLink, materials)
+    WC.Engine.CraftSounds(nil, CREATE_GLOW[craft])
     CraftSmithingItem(patternIndex, materialIndex, quantity, styleId, traitIndex, useMimic, 1)
     return true
 end

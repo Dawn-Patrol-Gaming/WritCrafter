@@ -67,6 +67,15 @@ local function AddWritLines(control, link, uid)
     for _, reason in ipairs(verdict.reasons) do
         control:AddLine(Color(reasonColor, reason))
     end
+    if verdict.status == Rules.OK and not (crafted and crafted.have > 0) then
+        local short = {}
+        for _, mat in ipairs(Rules.Shortages(writ)) do
+            short[#short + 1] = zo_strformat(SI_WRITCRAFTER_TT_SHORT_ITEM, ItemName(mat.itemId), mat.have, mat.need)
+        end
+        if #short > 0 then
+            control:AddLine(Color(ORANGE, zo_strformat(SI_WRITCRAFTER_TT_SHORT, table.concat(short, ", "))))
+        end
+    end
     for _, note in ipairs(verdict.notes) do
         control:AddLine(Color(GREY, note))
     end

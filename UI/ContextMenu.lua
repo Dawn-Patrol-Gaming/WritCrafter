@@ -48,7 +48,8 @@ local function OnContextMenu(inventorySlot)
         return
     end
 
-    if WC.Data.Alchemy.REAGENTS[itemId] or WC.Data.PriceDefaults.Category(link) then
+    if WC.Data.Alchemy.REAGENTS[itemId] or WC.Data.PriceDefaults.Category(link)
+        or WC.Data.Smithing.ImprovementCraft(itemId) then
         local excluded = Policy.IsExcluded(itemId)
         local label = excluded and SI_WRITCRAFTER_MENU_UNMARK_EXPENSIVE or SI_WRITCRAFTER_MENU_MARK_EXPENSIVE
         AddCustomMenuItem(GetString(label), function()

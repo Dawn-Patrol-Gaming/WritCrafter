@@ -92,6 +92,10 @@ Only the parts writs need are rebuilt (written fresh, using LLC only as an API r
 
 ### 2.3 DailyAlchemy (1.6.0, already U51)
 
+**Reagent count (decided 2026-11-05):** daily alchemy writs always use **two** reagents; only master writs use three. "Acquire a reagent" conditions count the craft bag (confirmed), so with ESO Plus they complete on pickup.
+
+**Excluded acquire reagents (noted 2026-11-05):** with ESO Plus the game counts the craft bag for "acquire" conditions and takes the reagents itself at turn-in, whatever WritCrafter's exclusions say. WritCrafter can't stop that, so: (1) on pickup, warn when an alchemy daily will hand over an excluded reagent (or its potion needs one), and abandon it when auto-abandon is on; (2) automatic turn-in never turns in a writ that would hand over an excluded reagent.
+
 | Feature | Verdict | Notes |
 |---|---|---|
 | Daily alchemy writ solve and craft | **Keep** | |
@@ -301,7 +305,7 @@ Any reagent can be overridden in settings.
 | Trait materials | **1,000g** | Cobalt ~370 → Titanium ~2,030 |
 | Provisioning ingredients | **300g** | Bervez Juice ~45 → Cyrodiil Citrus ~650 |
 | Style materials | **1,000g** → use a mimic stone instead of rejecting | Ancient Sandstone ~830 → Funerary Wrappings ~1,075 |
-| Improvement mats (temper/resin/tannin/plating) | not price-filtered | Covered by the gold-writ toggles (R4) |
+| Improvement mats (temper/resin/tannin/plating) | not price-filtered | Listed under each smithing craft in the exclusions window, none excluded by default; excluding one rejects writs that need it and stops improving at that tier. The gold-writ toggles (R4) still apply |
 
 The shipped default list is fixed from today's snapshot. A setting **"Re-check against live prices"** (default off) re-applies the ceilings on login.
 
@@ -417,9 +421,13 @@ Everything else stays on demand: rules, prices and the alchemy solver run only w
 3. **Crafting engine**: queue, then provisioning → alchemy → enchanting → smithing create → improve → deconstruct, each verified at a station before the next. Smithing is tested at **Grand Master stations and ordinary set stations** from the start (§2.6.2 checklist).
 4. **Daily writs**: all 7 crafts, bank withdraw, auto-exit, quest dialog, alchemy auto-abandon.
 5. **Master writs**: sealed-writ parsing, the queue window (§2.6.1) with saved per-character state, crafting from the queue, Accept & Turn In at Rolis, mimic policy, voucher count.
+   - **Station markers for queued writs** (asked 2026-11-06, deferred to this milestone): an icon over each station that can craft a queued master writ: the set's own crafting stations and Grand Master stations that have the set (in houses and in the world), plus the alchemy, enchanting and provisioning stations for those writs. Needs the stations' positions (ordinary set stations are fixed per zone; house stations are found as you visit them), 3D markers above them, and map pins. Prior art: **HomeStationMarker** (by WritWorthy's author), a separate addon that WritWorthy and LibLazyCrafting both call (`HomeStationMarker.AddMarker(setId, craftingType)` / `DeleteMarker`) to mark stations **inside player houses**; it records house station positions itself. Not installed now (checked 2026-11-06). **Already covered in houses by Essential Housing Tools** (installed): its setting "Show Master Writ crafting station Points of Interest" (on by default) puts a gold crafting icon over each attuned set station in a house for every master writ in your **backpack** not yet crafted for (not bank, not accepted quests). It has no API for other addons. So WritCrafter's part is only what EHT leaves out: Grand Master stations (their names carry no set, so EHT can't match them), stations outside houses, and possibly "queued writs only".
+     - **Settings (decided 2026-11-06, revised):** station markers *Off / All master writs in your bag / Queued writs only*, **Off by default**. WritCrafter is the newcomer, so it defers to Essential Housing Tools entirely: while EHT is loaded with its master writ markers on (`EHT.GetSetting("ShowMasterWritPOIs")`, read with a nil check since it isn't ours), WritCrafter draws **no markers anywhere** (not even Grand Master or outdoor stations), its setting is forced Off and greyed out, and the tooltip says why ("Essential Housing Tools is marking stations; turn its master writ markers off to use these"). Only with EHT absent or its option off can the player turn WritCrafter's markers on, by hand. If EHT's option is turned on later, WritCrafter's markers switch off again.
+     - **Look:** the same marker the game shows over a station for a daily writ (its floating quest marker, compass pin and map pin textures), tinted a different colour so it reads as "master writ". Addons can't add entries to the game's own quest markers, so WritCrafter draws these itself from the game's textures; positions come from WritCrafter, not the quest.
 6. **Reward handling**.
 7. **Potion search UI**.
 8. **Migration**: warn if any replaced addon is still enabled (they'd fight over auto-dialog and autocraft).
+9. **Help window** (last, decided 2026-11-06): `/wc help` opens a window where players can read about every feature (badges, tooltips, exclusions, queue, crafting notices and sounds, daily and master writ handling, bank withdrawal) and every command, instead of the chat list it prints now.
 
 Testing: pure logic (solver, rules, link parsing, price defaults) gets offline Lua unit tests with stubbed game APIs. Anything touching stations, quests or the bank is checked by you in game at each milestone.
 
@@ -437,3 +445,17 @@ Testing: pure logic (solver, rules, link parsing, price defaults) gets offline L
 
 ## 10. Still open
 - Nothing. All questions answered and the §9 defaults accepted (2026-11-03).
+
+## 11. Later (after the base is working)
+- **Diagnostic commands stay in the release** (decided 2026-11-06) and are documented in the help window (milestone 9):
+  - `/wc stock <item>`: backpack, bank, craft bag and usable counts.
+  - `/wc price <item>`: the price WritCrafter uses and its source.
+  - `/wc selftest`: every stack count against the game's own totals.
+  - `/wc perf`: timings of the work behind bag and bank windows.
+  - `/wc debug`: debug chat messages on or off.
+  - `/wc checkdata`: compares the built-in data with the game: reagent effects (every owned reagent pair, predicted by the game), runes and glyphs (including the glyph the game makes from owned runes), and smithing items, base materials and improvement materials. **Run it after every major game update**; reagent effects are the most likely to change (Update 51 moved several).
+    - **The game is the authority for reagent effects** (decided 2026-11-06). The table was built from Dolgubon's, WritWorthy, LibAlchemy and UESP, and the old addons are what broke on Update 51, so none of those sources is trusted on its own. `checkdata` reports how many of the table's effects the game has confirmed (two reagents sharing an effect, and the game's predicted potion having it) and lists the rest. Effects stay unconfirmed until you own the reagent, have discovered its traits, and own another reagent that shares the effect.
+- **Keep a reserve, per writ category** (asked 2026-11-05): a setting per category (blacksmithing, clothing, woodworking, jewelry, alchemy, enchanting, provisioning) such as "don't use a material if you'd have fewer than N left". Acts as a temporary, automatic exclusion that lifts on restocking, so manual exclusions stay for things never to be used. Chat explains it ("Low on X, keeping a reserve of N"), distinct from "excluded". The user currently does this by hand, excluding whatever is low.
+  - **Style materials:** one floor for all style materials. When a writ's style material is below it, a mimic stone is used instead (Mimic stones "When needed"), or the writ waits (Mimic stones "Never").
+  - **Improvement materials, one floor per tier:** green, blue, purple and gold (Honing Stone / Dwarven Oil / Grain Solvent / Tempering Alloy and the clothing, woodworking and jewelry equivalents). Improving stops at the tier whose material would drop below its floor, with the same "low on" message, and never improves below 100%.
+  - Goal: no stock management by hand; floors are set once and WritCrafter stays out of the reserves.

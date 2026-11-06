@@ -176,6 +176,27 @@ function Inventory.FindForStation(itemId)
     return bestBag, bestSlot, total
 end
 
+-- Item IDs you own of the given item types ({ [ITEMTYPE_x] = true }), anywhere a crafting
+-- station can use them (craft bag, backpack, bank). Each ID once.
+function Inventory.OwnedItemIds(itemTypes)
+    local ids, seen = {}, {}
+    for _, bagId in ipairs({ BAG_VIRTUAL, BAG_BACKPACK, BAG_BANK, BAG_SUBSCRIBER_BANK }) do
+        local slotIndex = ZO_GetNextBagSlotIndex(bagId)
+        while slotIndex do
+            if itemTypes[GetItemType(bagId, slotIndex)] then
+                local itemId = GetItemId(bagId, slotIndex)
+                if itemId ~= 0 and not seen[itemId] then
+                    seen[itemId] = true
+                    ids[#ids + 1] = itemId
+                end
+            end
+            slotIndex = ZO_GetNextBagSlotIndex(bagId, slotIndex)
+        end
+    end
+    table.sort(ids)
+    return ids
+end
+
 -- Best link we know for an item ID: a real one seen in the inventory, else a bare one. The
 -- link cache is saved between sessions, so this never forces a scan; new items join it at the
 -- next stock scan.
