@@ -56,6 +56,33 @@ Enchanting.LEVELS = {
     [225] = { cp = 160, additive = 68341, subtractive = 68340 },  -- Repora / Itade
 }
 
+-- Every enchanting rune, owned or not, for the exclusions window. The game has no "all runes"
+-- list, but runes sit in a few item-ID ranges; each ID in them is checked against the game and
+-- kept if it's a rune: potency 45806-45830 and 45855-45857, essences 45831-45849, aspects
+-- 45850-45854, CP150 64508/64509, CP160 68340/68341, Hakeijo 68342, Indeko 166045.
+local RUNE_ID_RANGES = { { 45800, 45900 }, { 64500, 64520 }, { 68330, 68350 }, { 166030, 166060 } }
+local RUNE_TYPES = {
+    [ITEMTYPE_ENCHANTING_RUNE_POTENCY] = true,
+    [ITEMTYPE_ENCHANTING_RUNE_ESSENCE] = true,
+    [ITEMTYPE_ENCHANTING_RUNE_ASPECT]  = true,
+}
+local allRunes
+
+function Enchanting.AllRunes()
+    if not allRunes then
+        allRunes = {}
+        for _, range in ipairs(RUNE_ID_RANGES) do
+            for itemId = range[1], range[2] do
+                local link = string.format("|H1:item:%d:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0|h|h", itemId)
+                if RUNE_TYPES[GetItemLinkItemType(link)] and GetItemLinkName(link) ~= "" then
+                    allRunes[#allRunes + 1] = itemId
+                end
+            end
+        end
+    end
+    return allRunes
+end
+
 -- Master writ field 12 is the glyph quality; it picks the aspect rune.
 Enchanting.ASPECTS = {
     [4] = 45853,  -- Rekuta (purple)

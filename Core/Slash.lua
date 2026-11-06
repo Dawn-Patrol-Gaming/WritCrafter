@@ -74,6 +74,7 @@ local COMMANDS = {
     selftest = SelfTest,
     debug    = ToggleDebug,
     perf     = function() WC.Perf.Run() end,
+    checkdata = function() WC.CheckData.Run() end,
     help     = function() WC.Log.Say(GetString(SI_WRITCRAFTER_HELP)) end,
 }
 

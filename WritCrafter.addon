@@ -28,6 +28,8 @@ Core/Price.lua
 Core/Policy.lua
 
 Writs/Master.lua
+Writs/Daily.lua
+Writs/Bank.lua
 Solver/Alchemy.lua
 Rules/Evaluate.lua
 Core/Reservations.lua
@@ -47,5 +49,6 @@ Engine/Enchanting.lua
 Engine/Smithing.lua
 
 Core/Perf.lua
+Core/CheckData.lua
 Core/Slash.lua
 Main.lua

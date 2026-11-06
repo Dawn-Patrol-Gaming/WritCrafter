@@ -63,6 +63,14 @@ function Perf.Run()
         end
     end)
 
+    -- Material shortages (the yellow badge): worked out fresh, as after a bag change.
+    local shortMs = Time(function()
+        WC.Rules.ClearCache()
+        for _, writ in ipairs(writs) do
+            WC.Rules.Shortages(writ)
+        end
+    end)
+
     -- Badge decision for every bag and bank slot: what drawing every row would cost.
     local badgeMs, slots = Time(function()
         local count = 0
@@ -77,5 +85,6 @@ function Perf.Run()
     WC.Log.Say(zo_strformat(SI_WRITCRAFTER_PERF_MATCH, Ms(matchMs), writCount or 0, candidateCount or 0))
     WC.Log.Say(zo_strformat(SI_WRITCRAFTER_PERF_STOCK, Ms(stockMs), stacks or 0))
     WC.Log.Say(zo_strformat(SI_WRITCRAFTER_PERF_VERDICTS, Ms(coldMs), Ms(warmMs), #writs))
+    WC.Log.Say(zo_strformat(SI_WRITCRAFTER_PERF_SHORT, Ms(shortMs), #writs))
     WC.Log.Say(zo_strformat(SI_WRITCRAFTER_PERF_BADGES, Ms(badgeMs), slots or 0))
 end

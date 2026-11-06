@@ -33,6 +33,10 @@ local CATEGORIES_BY_ITEMTYPE = {
     [ITEMTYPE_JEWELRY_TRAIT]           = { CRAFTING_TYPE_JEWELRYCRAFTING },
     [ITEMTYPE_INGREDIENT]              = { CRAFTING_TYPE_PROVISIONING },
     [ITEMTYPE_STYLE_MATERIAL]          = { Window.STYLE },
+    [ITEMTYPE_BLACKSMITHING_BOOSTER]   = { CRAFTING_TYPE_BLACKSMITHING },
+    [ITEMTYPE_CLOTHIER_BOOSTER]        = { CRAFTING_TYPE_CLOTHIER },
+    [ITEMTYPE_WOODWORKING_BOOSTER]     = { CRAFTING_TYPE_WOODWORKING },
+    [ITEMTYPE_JEWELRYCRAFTING_BOOSTER] = { CRAFTING_TYPE_JEWELRYCRAFTING },
 }
 
 local ORIGIN_TEXT = {
@@ -112,11 +116,28 @@ local function BuildMembers()
             AddByType(itemId)
         end
     end
+    -- Improvement materials, green to gold, for each smithing craft.
+    for craft, ids in pairs(WC.Data.Smithing.IMPROVE_MATS) do
+        for _, itemId in ipairs(ids) do
+            Add(craft, itemId)
+        end
+    end
     -- Alchemy: all reagents.
     for itemId in pairs(REAGENTS) do
         Add(CRAFTING_TYPE_ALCHEMY, itemId)
     end
-    -- Enchanting: the runes master writs use.
+    -- Enchanting: every rune, owned or not (daily writs use runes of every level and every
+    -- aspect from Ta up), plus anything owned the ID ranges might miss.
+    for _, itemId in ipairs(WC.Data.Enchanting.AllRunes()) do
+        Add(CRAFTING_TYPE_ENCHANTING, itemId)
+    end
+    for _, itemId in ipairs(WC.Inventory.OwnedItemIds({
+        [ITEMTYPE_ENCHANTING_RUNE_POTENCY] = true,
+        [ITEMTYPE_ENCHANTING_RUNE_ESSENCE] = true,
+        [ITEMTYPE_ENCHANTING_RUNE_ASPECT]  = true,
+    })) do
+        Add(CRAFTING_TYPE_ENCHANTING, itemId)
+    end
     local Enchanting = WC.Data.Enchanting
     for _, level in pairs(Enchanting.LEVELS) do
         Add(CRAFTING_TYPE_ENCHANTING, level.additive)

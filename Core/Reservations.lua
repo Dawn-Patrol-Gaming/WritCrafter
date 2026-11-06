@@ -70,6 +70,7 @@ local function PotionEffects(link)
     table.sort(effects)
     return effects
 end
+Reservations.PotionEffects = PotionEffects   -- for /wc checkdata
 
 -- Match keys. An item satisfies a writ when both produce the same key, so each writ finds its
 -- items with one table lookup instead of being tested against every item. Item key builders

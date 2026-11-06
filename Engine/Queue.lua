@@ -15,10 +15,12 @@ end
 
 function Queue.Add(uid, link)
     entries[uid] = { link = link }
+    WC.InventoryIcons.Refresh()
 end
 
 function Queue.Remove(uid)
     entries[uid] = nil
+    WC.InventoryIcons.Refresh()
 end
 
 function Queue.Has(uid)

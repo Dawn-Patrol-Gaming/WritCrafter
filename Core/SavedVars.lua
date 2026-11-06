@@ -20,11 +20,23 @@ WC.DEFAULTS = {
     ceilings          = { reagent = 300, rune = 500, trait = 1000, ingredient = 300 },
     mimic             = "needed",   -- WC.Policy.MIMIC_*
     maxGoldPerVoucher = 0,          -- 0 = off
-    autoCraft         = true,       -- craft queued writs at stations
+    autoCraft         = true,       -- craft queued master writs at stations
+    autoCraftDaily    = true,       -- craft daily writ quests at stations
+    bankWithdraw      = true,       -- take reagents daily writs must acquire out of the bank
+    craftNotice       = true,       -- on-screen alerts and the failure banner
+    soundStart        = true,       -- sound when writ crafting starts at a station
+    soundDone         = true,       -- sound when it's done
+    soundProblem      = true,       -- sound when something couldn't be crafted
+    soundSlot         = true,       -- slotting sounds (solvent/reagents, runes, item placed)
+    soundRunes        = true,       -- enchanting's spoken rune names
+    soundSuccess      = true,       -- the station's success sound as each item is made
+    leaveStation      = true,       -- leave the station once writ crafting there is done
     tooltip           = true,
     tooltipMaterials  = true,
     iconCrafted       = true,
     iconRejected      = true,
+    iconQueued        = true,
+    iconMissing       = true,
     iconReserved      = true,
     iconOffsetX       = 0,
     iconOffsetY       = 0,

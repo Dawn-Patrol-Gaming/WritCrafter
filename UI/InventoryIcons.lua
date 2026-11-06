@@ -9,6 +9,8 @@ local ICON_SIZE = 20
 local TEXTURE_CRAFTED  = "/esoui/art/buttons/accept_up.dds"
 local TEXTURE_REJECTED = "/esoui/art/buttons/decline_up.dds"
 local TEXTURE_RESERVED = "/esoui/art/miscellaneous/locked_up.dds"
+local TEXTURE_MISSING  = "/esoui/art/miscellaneous/eso_icon_warning.dds"
+local TEXTURE_QUEUED   = "/esoui/art/crafting/smithing_tabicon_creation_up.dds"   -- the station's Create hammer
 
 -- Item lists that show sealed writs or crafted items. Other addons already use the row's
 -- top-right corner (LootLog) and left edge (CraftStore), so the badge sits on the item
@@ -67,6 +69,15 @@ local function BadgeFor(bagId, slotIndex)
         end
         if settings.iconRejected and WC.Rules.GetStatus(writ) ~= WC.Rules.OK then
             return TEXTURE_REJECTED, 1, 0.3, 0.3
+        end
+        -- Nothing made yet and not enough of some material: yellow warning.
+        if settings.iconMissing and not (status and status.have > 0)
+            and #WC.Rules.Shortages(writ) > 0 then
+            return TEXTURE_MISSING, 1, 0.85, 0.2
+        end
+        -- Queued with the right-click menu: crafted at its station on the next visit.
+        if settings.iconQueued and WC.Queue.Has(WC.Master.UniqueId(bagId, slotIndex)) then
+            return TEXTURE_QUEUED, 0.45, 0.75, 1
         end
         -- Some but not all made (alchemy and provisioning writs need several): amber check.
         if settings.iconCrafted and status and status.have > 0 then
