@@ -47,7 +47,8 @@ local ORIGIN_TEXT = {
 }
 local ORIGIN_ORDER = { plant = 1, critter = 2, zone = 3, special = 4 }
 
-local FILTER_ALL, FILTER_EXCLUDED, FILTER_OWNED = 1, 2, 3
+-- In the Show menu's order (the value is the menu index).
+local FILTER_ALL, FILTER_EXCLUDED, FILTER_NOT_EXCLUDED, FILTER_OWNED = 1, 2, 3, 4
 
 function Window.CategoryName(category)
     if category == Window.STYLE then
@@ -62,6 +63,7 @@ local filter  = FILTER_ALL
 local search  = ""
 local sortKey, sortUp     -- nil until a column heading is clicked: natural order (plants first, then name)
 local members = {}   -- [category] = { { itemId, name, lower, origin }, ... }, rebuilt on open
+local shown = {}     -- the entries the list shows now (category, filter and search applied)
 
 -- Everything a master writ can ask for in each category, plus the shipped defaults and the
 -- player's own marks (on either profile), so nothing that's excluded is ever hidden.
@@ -237,6 +239,8 @@ local function FillList()
         local show = true
         if filter == FILTER_EXCLUDED then
             show = WC.Policy.IsExcluded(entry.itemId)
+        elseif filter == FILTER_NOT_EXCLUDED then
+            show = not WC.Policy.IsExcluded(entry.itemId)
         elseif filter == FILTER_OWNED then
             show = WC.Inventory.GetStock(entry.itemId).total > 0
         end
@@ -248,6 +252,7 @@ local function FillList()
         end
     end
     SortRows(rows)
+    shown = rows
 
     ZO_ScrollList_Clear(list)
     local dataList = ZO_ScrollList_GetDataList(list)
@@ -308,6 +313,24 @@ function Window.OnSearchChanged(editBox)
     if control and not control:IsHidden() then
         FillList()
     end
+end
+
+-- Excludes (or with value false, un-excludes) every material the list shows now, so the filter
+-- and search pick what changes; then the filter is applied again (e.g. "Not excluded" empties).
+local function SetAllShown(value)
+    for _, entry in ipairs(shown) do
+        WC.Policy.SetExcluded(entry.itemId, value)
+    end
+    WC.Policy.Changed()
+    FillList()
+end
+
+function Window.MarkAll()
+    SetAllShown(true)
+end
+
+function Window.ClearMarks()
+    SetAllShown(false)
 end
 
 -- Puts the current category back to the shipped defaults: removes the player's own marks.
@@ -371,6 +394,8 @@ function Window.Init()
     control:GetNamedChild("ShowLabel"):SetText(GetString(SI_WRITCRAFTER_EXCL_SHOW))
     control:GetNamedChild("SearchLabel"):SetText(GetString(SI_WRITCRAFTER_EXCL_SEARCH))
     control:GetNamedChild("Reset"):SetText(GetString(SI_WRITCRAFTER_EXCL_RESET))
+    control:GetNamedChild("MarkAll"):SetText(GetString(SI_WRITCRAFTER_EXCL_MARK_ALL))
+    control:GetNamedChild("ClearMarks"):SetText(GetString(SI_WRITCRAFTER_EXCL_CLEAR_MARKS))
 
     -- Click a heading to sort by it, click again to reverse. Names start A to Z; counts and
     -- prices start highest first.
@@ -407,6 +432,7 @@ function Window.Init()
     FillCombo(showCombo, {
         { name = GetString(SI_WRITCRAFTER_EXCL_SHOW_ALL),      value = FILTER_ALL },
         { name = GetString(SI_WRITCRAFTER_EXCL_SHOW_EXCLUDED), value = FILTER_EXCLUDED },
+        { name = GetString(SI_WRITCRAFTER_EXCL_SHOW_NOT_EXCLUDED), value = FILTER_NOT_EXCLUDED },
         { name = GetString(SI_WRITCRAFTER_EXCL_SHOW_OWNED),    value = FILTER_OWNED },
     }, function(value)
         filter = value

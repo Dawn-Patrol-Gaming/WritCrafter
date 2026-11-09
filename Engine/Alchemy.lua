@@ -180,11 +180,10 @@ local function OwnedReagents()
 end
 
 local function ResolveDaily(condition)
-    -- Acquire a reagent?
-    for itemId in pairs(REAGENTS) do
-        if WC.Daily.Fulfils(WC.Inventory.GetLink(itemId), condition) then
-            return { acquire = itemId }
-        end
+    -- Acquire a reagent or solvent?
+    local acquire = WC.Daily.AcquireItem(condition)
+    if acquire then
+        return { acquire = acquire }
     end
     -- Craft a potion or poison: one test per effect and owned solvent, using any owned pair
     -- that makes the effect. The pair actually used is chosen at craft time.
@@ -237,7 +236,7 @@ local function CraftDaily(condition, plan)
     local remaining = condition.max - condition.current
     if plan.acquire then
         local itemId = plan.acquire
-        if not WC.Policy.IsReagentAllowed(itemId) then
+        if WC.Policy.IsExcluded(itemId) then
             return false, zo_strformat(SI_WRITCRAFTER_CRAFT_EXCLUDED_REAGENT, ItemName(itemId))
         end
         local moved, reason = MoveToBackpack(itemId, remaining)
@@ -293,39 +292,50 @@ local function CraftDaily(condition, plan)
     end
     local args, resultLink, prospective, usedPair = FirstFulfilling(allowed)
     if not args then
-        -- Would excluded reagents have done it? List every option, so you can pick which to
-        -- allow: "A or B", or "A + B" when a pair needs both.
-        local options, seen = {}, {}
+        -- Would excluded reagents have done it? Name each excluded reagent in a pair that makes
+        -- it, once, so you can pick which to allow.
+        local names, seen = {}, {}
         for _, pair in ipairs(PairsForEffects(owned, plan.effects)) do
             local excluded = {}
             for _, itemId in ipairs(pair) do
-                if not WC.Policy.IsReagentAllowed(itemId) then
-                    excluded[#excluded + 1] = ItemName(itemId)
+                if not WC.Policy.IsReagentAllowed(itemId) and not seen[itemId] then
+                    excluded[#excluded + 1] = itemId
                 end
             end
-            local option = table.concat(excluded, " + ")
-            if #excluded > 0 and not seen[option] then
+            if #excluded > 0 then
                 local _, _, _, fits = TestPair(pair)
                 if fits then
-                    seen[option] = true
-                    options[#options + 1] = option
+                    for _, itemId in ipairs(excluded) do
+                        seen[itemId] = true
+                        names[#names + 1] = ItemName(itemId)
+                    end
                 end
             end
         end
-        if #options > 0 then
-            -- At most a handful in chat; the rest as a count.
-            local MAX_SHOWN = 5
-            local shown = {}
-            for i = 1, zo_min(#options, MAX_SHOWN) do
-                shown[i] = options[i]
+        -- Reagents that carry the effect but aren't in your bags, bank or craft bag.
+        local missing = {}
+        for itemId, reagent in pairs(REAGENTS) do
+            if StationStock(itemId) == 0 then
+                for _, effect in ipairs(reagent.effects) do
+                    if ZO_IsElementInNumericallyIndexedTable(plan.effects, effect) then
+                        missing[#missing + 1] = ItemName(itemId)
+                        break
+                    end
+                end
             end
-            local text = table.concat(shown, GetString(SI_WRITCRAFTER_OR))
-            if #options > MAX_SHOWN then
-                text = text .. zo_strformat(SI_WRITCRAFTER_AND_MORE, #options - MAX_SHOWN)
-            end
-            return false, zo_strformat(SI_WRITCRAFTER_REASON_REAGENTS, text)
         end
-        return false, GetString(SI_WRITCRAFTER_CRAFT_NO_REAGENTS)
+        local reason
+        if #names > 0 then
+            table.sort(names)
+            reason = zo_strformat(SI_WRITCRAFTER_REASON_REAGENTS, table.concat(names, ", "))
+        else
+            reason = GetString(SI_WRITCRAFTER_CRAFT_NO_REAGENTS)
+        end
+        if #missing > 0 then
+            table.sort(missing)
+            reason = reason .. zo_strformat(SI_WRITCRAFTER_REASON_MISSING, table.concat(missing, ", "))
+        end
+        return false, reason
     end
     local perCraft = zo_max(GetAlchemyResultQuantity(args[1], args[2], 1) or 1, 1)
     local maxIterations, result = GetMaxIterationsPossibleForAlchemyItem(unpack(args))
@@ -349,4 +359,88 @@ local function CraftDaily(condition, plan)
     return true
 end
 
-WC.Daily.RegisterCraft(CRAFTING_TYPE_ALCHEMY, ResolveDaily, CraftDaily)
+WC.Daily.RegisterCraft(CRAFTING_TYPE_ALCHEMY, ResolveDaily, CraftDaily, true)
+
+-- /wc reagents: for each unfinished alchemy daily, the solvents and reagent pairs you own that
+-- the game says would make it, with stock (house storage doesn't count). Excluded reagents are
+-- included and marked, since they'd make it if allowed.
+local AlchemyDaily = {}
+WC.AlchemyDaily = AlchemyDaily
+
+local function StockText(itemId)
+    local stringId = WC.Policy.IsExcluded(itemId) and SI_WRITCRAFTER_REAGENTS_ITEM_EXCLUDED or SI_WRITCRAFTER_REAGENTS_ITEM
+    return zo_strformat(stringId, ItemName(itemId), StationStock(itemId))
+end
+
+function AlchemyDaily.List()
+    local conditions = {}
+    for _, condition in ipairs(WC.Daily.Conditions()) do
+        if condition.current < condition.max and not WC.Daily.AcquireItem(condition)
+            and WC.Daily.IsAlchemyQuest(condition) then
+            conditions[#conditions + 1] = condition
+        end
+    end
+    if #conditions == 0 then
+        WC.Log.Say(GetString(SI_WRITCRAFTER_REAGENTS_NONE))
+        return
+    end
+    WC.Inventory.Invalidate()   -- counts right after moving things to house storage
+    local owned = OwnedReagents()
+    local solvents = OwnedSolvents()
+    local all = {}
+    for _, id in ipairs(owned) do all[#all + 1] = id end
+    for _, id in ipairs(solvents) do all[#all + 1] = id end
+    local where = Locations(all)
+    -- Every owned pair sharing an effect, each once: the only pairs WritCrafter would try.
+    local candidates, seen = {}, {}
+    for _, effectPairs in pairs(PairsByEffect(owned)) do
+        for _, pair in ipairs(effectPairs) do
+            local key = pair[1] .. ":" .. pair[2]
+            if not seen[key] then
+                seen[key] = true
+                candidates[#candidates + 1] = pair
+            end
+        end
+    end
+    table.sort(candidates, function(x, y)
+        return ItemName(x[1]) .. ItemName(x[2]) < ItemName(y[1]) .. ItemName(y[2])
+    end)
+
+    for _, condition in ipairs(conditions) do
+        WC.Log.Say(zo_strformat(SI_WRITCRAFTER_REAGENTS_HEADER, condition.text))
+        local fitSolvents, fitPairs, pairSeen, reagents = {}, {}, {}, {}
+        for _, solventId in ipairs(solvents) do
+            for _, pair in ipairs(candidates) do
+                local args = Args(where, solventId, pair)
+                if args and WC.Daily.Fulfils(GetAlchemyResultingItemLink(unpack(args)), condition) then
+                    fitSolvents[solventId] = true
+                    local key = pair[1] .. ":" .. pair[2]
+                    if not pairSeen[key] then
+                        pairSeen[key] = true
+                        fitPairs[#fitPairs + 1] = ItemName(pair[1]) .. " + " .. ItemName(pair[2])
+                        reagents[pair[1]] = true
+                        reagents[pair[2]] = true
+                    end
+                end
+            end
+        end
+        if #fitPairs == 0 then
+            WC.Log.Say(GetString(SI_WRITCRAFTER_REAGENTS_NOTHING))
+        else
+            local function Listed(set)
+                local list = {}
+                for itemId in pairs(set) do
+                    list[#list + 1] = itemId
+                end
+                table.sort(list, function(x, y) return ItemName(x) < ItemName(y) end)
+                for i, itemId in ipairs(list) do
+                    list[i] = StockText(itemId)
+                end
+                return table.concat(list, ", ")
+            end
+            WC.Log.Say(zo_strformat(SI_WRITCRAFTER_REAGENTS_SOLVENT, Listed(fitSolvents)))
+            WC.Log.Say(zo_strformat(SI_WRITCRAFTER_REAGENTS_USED, Listed(reagents)))
+            WC.Log.Say(zo_strformat(SI_WRITCRAFTER_REAGENTS_PAIRS, #fitPairs, table.concat(fitPairs, ", ")))
+        end
+    end
+end

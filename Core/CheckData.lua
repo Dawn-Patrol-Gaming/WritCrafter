@@ -180,6 +180,20 @@ local function CheckAlchemy()
     end
 end
 
+-- Solvents: every ID daily "acquire" conditions are matched against is still a solvent.
+local SOLVENT_TYPES = { [ITEMTYPE_POTION_BASE] = true, [ITEMTYPE_POISON_BASE] = true }
+
+local function CheckSolvents()
+    local ids = WC.Data.Alchemy.SOLVENT_ITEMS
+    local problems = {}
+    for _, itemId in ipairs(ids) do
+        if not SOLVENT_TYPES[GetItemLinkItemType(WC.Inventory.GetLink(itemId))] then
+            problems[#problems + 1] = zo_strformat(SI_WRITCRAFTER_CHECK_NOT_SOLVENT, itemId, Name(itemId))
+        end
+    end
+    Report(GetString(SI_WRITCRAFTER_CHECK_SOLVENTS), #ids, 0, problems)
+end
+
 local RUNE_CLASS = {
     potency = ENCHANTING_RUNE_POTENCY, essence = ENCHANTING_RUNE_ESSENCE, aspect = ENCHANTING_RUNE_ASPECT,
 }
@@ -289,6 +303,7 @@ end
 function CheckData.Run()
     WC.Log.Say(GetString(SI_WRITCRAFTER_CHECK_HEADER))
     CheckAlchemy()
+    CheckSolvents()
     CheckEnchanting()
     CheckSmithing()
 end

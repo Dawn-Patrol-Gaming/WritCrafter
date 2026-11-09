@@ -29,6 +29,7 @@ Core/Policy.lua
 
 Writs/Master.lua
 Writs/Daily.lua
+Writs/DailyItems.lua
 Writs/Bank.lua
 Solver/Alchemy.lua
 Rules/Evaluate.lua
@@ -36,6 +37,8 @@ Core/Reservations.lua
 
 UI/ExclusionsWindow.xml
 UI/ExclusionsWindow.lua
+UI/QueueWindow.xml
+UI/QueueWindow.lua
 UI/Settings.lua
 UI/Tooltip.lua
 UI/InventoryIcons.lua
@@ -52,3 +55,4 @@ Core/Perf.lua
 Core/CheckData.lua
 Core/Slash.lua
 Main.lua
+Bindings.xml

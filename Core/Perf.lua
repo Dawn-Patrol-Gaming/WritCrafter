@@ -81,10 +81,41 @@ function Perf.Run()
         return count
     end)
 
+    -- Writ quests: reading the journal (what each station step and storage check used to do
+    -- every time), then reading it again while it's remembered.
+    local journalMs, conditions = Time(function()
+        WC.Daily.Invalidate()
+        return #WC.Daily.Conditions(true)
+    end)
+    local quests = #WC.Daily.Quests()
+    local journalWarmMs = Time(function()
+        return #WC.Daily.Conditions(true)
+    end)
+    local acceptedMs, accepted = Time(function()
+        WC.Daily.Invalidate()
+        return #WC.Master.Accepted()
+    end)
+
+    -- Storage check for every daily task (whether one is already made and in storage).
+    local daily = WC.Daily.Conditions()
+    local function CheckStored()
+        for _, condition in ipairs(daily) do
+            WC.Bank.Stored(condition)
+        end
+    end
+    local storedMs = Time(function()
+        WC.Bank.ClearStored()
+        CheckStored()
+    end)
+    local storedWarmMs = Time(CheckStored)
+
     WC.Log.Say(zo_strformat(SI_WRITCRAFTER_PERF_HEADER, REPEAT))
     WC.Log.Say(zo_strformat(SI_WRITCRAFTER_PERF_MATCH, Ms(matchMs), writCount or 0, candidateCount or 0))
     WC.Log.Say(zo_strformat(SI_WRITCRAFTER_PERF_STOCK, Ms(stockMs), stacks or 0))
     WC.Log.Say(zo_strformat(SI_WRITCRAFTER_PERF_VERDICTS, Ms(coldMs), Ms(warmMs), #writs))
     WC.Log.Say(zo_strformat(SI_WRITCRAFTER_PERF_SHORT, Ms(shortMs), #writs))
     WC.Log.Say(zo_strformat(SI_WRITCRAFTER_PERF_BADGES, Ms(badgeMs), slots or 0))
+    WC.Log.Say(zo_strformat(SI_WRITCRAFTER_PERF_JOURNAL, Ms(journalMs), quests, conditions or 0, Ms(journalWarmMs)))
+    WC.Log.Say(zo_strformat(SI_WRITCRAFTER_PERF_ACCEPTED, Ms(acceptedMs), accepted or 0))
+    WC.Log.Say(zo_strformat(SI_WRITCRAFTER_PERF_STORED, Ms(storedMs), Ms(storedWarmMs), #daily))
 end

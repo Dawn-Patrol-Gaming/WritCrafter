@@ -2,7 +2,7 @@
     <Controls>
         <!-- One material row. Rows are pooled by the scroll list, so only the visible ones exist. -->
         <Control name="WritCrafterExclusionRow" virtual="true" mouseEnabled="true">
-            <Dimensions x="590" y="36" />
+            <Dimensions x="710" y="36" />
             <OnMouseEnter>WritCrafter.ExclusionsWindow.OnRowEnter(self)</OnMouseEnter>
             <OnMouseExit>WritCrafter.ExclusionsWindow.OnRowExit(self)</OnMouseExit>
             <OnMouseUp>WritCrafter.ExclusionsWindow.OnRowMouseUp(self, button, upInside)</OnMouseUp>
@@ -32,7 +32,7 @@
         </Control>
 
         <TopLevelControl name="WritCrafterExclusionsWindow" hidden="true" mouseEnabled="true" movable="true" clampedToScreen="true">
-            <Dimensions x="640" y="680" />
+            <Dimensions x="760" y="680" />
             <Anchor point="CENTER" />
             <Controls>
                 <Backdrop name="$(parent)BG" inherits="ZO_DefaultBackdrop" />
@@ -45,7 +45,7 @@
                     <OnClicked>WritCrafter.ExclusionsWindow.Close()</OnClicked>
                 </Button>
                 <Label name="$(parent)Hint" font="ZoFontGame">
-                    <Dimensions x="600" />
+                    <Dimensions x="720" />
                     <Anchor point="TOPLEFT" offsetX="20" offsetY="50" />
                 </Label>
 
@@ -111,6 +111,16 @@
                     <Dimensions x="220" y="30" />
                     <Anchor point="BOTTOMRIGHT" offsetX="-16" offsetY="-14" />
                     <OnClicked>WritCrafter.ExclusionsWindow.ResetCategory()</OnClicked>
+                </Button>
+                <Button name="$(parent)ClearMarks" inherits="ZO_DefaultButton">
+                    <Dimensions x="150" y="30" />
+                    <Anchor point="RIGHT" relativeTo="$(parent)Reset" relativePoint="LEFT" offsetX="-8" />
+                    <OnClicked>WritCrafter.ExclusionsWindow.ClearMarks()</OnClicked>
+                </Button>
+                <Button name="$(parent)MarkAll" inherits="ZO_DefaultButton">
+                    <Dimensions x="150" y="30" />
+                    <Anchor point="RIGHT" relativeTo="$(parent)ClearMarks" relativePoint="LEFT" offsetX="-8" />
+                    <OnClicked>WritCrafter.ExclusionsWindow.MarkAll()</OnClicked>
                 </Button>
             </Controls>
         </TopLevelControl>

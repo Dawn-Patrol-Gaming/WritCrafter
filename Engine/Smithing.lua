@@ -189,3 +189,112 @@ end
 for _, kind in ipairs({ WC.Master.KIND_SMITHING }) do
     WC.Engine.RegisterCrafter(kind, CraftSmithing, SmithingProgress)
 end
+
+-- Daily writs: a plain piece (no trait, normal quality) in any material and style. The game says
+-- which pattern and material fulfil the condition; the style is the allowed style material you
+-- know for that pattern and have the most of. At a Grand Master station the active set's piece is
+-- made, if the game accepts it for the condition.
+local NO_TRAIT = ITEM_TRAIT_TYPE_NONE + 1
+
+-- Allowed styles known for a pattern that you have material for, most material first.
+local function DailyStyles(patternIndex)
+    local styles = {}
+    for index = 1, GetNumValidItemStyles() do
+        local styleId = GetValidItemStyleId(index)
+        if styleId and styleId > 0 and IsSmithingStyleKnown(styleId, patternIndex) then
+            local count = GetCurrentSmithingStyleItemCount(styleId) or 0
+            local styleItemId = GetItemLinkItemId(GetItemStyleMaterialLink(styleId))
+            if count > 0 and not WC.Policy.IsExpensive(styleItemId) then
+                styles[#styles + 1] = { id = styleId, count = count }
+            end
+        end
+    end
+    table.sort(styles, function(a, b) return a.count > b.count end)
+    return styles
+end
+
+-- Any style this character knows for a pattern: enough to ask the game about the piece.
+local function AnyKnownStyle(patternIndex)
+    for index = 1, GetNumValidItemStyles() do
+        local styleId = GetValidItemStyleId(index)
+        if styleId and styleId > 0 and IsSmithingStyleKnown(styleId, patternIndex) then
+            return styleId
+        end
+    end
+end
+
+-- The pattern and material whose piece the game accepts for the condition, with the style to use
+-- (nil when the craft ignores styles, false when no allowed style material is available).
+local function FindDaily(condition)
+    local ignoresStyle = DoesSmithingTypeIgnoreStyleItems(GetCraftingInteractionType())
+    for patternIndex = 1, GetNumSmithingPatterns() do
+        local _, _, _, numMaterials = GetSmithingPatternInfo(patternIndex)
+        local testStyle = not ignoresStyle and AnyKnownStyle(patternIndex) or nil
+        if ignoresStyle or testStyle then
+            for materialIndex = 1, numMaterials or 0 do
+                local _, _, quantity = GetSmithingPatternMaterialItemInfo(patternIndex, materialIndex)
+                local link = GetSmithingPatternResultLink(patternIndex, materialIndex, quantity, testStyle, NO_TRAIT)
+                if WC.Daily.Fulfils(link, condition) then
+                    local style
+                    if not ignoresStyle then
+                        local usable = DailyStyles(patternIndex)
+                        style = usable[1] and usable[1].id or false
+                    end
+                    return { pattern = patternIndex, material = materialIndex, quantity = quantity,
+                        style = style, link = link }
+                end
+            end
+        end
+    end
+end
+
+local function ResolveDaily(condition)
+    local plan = FindDaily(condition)
+    if WC.settings.logLevel >= WC.Log.LEVEL_DEBUG then
+        local firstLink = ""
+        if GetNumSmithingPatterns() > 0 then
+            local _, _, quantity = GetSmithingPatternMaterialItemInfo(1, 1)
+            firstLink = GetSmithingPatternResultLink(1, 1, quantity, AnyKnownStyle(1), NO_TRAIT) or ""
+        end
+        WC.Log.Debug(string.format("Smithing daily '%s': %d patterns, style for pattern 1: %s, pattern 1 makes %s, consolidated %s, active set %s -> %s",
+            condition.text, GetNumSmithingPatterns(), tostring(AnyKnownStyle(1)), firstLink,
+            tostring(ZO_Smithing_IsConsolidatedStationCraftingMode()), tostring(GetActiveConsolidatedSmithingItemSetId()),
+            plan and plan.link or "no match"))
+    end
+    return plan
+end
+
+local function CraftDaily(condition)
+    -- Searched again: the cached answer may be from another station (e.g. a Grand Master one).
+    local plan = FindDaily(condition)
+    if not plan then
+        return false, GetString(SI_WRITCRAFTER_CRAFT_WRONG_RESULT)
+    end
+    if plan.style == false then
+        return false, zo_strformat(SI_WRITCRAFTER_CRAFT_NO_STYLE, ItemName(plan.link))
+    end
+    local remaining = condition.max - condition.current
+    local maxIterations, result = GetMaxIterationsPossibleForSmithingItem(plan.pattern, plan.material,
+        plan.quantity, plan.style, NO_TRAIT, false)
+    if not maxIterations or maxIterations == 0 then
+        return false, GetString("SI_TRADESKILLRESULT", result)
+    end
+    local iterations = zo_min(remaining, maxIterations)
+    local materials = {
+        { itemId = GetItemLinkItemId(GetSmithingPatternMaterialItemLink(plan.pattern, plan.material)),
+          count = plan.quantity * iterations },
+    }
+    if plan.style then
+        materials[#materials + 1] = { itemId = GetItemLinkItemId(GetItemStyleMaterialLink(plan.style)), count = iterations }
+    end
+    local craft = GetCraftingInteractionType()
+    WC.Engine.SayCrafting(iterations, plan.link, materials)
+    WC.Engine.CraftSounds(nil, CREATE_GLOW[craft])
+    CraftSmithingItem(plan.pattern, plan.material, plan.quantity, plan.style, NO_TRAIT, false, iterations)
+    return true
+end
+
+for _, craft in ipairs({ CRAFTING_TYPE_BLACKSMITHING, CRAFTING_TYPE_CLOTHIER,
+                         CRAFTING_TYPE_WOODWORKING, CRAFTING_TYPE_JEWELRYCRAFTING }) do
+    WC.Daily.RegisterCraft(craft, ResolveDaily, CraftDaily)
+end

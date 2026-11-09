@@ -118,6 +118,145 @@ function Master.Parse(link)
     return hit or nil
 end
 
+-- The writ for an accepted master writ quest's condition (the sealed writ is used up when it's
+-- accepted), built from the quest's own details, or nil. GetQuestConditionMasterWritInfo returns
+-- the sealed writ's fields: item ID (glyph, food or potion; 0 for gear), material (enchanting level,
+-- alchemy solvent), craft, quality, item template, set, trait, style, and the alchemy effects
+-- packed one per byte. required is the quest's own count.
+function Master.ReadInfo(questIndex, stepIndex, conditionIndex)
+    local itemId, materialId, craft, quality, templateId, setId, trait, style, encodedEffects =
+        GetQuestConditionMasterWritInfo(questIndex, stepIndex, conditionIndex)
+    return {
+        itemId = itemId or 0, materialId = materialId or 0, craft = craft or 0, quality = quality or 0,
+        templateId = templateId or 0, setId = setId or 0, trait = trait or 0, style = style or 0,
+        effects = encodedEffects or 0,
+    }
+end
+
+-- Whether the game gave master writ details for a condition at all (a craft, or an item). Also
+-- true for writs WritCrafter can't craft (e.g. holiday writs), whose tasks aren't daily ones.
+function Master.IsWritInfo(info)
+    return info.itemId ~= 0 or info.craft ~= 0
+end
+
+local function FromInfo(info, required)
+    local itemId, materialId, craft, quality = info.itemId, info.materialId, info.craft, info.quality
+    local templateId, setId, trait, style = info.templateId, info.setId, info.trait, info.style
+    local encodedEffects = info.effects
+    local kind = KIND_BY_CRAFT[craft]
+    if not kind then
+        return nil
+    end
+    -- Smithing writs name a template and no item; the others name the item.
+    if kind == Master.KIND_SMITHING then
+        if not templateId or templateId == 0 then
+            return nil
+        end
+    elseif not itemId or itemId == 0 then
+        return nil
+    end
+    local writ = { craft = craft, kind = kind, required = required, vouchers = 0 }
+    if kind == Master.KIND_SMITHING then
+        writ.templateId = templateId
+        writ.template   = WC.Data.Smithing.TEMPLATES[templateId]
+        writ.quality    = quality
+        writ.setId      = setId
+        writ.trait      = trait
+        writ.style      = style
+    elseif kind == Master.KIND_ENCHANTING then
+        writ.glyphId = itemId
+        writ.glyph   = WC.Data.Enchanting.GLYPHS[itemId]
+        writ.level   = WC.Data.Enchanting.LEVELS[materialId]
+        writ.quality = quality
+    elseif kind == Master.KIND_ALCHEMY then
+        local Alchemy = WC.Data.Alchemy
+        local packed = encodedEffects or 0
+        writ.solvent = Alchemy.SOLVENTS[materialId]
+        writ.effects = {
+            Alchemy.Normalize(zo_floor(packed / 65536) % 64),
+            Alchemy.Normalize(zo_floor(packed / 256) % 64),
+            Alchemy.Normalize(packed % 64),
+        }
+    else
+        writ.resultId = itemId
+    end
+    return writ
+end
+
+Master.FromInfo = FromInfo
+
+-- Accepted master writ quests in the journal: { quest, writ, condition }, where condition is the
+-- craft task while it's still to do (as in WC.Daily.Conditions) and nil once the quest has moved
+-- on to delivery. That task leaves the journal when it's done, so each writ's details are
+-- remembered per character (by quest name: only one master writ of each kind can be accepted)
+-- and its items keep their badge until it's turned in. Worked out once per journal read.
+local acceptedList, acceptedGeneration
+local searched = {}   -- [quest] = true: no remembered details, and its hidden tasks had none
+
+function Master.Accepted()
+    local generation = WC.Daily.Generation()
+    if acceptedList and acceptedGeneration == generation then
+        return acceptedList
+    end
+    local saved = WC.character.acceptedWrits or {}
+    WC.character.acceptedWrits = saved
+    local craftTasks = {}
+    for _, condition in ipairs(WC.Daily.Conditions(true)) do
+        if condition.writ then
+            craftTasks[condition.quest] = condition
+        end
+    end
+    local list, added = {}, false
+    for _, entry in ipairs(WC.Daily.Quests()) do
+        local quest, questIndex = entry.quest, entry.questIndex
+        local condition = craftTasks[quest]
+        if condition then
+            added = added or not saved[quest]
+            saved[quest] = { info = condition.info, required = condition.max }
+        elseif not saved[quest] and not searched[quest] then
+            -- Accepted before WritCrafter remembered it: a finished task may still carry the
+            -- details even though it's no longer shown. Looked for once per quest.
+            searched[quest] = true
+            for stepIndex = 1, GetJournalQuestNumSteps(questIndex) do
+                for conditionIndex = 1, GetJournalQuestNumConditions(questIndex, stepIndex) do
+                    if not saved[quest] then
+                        local info = Master.ReadInfo(questIndex, stepIndex, conditionIndex)
+                        local _, _, max = GetJournalQuestConditionInfo(questIndex, stepIndex, conditionIndex)
+                        local required = (max and max > 0) and max or 1
+                        if FromInfo(info, required) then
+                            saved[quest] = { info = info, required = required }
+                            added = true
+                        end
+                    end
+                end
+            end
+        end
+        local record = saved[quest]
+        local writ = condition and condition.writ or (record and FromInfo(record.info, record.required))
+        if writ then
+            list[#list + 1] = { quest = quest, writ = writ, condition = condition }
+        end
+    end
+    if added then
+        WC.Daily.MasterQuestsChanged()
+    end
+    acceptedList, acceptedGeneration = list, generation
+    return list
+end
+
+-- Turned in or abandoned: forget it. A new quest may be looked for again.
+function Master.OnJournalChanged(event, ...)
+    if event == EVENT_QUEST_REMOVED then
+        local questName = select(3, ...)
+        if WC.character.acceptedWrits then
+            WC.character.acceptedWrits[questName] = nil
+        end
+        searched[questName] = nil
+    elseif event == EVENT_QUEST_ADDED then
+        ZO_ClearTable(searched)
+    end
+end
+
 -- Stable per-item key, so state survives the writ moving between bag and bank.
 function Master.UniqueId(bagId, slotIndex)
     return Id64ToString(GetItemUniqueId(bagId, slotIndex))

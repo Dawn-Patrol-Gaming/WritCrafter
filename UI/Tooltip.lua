@@ -116,6 +116,16 @@ function Tooltip.Init()
         local link = GetItemLink(bagId, slotIndex)
         if WC.Master.Parse(link) then
             AddWritLines(control, link, WC.Master.UniqueId(bagId, slotIndex))
+            return
+        end
+        local quest = WC.DailyItems.QuestFor(bagId, slotIndex)
+        if quest then
+            control:AddLine(Color(GOLD, WC.displayName) .. ": " .. zo_strformat(SI_WRITCRAFTER_TT_DAILY_ITEM, quest))
+            return
+        end
+        quest = WC.Reservations.AcceptedQuestFor(bagId, slotIndex)
+        if quest then
+            control:AddLine(Color(GOLD, WC.displayName) .. ": " .. zo_strformat(SI_WRITCRAFTER_TT_ACCEPTED_ITEM, quest))
         end
     end)
     ZO_PostHook(ItemTooltip, "SetLootItem", function(control, lootId)

@@ -52,6 +52,7 @@ local skipped = {}   -- [id] = true: not crafted again during this station visit
 local worked = {}    -- [id] = true: crafted for during this visit
 local finished = 0   -- jobs finished during this visit
 local announced = false  -- the "crafting started" notice was shown this visit
+local startPlayed = false  -- its sound was played (just before the first craft call)
 local problems = 0       -- jobs that couldn't be crafted this visit
 local firstProblem       -- the first problem's text, for the banner
 
@@ -76,7 +77,7 @@ local function Corner(text)
         corner:SetDrawLayer(DL_OVERLAY)
         corner:SetMouseEnabled(false)
         corner:SetDimensions(10, 10)
-        corner:SetAnchor(TOPRIGHT, GuiRoot, TOPRIGHT, -40, 60)
+        corner:SetAnchor(TOPRIGHT, GuiRoot, TOPRIGHT, -40, 4)   -- above the station's tab icons
         corner.label = WINDOW_MANAGER:CreateControl(WC.name .. "CornerText", corner, CT_LABEL)
         corner.label:SetFont("ZoFontWinH2")
         corner.label:SetColor(1, 0.9, 0.6, 1)
@@ -170,9 +171,19 @@ local doneSound
 
 function Engine.CraftSounds(placed, done)
     doneSound = nil
+    -- The start sound goes before the craft call: played after it, smithing's own create sound
+    -- drowns it out.
+    local delay = 0
+    if not startPlayed then
+        startPlayed = true
+        if WC.settings.soundStart then
+            PlaySound(SOUNDS.QUEST_OBJECTIVE_STARTED)
+            delay = SLOT_SOUND_GAP_MS
+        end
+    end
     if WC.settings.soundSlot then
         for i, sound in ipairs(placed or {}) do
-            zo_callLater(function() PlaySound(sound) end, (i - 1) * SLOT_SOUND_GAP_MS)
+            zo_callLater(function() PlaySound(sound) end, delay + (i - 1) * SLOT_SOUND_GAP_MS)
         end
     end
     if WC.settings.soundSuccess then
@@ -210,6 +221,7 @@ end
 -- WritCrafter crafted writ items on this visit and nothing failed, so it never closes after
 -- your own crafting, and stays open when there's something to read in chat.
 local function Finish()
+    WC.DailyItems.Begin(nil)   -- every craft's items have landed by now
     local crafted = finished > 0
     if crafted then
         Say(SI_WRITCRAFTER_CRAFT_DONE, finished, CraftName(craftSkill))
@@ -350,6 +362,7 @@ function Step()
                     Problem(reason or "")
                 else
                     local issued
+                    WC.DailyItems.Begin(job.quest)   -- badges what a daily craft makes
                     issued, reason = job.Craft()
                     if issued == "wait" then
                         waits[id] = (waits[id] or 0) + 1
@@ -361,7 +374,10 @@ function Step()
                     end
                     if issued and not announced then
                         announced = true
-                        Notice("soundStart", SOUNDS.QUEST_OBJECTIVE_STARTED, SI_WRITCRAFTER_ALERT_START,
+                        -- The sound is normally already played by CraftSounds; not for a move.
+                        local sound = not startPlayed and SOUNDS.QUEST_OBJECTIVE_STARTED or nil
+                        startPlayed = true
+                        Notice("soundStart", sound, SI_WRITCRAFTER_ALERT_START,
                             WritKinds(jobs), CraftName(craftSkill))
                     end
                     if issued == "moved" then
@@ -419,6 +435,10 @@ local function MasterJobs(skill)
                 end,
                 Check = function()
                     local verdict = WC.Rules.Evaluate(writ)
+                    -- Queued by hand despite your settings: only "can't craft" stops it.
+                    if verdict.status == WC.Rules.REJECTED and WC.Queue.IsOverride(uid) then
+                        return true
+                    end
                     if verdict.status ~= WC.Rules.OK then
                         return false, verdict.reasons[1]
                     end
@@ -432,9 +452,104 @@ local function MasterJobs(skill)
                     return crafter(writ, Status())
                 end,
                 OnDone = function() WC.Queue.Remove(uid) end,
-                OnGone = function() WC.Queue.Remove(uid) end,
+                OnGone = function()
+                    -- Accepting the writ uses it up; its quest is then crafted as an accepted writ.
+                    local accepted = false
+                    for _, entry in ipairs(WC.Master.Accepted()) do
+                        if entry.writ.craft == writ.craft then
+                            accepted = true
+                            break
+                        end
+                    end
+                    if not accepted then
+                        Say(SI_WRITCRAFTER_QUEUE_GONE, GetItemLinkName(writ.link))
+                    end
+                    WC.Queue.Remove(uid)
+                end,
             }
         end
+    end
+    return jobs
+end
+
+-- Accepted master writ quest conditions for this craft: { condition, writ }.
+local function AcceptedWrits(skill)
+    local list = {}
+    for _, entry in ipairs(WC.Master.Accepted()) do
+        if entry.condition and entry.writ.craft == skill then   -- still to craft
+            list[#list + 1] = entry
+        end
+    end
+    return list
+end
+
+-- Built-in job source: accepted master writs (quests in the journal) for this station's craft.
+-- The quest counts finished items in the backpack, so that's the progress; one already made and
+-- left in storage is taken out at the bank instead of crafting another.
+local function AcceptedJobs(skill)
+    local jobs = {}
+    for _, entry in ipairs(AcceptedWrits(skill)) do
+        local writ, quest = entry.writ, entry.condition.quest
+        local function Now()
+            for _, condition in ipairs(WC.Daily.Conditions(true)) do
+                if condition.master and condition.quest == quest then
+                    return condition
+                end
+            end
+        end
+        local function Status()
+            local now = Now()
+            if not now then
+                return nil
+            end
+            return { required = now.max, have = now.current, crafted = now.current >= now.max }
+        end
+        jobs[#jobs + 1] = {
+            id = "accepted:" .. quest,
+            source = "master",
+            label = quest,
+            State = function()
+                local now = Now()
+                if not now then
+                    return "done"   -- turned in, or the step moved on
+                end
+                return now.current >= now.max and "done" or "active"
+            end,
+            Progress = function()
+                local status = Status()
+                if not status then
+                    return math.huge
+                end
+                local progress = progressOf[writ.kind]
+                return progress and progress(writ, status) or status.have
+            end,
+            -- Matched like the badge and the bank pickup (the game's own condition check
+            -- didn't count a bank item for an accepted master writ).
+            Check = function()
+                local stored, name = 0, nil
+                for _, item in ipairs(WC.Reservations.BankItemsForAcceptedWrits()) do
+                    if item.quest == quest then
+                        stored = stored + item.quantity
+                        name = name or zo_strformat("<<t:1>>", GetItemName(item.bagId, item.slotIndex))
+                    end
+                end
+                if stored > 0 then
+                    return false, zo_strformat(SI_WRITCRAFTER_DAILY_IN_STORAGE, stored, name)
+                end
+                return true
+            end,
+            Craft = function()
+                local crafter = crafters[writ.kind]
+                local status = Status()
+                if not crafter then
+                    return false, zo_strformat(SI_WRITCRAFTER_CRAFT_NOT_YET, CraftName(skill))
+                end
+                if not status then
+                    return false
+                end
+                return crafter(writ, status)
+            end,
+        }
     end
     return jobs
 end
@@ -443,19 +558,43 @@ local function OnStationOpened(_, skill)
     if running then
         return
     end
-    -- Idle unless there's writ work for this craft.
-    WC.Daily.ForgetFailures()
-    local jobs = CollectJobs(skill)
-    if #jobs == 0 then
-        return
-    end
-    running, craftSkill, waiting, finished, announced, problems = true, skill, nil, 0, false, 0
-    firstProblem = nil
-    ZO_ClearTable(skipped)
-    ZO_ClearTable(waits)
-    ZO_ClearTable(worked)
-    WC.Reservations.EnsureFresh()
-    Later(SETTLE_MS)   -- let the station's own UI finish opening
+    -- Let the station's own UI finish opening first: smithing patterns (which daily writs are
+    -- searched in) aren't readable the moment the station opens.
+    zo_callLater(function()
+        if running or GetCraftingInteractionType() ~= skill then
+            return
+        end
+        -- Idle unless there's writ work for this craft.
+        WC.Daily.ForgetFailures(skill)
+        local jobs = CollectJobs(skill)
+        if WC.settings.logLevel >= WC.Log.LEVEL_DEBUG then
+            local queued = {}
+            for _, entry in ipairs(WC.Queue.List()) do
+                local status = WC.Reservations.GetWritStatus(entry.uid)
+                queued[#queued + 1] = string.format("%s (craft %d, %s)", GetItemLinkName(entry.writ.link),
+                    entry.writ.craft or 0, status and (status.crafted and "crafted" or "found") or "not in backpack/bank")
+            end
+            local accepted = {}
+            for _, entry in ipairs(AcceptedWrits(skill)) do
+                accepted[#accepted + 1] = string.format("%s (%d/%d)", entry.condition.quest,
+                    entry.condition.current, entry.condition.max)
+            end
+            WC.Log.Debug(string.format("Station %d opened: %d job(s); auto-craft %s; queued: %s; accepted: %s", skill, #jobs,
+                tostring(WC.settings.autoCraft), #queued > 0 and table.concat(queued, ", ") or "none",
+                #accepted > 0 and table.concat(accepted, ", ") or "none"))
+        end
+        if #jobs == 0 then
+            return
+        end
+        running, craftSkill, waiting, finished, announced, problems = true, skill, nil, 0, false, 0
+        startPlayed = false
+        firstProblem = nil
+        ZO_ClearTable(skipped)
+        ZO_ClearTable(waits)
+        ZO_ClearTable(worked)
+        WC.Reservations.EnsureFresh()
+        Step()
+    end, SETTLE_MS)
 end
 
 local function OnCraftCompleted()
@@ -484,6 +623,12 @@ function Engine.Init()
             return {}
         end
         return MasterJobs(skill)
+    end)
+    Engine.AddJobSource(function(skill)
+        if not WC.settings.autoCraft or not WC.Daily.HasAny() then
+            return {}
+        end
+        return AcceptedJobs(skill)
     end)
     local namespace = WC.name .. "Engine"
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_CRAFTING_STATION_INTERACT, OnStationOpened)

@@ -84,6 +84,12 @@ Alchemy.SOLVENTS = {
     [239] = { itemId = 75365, poison = true,  crafts = 1 },  -- Alkahest: 16 poisons per craft
 }
 
+-- Every solvent, lowest level first. Daily writs can ask you to acquire one (e.g. Lorkhan's Tears).
+Alchemy.SOLVENT_ITEMS = {
+    883, 1187, 4570, 23265, 23266, 23267, 23268, 64500, 64501,       -- Natural Water .. Lorkhan's Tears
+    75357, 75358, 75359, 75360, 75361, 75362, 75363, 75364, 75365,   -- Grease .. Alkahest
+}
+
 -- Known Update 51 bug: this combination can't be crafted. Hold such writs until ZOS fixes it.
 Alchemy.IMPOSSIBLE = { [12] = true, [21] = true, [24] = true }  -- Cowardice + Detection + Hindrance
 

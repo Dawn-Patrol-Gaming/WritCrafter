@@ -63,11 +63,15 @@ local function BadgeFor(bagId, slotIndex)
         if not writ then
             return nil
         end
-        local status = WC.Reservations.GetWritStatus(WC.Master.UniqueId(bagId, slotIndex))
+        local uid = WC.Master.UniqueId(bagId, slotIndex)
+        local status = WC.Reservations.GetWritStatus(uid)
         if settings.iconCrafted and status and status.crafted then
             return TEXTURE_CRAFTED, 0.25, 0.85, 0.25
         end
-        if settings.iconRejected and WC.Rules.GetStatus(writ) ~= WC.Rules.OK then
+        -- Rejected, unless queued by hand anyway (then it shows as queued below).
+        local verdict = WC.Rules.GetStatus(writ)
+        if settings.iconRejected and verdict ~= WC.Rules.OK
+            and not (verdict == WC.Rules.REJECTED and WC.Queue.IsOverride(uid)) then
             return TEXTURE_REJECTED, 1, 0.3, 0.3
         end
         -- Nothing made yet and not enough of some material: yellow warning.
@@ -75,8 +79,8 @@ local function BadgeFor(bagId, slotIndex)
             and #WC.Rules.Shortages(writ) > 0 then
             return TEXTURE_MISSING, 1, 0.85, 0.2
         end
-        -- Queued with the right-click menu: crafted at its station on the next visit.
-        if settings.iconQueued and WC.Queue.Has(WC.Master.UniqueId(bagId, slotIndex)) then
+        -- Queued (right-click menu or queue window): crafted at its station on the next visit.
+        if settings.iconQueued and WC.Queue.Has(uid) then
             return TEXTURE_QUEUED, 0.45, 0.75, 1
         end
         -- Some but not all made (alchemy and provisioning writs need several): amber check.
@@ -89,8 +93,12 @@ local function BadgeFor(bagId, slotIndex)
         or IsItemPlayerLocked(bagId, slotIndex) then
         return nil   -- materials, locked gear and everything else can never be set aside
     end
-    if WC.Reservations.GetReserved(bagId, slotIndex) > 0 then
+    if WC.Reservations.GetReserved(bagId, slotIndex) > 0 or WC.Reservations.AcceptedQuestFor(bagId, slotIndex) then
         return TEXTURE_RESERVED, 0.9, 0.8, 0.4
+    end
+    -- Made for a daily writ: the same padlock in blue.
+    if WC.DailyItems.QuestFor(bagId, slotIndex) then
+        return TEXTURE_RESERVED, 0.4, 0.75, 1
     end
     return nil
 end

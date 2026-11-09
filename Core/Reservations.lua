@@ -3,18 +3,42 @@ local WC = WritCrafter
 local Reservations = {}
 WC.Reservations = Reservations
 
--- Writs and crafted items are matched across everything reachable without a trip.
-local BAGS = { BAG_BACKPACK, BAG_BANK, BAG_SUBSCRIBER_BANK }
+-- Writs and crafted items are matched across the backpack and bank, and, inside your own house,
+-- its storage chests too (their contents can only be read there). Scan order matters: items
+-- closest to hand are assigned first.
+local BASE_BAGS = { BAG_BACKPACK, BAG_BANK, BAG_SUBSCRIBER_BANK }
+local HOUSE_BAGS = {}
+if BAG_HOUSE_BANK_ONE and BAG_HOUSE_BANK_TEN then
+    for bagId = BAG_HOUSE_BANK_ONE, BAG_HOUSE_BANK_TEN do
+        HOUSE_BAGS[#HOUSE_BAGS + 1] = bagId
+    end
+end
 
 local SCANNED = {}
-for _, bagId in ipairs(BAGS) do
-    SCANNED[bagId] = true
+for _, list in ipairs({ BASE_BAGS, HOUSE_BAGS }) do
+    for _, bagId in ipairs(list) do
+        SCANNED[bagId] = true
+    end
+end
+
+local function ScannedBags()
+    if #HOUSE_BAGS == 0 or not (IsOwnerOfCurrentHouse and IsOwnerOfCurrentHouse()) then
+        return BASE_BAGS
+    end
+    local bags = { unpack(BASE_BAGS) }
+    for _, bagId in ipairs(HOUSE_BAGS) do
+        bags[#bags + 1] = bagId
+    end
+    return bags
 end
 
 local dirty = true
 local writCount            -- sealed writs found by the last scan; nil until the first one
-local statusByUid = {}     -- [writ unique ID] = { have, required, crafted, inBackpack, inBank }
-local reservedBySlot = {}  -- ["bag:slot"] = units assigned to writs
+local statusByUid = {}     -- [writ unique ID] = { have, required, crafted, inBackpack, inBank, writBag, assigned }
+local reservedBySlot = {}  -- [bagId][slotIndex] = units assigned to writs
+local acceptedBySlot = {}  -- [bagId][slotIndex] = quest name of the accepted master writ it's for
+local acceptedCount = 0    -- accepted master writs found by the last scan
+local acceptedInBank = {}  -- { bagId, slotIndex, quantity } of bank items claimed by accepted writs
 
 local CANDIDATE_TYPES = {
     [ITEMTYPE_WEAPON]        = WC.Master.KIND_SMITHING,
@@ -181,8 +205,20 @@ local function WritKey(writ)
     return writ.matchKey
 end
 
-local function SlotKey(bagId, slotIndex)
-    return bagId .. ":" .. slotIndex
+-- Per-slot tables are [bagId][slotIndex] = value, so looking a slot up while drawing rows builds
+-- no strings.
+local function GetSlot(map, bagId, slotIndex)
+    local bag = map[bagId]
+    return bag and bag[slotIndex]
+end
+
+local function SetSlot(map, bagId, slotIndex, value)
+    local bag = map[bagId]
+    if not bag then
+        bag = {}
+        map[bagId] = bag
+    end
+    bag[slotIndex] = value
 end
 
 local candidateCount = 0
@@ -190,19 +226,21 @@ local candidateCount = 0
 local function Rebuild()
     ZO_ClearTable(statusByUid)
     ZO_ClearTable(reservedBySlot)
+    ZO_ClearTable(acceptedBySlot)
+    ZO_ClearTable(acceptedInBank)
 
     -- One pass over backpack and bank, cheapest checks first: item type (no link needed),
     -- then the game lock, then the link-based filters, and the FCO ItemSaver mark last.
     local writs, byKey = {}, {}
     candidateCount = 0
-    for _, bagId in ipairs(BAGS) do
+    for _, bagId in ipairs(ScannedBags()) do
         local slotIndex = ZO_GetNextBagSlotIndex(bagId)
         while slotIndex do
             local itemType = GetItemType(bagId, slotIndex)
             if itemType == ITEMTYPE_MASTER_WRIT then
                 local writ = WC.Master.Parse(GetItemLink(bagId, slotIndex))
                 if writ then
-                    writs[#writs + 1] = { uid = WC.Master.UniqueId(bagId, slotIndex), writ = writ }
+                    writs[#writs + 1] = { uid = WC.Master.UniqueId(bagId, slotIndex), writ = writ, bagId = bagId }
                 end
             else
                 local kind = CANDIDATE_TYPES[itemType]
@@ -245,11 +283,39 @@ local function Rebuild()
         end
     end
 
-    -- Writs in the backpack claim items first.
+    -- Accepted master writs (the sealed writ is used up when you accept it) claim items first,
+    -- since they're the ones being turned in, matched like sealed writs. Their full amount is
+    -- claimed, including what's already in the backpack, so those items keep their badge until
+    -- turn-in, also once the quest has moved on to delivery. These aren't reservedBySlot:
+    -- storage withdrawal hands them to the quest.
+    local accepted = WC.Master.Accepted()
+    acceptedCount = #accepted
+    for _, entry in ipairs(accepted) do
+        local need = entry.writ.required
+        local key = WritKey(entry.writ)
+        for _, candidate in ipairs(key and byKey[key] or {}) do
+            if need == 0 then
+                break
+            end
+            if candidate.remaining > 0 then
+                local take = zo_min(candidate.remaining, need)
+                candidate.remaining = candidate.remaining - take
+                need = need - take
+                SetSlot(acceptedBySlot, candidate.bagId, candidate.slotIndex, entry.quest)
+                if candidate.bagId ~= BAG_BACKPACK then
+                    acceptedInBank[#acceptedInBank + 1] = { bagId = candidate.bagId, slotIndex = candidate.slotIndex,
+                        quantity = take, quest = entry.quest }
+                end
+            end
+        end
+    end
+
+    -- Sealed writs, those in the backpack first.
     for _, entry in ipairs(writs) do
         local writ = entry.writ
         local need = writ.required
         local inBackpack, inBank = 0, 0
+        local assigned = {}
         local key = WritKey(writ)
         for _, candidate in ipairs(key and byKey[key] or {}) do
             if need == 0 then
@@ -259,8 +325,9 @@ local function Rebuild()
                 local take = zo_min(candidate.remaining, need)
                 candidate.remaining = candidate.remaining - take
                 need = need - take
-                local slot = SlotKey(candidate.bagId, candidate.slotIndex)
-                reservedBySlot[slot] = (reservedBySlot[slot] or 0) + take
+                SetSlot(reservedBySlot, candidate.bagId, candidate.slotIndex,
+                    (GetSlot(reservedBySlot, candidate.bagId, candidate.slotIndex) or 0) + take)
+                assigned[#assigned + 1] = { bagId = candidate.bagId, slotIndex = candidate.slotIndex, quantity = take }
                 if candidate.bagId == BAG_BACKPACK then
                     inBackpack = inBackpack + take
                 else
@@ -274,10 +341,40 @@ local function Rebuild()
             crafted    = need == 0,
             inBackpack = inBackpack,
             inBank     = inBank,
+            writBag    = entry.bagId,
+            assigned   = assigned,
         }
     end
     writCount = #writs
     dirty = false
+end
+
+-- Bank stacks set aside for sealed writs in the backpack, as { bagId, slotIndex, quantity }:
+-- what to take out so those writs can be turned in.
+function Reservations.BankItemsForBackpackWrits()
+    if dirty then
+        Rebuild()
+    end
+    local list = {}
+    for _, status in pairs(statusByUid) do
+        if status.writBag == BAG_BACKPACK then
+            for _, item in ipairs(status.assigned) do
+                if item.bagId ~= BAG_BACKPACK then
+                    list[#list + 1] = item
+                end
+            end
+        end
+    end
+    return list
+end
+
+-- Bank stacks claimed by accepted master writs (what the backpack doesn't already hold), as
+-- { bagId, slotIndex, quantity }: taken out so the quest can be turned in.
+function Reservations.BankItemsForAcceptedWrits()
+    if dirty then
+        Rebuild()
+    end
+    return acceptedInBank
 end
 
 -- Whether an item link (e.g. the result a craft would produce) satisfies a writ. The crafting
@@ -323,7 +420,7 @@ local function OnBagChanged(bagId, slotIndex)
     if bagId and not SCANNED[bagId] then
         return
     end
-    if writCount == 0 and bagId and GetItemType(bagId, slotIndex) ~= ITEMTYPE_MASTER_WRIT then
+    if writCount == 0 and acceptedCount == 0 and bagId and GetItemType(bagId, slotIndex) ~= ITEMTYPE_MASTER_WRIT then
         return
     end
     dirty = true
@@ -332,6 +429,37 @@ end
 
 function Reservations.Init()
     WC.Inventory.AddListener(OnBagChanged)
+    -- Accepting, turning in or abandoning a master writ changes which items are claimed.
+    -- The craft task leaves the journal once done, so its details are read (and remembered by
+    -- WC.Master.Accepted) as soon as the quest is accepted or its progress changes.
+    -- Items are only re-matched when the set of accepted writs changes (progress alone doesn't
+    -- change which items are claimed), or on entering the world: on a fresh login the journal
+    -- may not be loaded until then, and entering or leaving your house changes which storage
+    -- can be read.
+    local lastAccepted
+    WC.Daily.OnJournalChanged(function(event, ...)
+        WC.Master.OnJournalChanged(event, ...)
+        local names = {}
+        for _, entry in ipairs(WC.Master.Accepted()) do
+            names[#names + 1] = entry.quest
+        end
+        local accepted = table.concat(names, "\n")
+        if event == EVENT_PLAYER_ACTIVATED or accepted ~= lastAccepted then
+            lastAccepted = accepted
+            OnBagChanged()
+        end
+    end)
+end
+
+-- The accepted master writ quest an item is claimed for, or nil.
+function Reservations.AcceptedQuestFor(bagId, slotIndex)
+    if dirty then
+        Rebuild()
+    end
+    if acceptedCount == 0 then
+        return nil
+    end
+    return GetSlot(acceptedBySlot, bagId, slotIndex)
 end
 
 -- Settings and knowledge changes: always re-match.
@@ -355,5 +483,5 @@ function Reservations.GetReserved(bagId, slotIndex)
     if writCount == 0 then
         return 0
     end
-    return reservedBySlot[SlotKey(bagId, slotIndex)] or 0
+    return GetSlot(reservedBySlot, bagId, slotIndex) or 0
 end

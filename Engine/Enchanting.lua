@@ -242,4 +242,4 @@ local function CraftDaily(condition, plan)
     return true
 end
 
-WC.Daily.RegisterCraft(CRAFTING_TYPE_ENCHANTING, ResolveDaily, CraftDaily)
+WC.Daily.RegisterCraft(CRAFTING_TYPE_ENCHANTING, ResolveDaily, CraftDaily, true)

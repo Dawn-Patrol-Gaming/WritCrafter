@@ -75,6 +75,9 @@ local COMMANDS = {
     debug    = ToggleDebug,
     perf     = function() WC.Perf.Run() end,
     checkdata = function() WC.CheckData.Run() end,
+    reagents = function() WC.AlchemyDaily.List() end,
+    quests   = function() WC.Daily.ListQuests() end,
+    queue    = function() WC.QueueWindow.Toggle() end,
     help     = function() WC.Log.Say(GetString(SI_WRITCRAFTER_HELP)) end,
 }
 
