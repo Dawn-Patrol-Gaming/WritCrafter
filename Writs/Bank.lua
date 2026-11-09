@@ -149,7 +149,7 @@ end
 
 local function OnOpenBank(_, bankBag)
     local bags = OpenedBags(bankBag)
-    if not bags or not WC.settings.bankWithdraw then
+    if not bags then
         return
     end
     local empties, nextEmpty = EmptySlots(), 1
@@ -189,7 +189,7 @@ local function OnOpenBank(_, bankBag)
     -- left where you put them), and of accepted writs, also once the quest has moved on to
     -- delivery. Only from the storage just opened (the bank, or this house chest). Re-matched
     -- first, in case that storage's contents only just became readable.
-    do
+    if WC.settings.bankWithdrawMaster then
         WC.Reservations.Invalidate()
         local opened = {}
         for _, bagId in ipairs(bags) do
@@ -233,10 +233,12 @@ local function OnOpenBank(_, bankBag)
                         return GetItemId(bagId, slotIndex) == itemId and not WC.Inventory.IsProtected(bagId, slotIndex)
                     end, need)
                 end
-            else
+            elseif WC.settings.bankWithdrawDaily then
                 left = Take(function(bagId, slotIndex)
                     return Fits(condition, bagId, slotIndex)
                 end, need, condition.quest)
+            else
+                left = need   -- finished daily items stay in storage (setting off)
             end
             if left == nil then
                 return   -- backpack full

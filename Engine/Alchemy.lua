@@ -185,21 +185,40 @@ local function ResolveDaily(condition)
     if acquire then
         return { acquire = acquire }
     end
-    -- Craft a potion or poison: one test per effect and owned solvent, using any owned pair
-    -- that makes the effect. The pair actually used is chosen at craft time.
+    -- Craft a potion or poison: every owned pair that makes something, with every owned
+    -- solvent, until the game accepts one. Pairs sharing fewer effects go first: a writ asks
+    -- for a plain potion ("Essence of Stamina"), and a pair that also shares a second effect
+    -- makes a two-effect potion the writ won't take. The pair actually used is chosen at craft
+    -- time; this only finds the solvent and the effect.
     local owned = OwnedReagents()
     local solvents = OwnedSolvents()
     local all = {}
     for _, id in ipairs(owned) do all[#all + 1] = id end
     for _, id in ipairs(solvents) do all[#all + 1] = id end
     local where = Locations(all)
-    for effect, effectPairs in pairs(PairsByEffect(owned)) do
+    local candidates, seen = {}, {}
+    for _, effectPairs in pairs(PairsByEffect(owned)) do
+        for _, pair in ipairs(effectPairs) do
+            local key = pair[1] .. ":" .. pair[2]
+            if not seen[key] then
+                seen[key] = true
+                candidates[#candidates + 1] = { pair = pair, shared = SharedEffects(pair) }
+            end
+        end
+    end
+    table.sort(candidates, function(x, y)
+        if #x.shared ~= #y.shared then
+            return #x.shared < #y.shared
+        end
+        return x.pair[1] .. ":" .. x.pair[2] < y.pair[1] .. ":" .. y.pair[2]
+    end)
+    for _, candidate in ipairs(candidates) do
         for _, solventId in ipairs(solvents) do
-            local args = Args(where, solventId, effectPairs[1])
+            local args = Args(where, solventId, candidate.pair)
             if args and WC.Daily.Fulfils(GetAlchemyResultingItemLink(unpack(args)), condition) then
                 -- Remember every effect the working pair shares: the potion's defining
                 -- effect may be any of them, so other pairs are searched by all of them.
-                return { solvent = solventId, effects = SharedEffects(effectPairs[1]) }
+                return { solvent = solventId, effects = candidate.shared }
             end
         end
     end

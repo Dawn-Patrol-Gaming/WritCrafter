@@ -526,6 +526,9 @@ local function AcceptedJobs(skill)
             -- Matched like the badge and the bank pickup (the game's own condition check
             -- didn't count a bank item for an accepted master writ).
             Check = function()
+                if not WC.settings.bankWithdrawMaster then
+                    return true
+                end
                 local stored, name = 0, nil
                 for _, item in ipairs(WC.Reservations.BankItemsForAcceptedWrits()) do
                     if item.quest == quest then

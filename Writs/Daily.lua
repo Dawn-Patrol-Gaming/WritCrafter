@@ -260,8 +260,12 @@ local function DailyJobs(skill)
                     local now = Reread(text)
                     return now and now.current or math.huge
                 end,
-                -- One made earlier and left in storage: take that instead of crafting another.
+                -- One made earlier and left in storage: take that instead of crafting another
+                -- (only with "Daily writs: use items already in storage" on).
                 Check = function()
+                    if not WC.settings.bankWithdrawDaily then
+                        return true
+                    end
                     local now = Reread(text)
                     local stored, name = 0, nil
                     if now then

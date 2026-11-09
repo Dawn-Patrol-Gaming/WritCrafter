@@ -25,6 +25,17 @@ New files, so this deploy needs a **full relog** (character select and back), no
 | QW12 | Controls > Keybindings > Addons: "Show or hide the master writ queue"; set a key and press it twice | Opens, then closes |
 | QW13 | `/wc help` | Lists `/wc queue` |
 
+## Fix: alchemy daily missed a plain potion (2026-11-09)
+
+| # | Do | Expect |
+|---|---|---|
+| AD13 | `/reloadui`, then open the alchemy station with **Craft Essence of Stamina** (first try: "none of your solvents and reagent pairs make this", though Lorkhan's Tears and five Restore Stamina reagents were there) | Crafts it, e.g. `Crafting 4 x Essence of Stamina with Lorkhan's Tears, Blessed Thistle, Columbine` (a pair that shares only Restore Stamina). With Debug chat on, no long pause |
+| BS1 | `/reloadui`. Settings → Crafting | "Take writ items out of storage" is now two switches: **Daily writs: use items already in storage** (off) and **Master writs: take items out of storage** (on, or off if you had the old switch off) |
+| BS2 | Daily switch off: leave a finished daily item (e.g. a potion or glyph the daily wants) in the bank, open that station | Crafts a new one; no `you already have ... in storage` message. Opening the bank leaves the stored one there |
+| BS3 | Daily switch off: an alchemy daily whose acquire reagent is only in the bank, open the bank | The reagent is still taken out |
+| BS4 | Daily switch on | Same as before: the station skips the craft (`you already have ... in storage`) and the bank hands it over |
+| BS5 | Master switch off: an accepted master writ whose item is in the bank | The station crafts another; opening the bank takes nothing for master writs. Switch on: as before (skipped, then taken out) |
+
 ## Milestone 4, step 3: daily enchanting writs (2026-11-05)
 
 All passed. 2026-11-07: Q2, CD1 (alchemy and solvents), RG1, AD11, AD12, FB6, SS6. 2026-11-08: SS4m (smithing master writ create and improve sounds), SS6b (start sound at a smithing station, now played before the first craft). AD10 skipped (see Results worth keeping).

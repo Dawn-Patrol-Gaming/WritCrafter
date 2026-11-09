@@ -104,8 +104,11 @@ def check_file(path):
         name = d.group(1)
         call = re.compile(r"(?<![\w.:])" + re.escape(name) + r"\s*\(")
         declared = re.compile(r"^\s*local\s+" + re.escape(name) + r"\s*$")
+        # An earlier definition of the same name (another function's own local helper, say):
+        # calls above it are that definition's business, checked on its own pass.
+        defined = re.compile(r"^\s*local\s+function\s+" + re.escape(name) + r"\s*\(")
         for earlier, line_text in enumerate(lines[:number - 1], 1):
-            if declared.match(line_text):
+            if declared.match(line_text) or defined.match(line_text):
                 break
             code = line_text.split("--", 1)[0]
             if call.search(code):

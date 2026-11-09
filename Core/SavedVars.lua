@@ -22,7 +22,8 @@ WC.DEFAULTS = {
     maxGoldPerVoucher = 0,          -- 0 = off
     autoCraft         = true,       -- craft queued master writs at stations
     autoCraftDaily    = true,       -- craft daily writ quests at stations
-    bankWithdraw      = true,       -- take reagents daily writs must acquire out of the bank
+    bankWithdrawDaily = false,      -- daily writs: use finished items in storage (take out, don't craft)
+    bankWithdrawMaster = true,      -- master writs: take their crafted items out of storage
     craftNotice       = true,       -- on-screen alerts and the failure banner
     soundStart        = true,       -- sound when writ crafting starts at a station
     soundDone         = true,       -- sound when it's done
@@ -80,6 +81,11 @@ local function PruneKeys(target, defaults)
 end
 
 local function PruneRemoved(target)
+    -- 2026-11-09: "Take writ items out of storage" was split by writ type. Someone who had it
+    -- off keeps master writs off too (dailies start off anyway).
+    if target.bankWithdraw == false and target.bankWithdrawMaster == nil then
+        target.bankWithdrawMaster = false
+    end
     PruneKeys(target, WC.DEFAULTS)
     if type(target.expensive) == "table" then
         for itemId in pairs(WC.Data.Alchemy.REAGENTS) do

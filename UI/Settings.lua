@@ -184,7 +184,8 @@ local function IconControls()
     return {
         { type = "header", name = GetString(SI_WRITCRAFTER_HEADER_CRAFTING) },
         Checkbox("autoCraftDaily", SI_WRITCRAFTER_AUTOCRAFT_DAILY, SI_WRITCRAFTER_AUTOCRAFT_DAILY_TOOLTIP),
-        Checkbox("bankWithdraw", SI_WRITCRAFTER_BANK_WITHDRAW, SI_WRITCRAFTER_BANK_WITHDRAW_TOOLTIP),
+        Checkbox("bankWithdrawDaily", SI_WRITCRAFTER_BANK_WITHDRAW_DAILY, SI_WRITCRAFTER_BANK_WITHDRAW_DAILY_TOOLTIP),
+        Checkbox("bankWithdrawMaster", SI_WRITCRAFTER_BANK_WITHDRAW_MASTER, SI_WRITCRAFTER_BANK_WITHDRAW_MASTER_TOOLTIP),
         Checkbox("craftNotice", SI_WRITCRAFTER_CRAFT_NOTICE, SI_WRITCRAFTER_CRAFT_NOTICE_TOOLTIP),
         {
             type     = "submenu",
