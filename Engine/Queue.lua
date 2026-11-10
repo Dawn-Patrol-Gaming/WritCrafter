@@ -13,7 +13,9 @@ function Queue.Init()
     entries = WC.character.queue
 end
 
+-- Queued writs claim matching items before unqueued ones (see Reservations), so re-match.
 local function Changed()
+    WC.Reservations.Invalidate()
     WC.InventoryIcons.Refresh()
     WC.QueueWindow.OnQueueChanged()
 end
@@ -31,7 +33,7 @@ function Queue.Remove(uid)
 end
 
 function Queue.Has(uid)
-    return entries[uid] ~= nil
+    return entries ~= nil and entries[uid] ~= nil
 end
 
 function Queue.IsOverride(uid)

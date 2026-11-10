@@ -101,7 +101,7 @@ local function EvaluateSmithing(verdict, writ, statusOnly)
         if not motifKnown then
             Fail(verdict, Rules.CANNOT, SI_WRITCRAFTER_REASON_MOTIF_UNKNOWN, styleName)
         else
-            useMimic = WC.Policy.UseMimic(styleItemId, statusOnly)
+            useMimic = WC.Policy.UseMimicFor(writ.link, styleItemId, statusOnly)
         end
         if useMimic then
             Note(verdict, SI_WRITCRAFTER_NOTE_MIMIC, ItemName(styleItemId))

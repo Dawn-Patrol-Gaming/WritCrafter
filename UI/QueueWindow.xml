@@ -2,7 +2,7 @@
     <Controls>
         <!-- One sealed writ. Rows are pooled by the scroll list, so only the visible ones exist. -->
         <Control name="WritCrafterQueueRow" virtual="true" mouseEnabled="true">
-            <Dimensions x="950" y="32" />
+            <Dimensions x="1130" y="32" />
             <OnMouseEnter>WritCrafter.QueueWindow.OnRowEnter(self)</OnMouseEnter>
             <OnMouseExit>WritCrafter.QueueWindow.OnRowExit(self)</OnMouseExit>
             <OnMouseUp>WritCrafter.QueueWindow.OnRowMouseUp(self, button, upInside)</OnMouseUp>
@@ -31,16 +31,26 @@
                     <Dimensions x="80" y="32" />
                     <Anchor point="RIGHT" relativeTo="$(parent)Vouchers" relativePoint="LEFT" offsetX="-10" />
                 </Label>
+                <!-- Mimic stone for this writ. The row handles its hover and click (it checks
+                     whether the pointer is over this box), so the box doesn't take the mouse. -->
+                <Texture name="$(parent)Mimic">
+                    <Dimensions x="24" y="24" />
+                    <Anchor point="RIGHT" relativeTo="$(parent)Where" relativePoint="LEFT" offsetX="-28" />
+                </Texture>
+                <Label name="$(parent)Station" font="ZoFontGame" wrapMode="ELLIPSIS" verticalAlignment="CENTER">
+                    <Dimensions x="190" y="32" />
+                    <Anchor point="RIGHT" relativeTo="$(parent)Where" relativePoint="LEFT" offsetX="-80" />
+                </Label>
                 <Label name="$(parent)Name" font="ZoFontGame" wrapMode="ELLIPSIS" verticalAlignment="CENTER">
                     <Dimensions y="32" />
                     <Anchor point="LEFT" relativeTo="$(parent)Icon" relativePoint="RIGHT" offsetX="10" />
-                    <Anchor point="RIGHT" relativeTo="$(parent)Where" relativePoint="LEFT" offsetX="-10" />
+                    <Anchor point="RIGHT" relativeTo="$(parent)Station" relativePoint="LEFT" offsetX="-10" />
                 </Label>
             </Controls>
         </Control>
 
         <TopLevelControl name="WritCrafterQueueWindow" hidden="true" mouseEnabled="true" movable="true" clampedToScreen="true">
-            <Dimensions x="1000" y="700" />
+            <Dimensions x="1180" y="700" />
             <Anchor point="CENTER" />
             <Controls>
                 <Backdrop name="$(parent)BG" inherits="ZO_DefaultBackdrop" />
@@ -53,7 +63,7 @@
                     <OnClicked>WritCrafter.QueueWindow.Close()</OnClicked>
                 </Button>
                 <Label name="$(parent)Hint" font="ZoFontGame">
-                    <Dimensions x="960" />
+                    <Dimensions x="1140" />
                     <Anchor point="TOPLEFT" offsetX="20" offsetY="50" />
                 </Label>
 
@@ -69,6 +79,20 @@
                     <Anchor point="LEFT" relativeTo="$(parent)Show" relativePoint="RIGHT" offsetX="24" />
                     <OnClicked>WritCrafter.QueueWindow.SortByStation()</OnClicked>
                 </Button>
+                <!-- Max gold per voucher: the same setting as in Settings; applied on Enter or leaving the box. -->
+                <Label name="$(parent)GpvLabel" font="ZoFontGame">
+                    <Anchor point="LEFT" relativeTo="$(parent)ByStation" relativePoint="RIGHT" offsetX="30" />
+                </Label>
+                <Backdrop name="$(parent)Gpv" inherits="ZO_SingleLineEditBackdrop_Keyboard">
+                    <Dimensions x="90" />
+                    <Anchor point="LEFT" relativeTo="$(parent)GpvLabel" relativePoint="RIGHT" offsetX="10" />
+                    <Controls>
+                        <EditBox name="$(parent)Box" inherits="ZO_DefaultEditForBackdrop">
+                            <OnEnter>self:LoseFocus()</OnEnter>
+                            <OnFocusLost>WritCrafter.QueueWindow.OnGpvCommitted(self)</OnFocusLost>
+                        </EditBox>
+                    </Controls>
+                </Backdrop>
 
                 <!-- Sortable column headings (the game's ZO_SortHeader: click to sort, click again to reverse). -->
                 <Control name="$(parent)Headers">
@@ -92,13 +116,22 @@
                             <Dimensions x="80" y="24" />
                             <Anchor point="TOPRIGHT" relativeTo="$(parent)Vouchers" relativePoint="TOPLEFT" offsetX="-10" />
                         </Control>
+                        <Control name="$(parent)Station" inherits="ZO_SortHeader">
+                            <Dimensions x="190" y="24" />
+                            <Anchor point="TOPRIGHT" relativeTo="$(parent)Where" relativePoint="TOPLEFT" offsetX="-80" />
+                        </Control>
                         <Control name="$(parent)Name" inherits="ZO_SortHeader">
                             <Dimensions y="24" />
                             <Anchor point="TOPLEFT" />
-                            <Anchor point="TOPRIGHT" relativeTo="$(parent)Where" relativePoint="TOPLEFT" offsetX="-10" />
+                            <Anchor point="TOPRIGHT" relativeTo="$(parent)Station" relativePoint="TOPLEFT" offsetX="-10" />
                         </Control>
                     </Controls>
                 </Control>
+
+                <Label name="$(parent)MimicHeading" font="ZoFontGameBold" horizontalAlignment="CENTER">
+                    <Dimensions x="60" y="24" />
+                    <Anchor point="TOPRIGHT" relativeTo="$(parent)HeadersWhere" relativePoint="TOPLEFT" offsetX="-10" />
+                </Label>
 
                 <Control name="$(parent)List" inherits="ZO_ScrollList">
                     <Anchor point="TOPLEFT" offsetX="14" offsetY="176" />
@@ -109,7 +142,7 @@
                 </Label>
 
                 <Label name="$(parent)Summary" font="ZoFontGame">
-                    <Dimensions x="960" />
+                    <Dimensions x="1140" />
                     <Anchor point="BOTTOMLEFT" offsetX="20" offsetY="-52" />
                 </Label>
                 <Button name="$(parent)DequeueAll" inherits="ZO_DefaultButton">
@@ -121,6 +154,11 @@
                     <Dimensions x="180" y="30" />
                     <Anchor point="RIGHT" relativeTo="$(parent)DequeueAll" relativePoint="LEFT" offsetX="-8" />
                     <OnClicked>WritCrafter.QueueWindow.EnqueueAll()</OnClicked>
+                </Button>
+                <Button name="$(parent)Accept" inherits="ZO_DefaultButton">
+                    <Dimensions x="220" y="30" />
+                    <Anchor point="BOTTOMLEFT" offsetX="16" offsetY="-14" />
+                    <OnClicked>WritCrafter.Rolis.AcceptCrafted(true)</OnClicked>
                 </Button>
             </Controls>
         </TopLevelControl>

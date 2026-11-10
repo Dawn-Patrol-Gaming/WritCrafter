@@ -115,9 +115,45 @@ local function OffsetSlider(key, nameId)
     }
 end
 
+-- At the station, for every writ (sounds last).
+local function CraftingControls()
+    return {
+        { type = "header", name = GetString(SI_WRITCRAFTER_HEADER_CRAFTING) },
+        Checkbox("craftNotice", SI_WRITCRAFTER_CRAFT_NOTICE, SI_WRITCRAFTER_CRAFT_NOTICE_TOOLTIP),
+        Checkbox("leaveStation", SI_WRITCRAFTER_LEAVE_STATION, SI_WRITCRAFTER_LEAVE_STATION_TOOLTIP),
+        {
+            type     = "submenu",
+            name     = GetString(SI_WRITCRAFTER_SOUNDS_SUBMENU),
+            controls = {
+                Checkbox("soundStart", SI_WRITCRAFTER_SOUND_START, SI_WRITCRAFTER_SOUND_START_TOOLTIP),
+                Checkbox("soundDone", SI_WRITCRAFTER_SOUND_DONE, SI_WRITCRAFTER_SOUND_DONE_TOOLTIP),
+                Checkbox("soundProblem", SI_WRITCRAFTER_SOUND_PROBLEM, SI_WRITCRAFTER_SOUND_PROBLEM_TOOLTIP),
+                Checkbox("soundSlot", SI_WRITCRAFTER_SOUND_SLOT, SI_WRITCRAFTER_SOUND_SLOT_TOOLTIP),
+                Checkbox("soundRunes", SI_WRITCRAFTER_SOUND_RUNES, SI_WRITCRAFTER_SOUND_RUNES_TOOLTIP),
+                Checkbox("soundSuccess", SI_WRITCRAFTER_SOUND_SUCCESS, SI_WRITCRAFTER_SOUND_SUCCESS_TOOLTIP),
+            },
+        },
+    }
+end
+
+local function DailyWritControls()
+    return {
+        { type = "header", name = GetString(SI_WRITCRAFTER_HEADER_DAILY) },
+        Checkbox("autoCraftDaily", SI_WRITCRAFTER_AUTOCRAFT_DAILY, SI_WRITCRAFTER_AUTOCRAFT_DAILY_TOOLTIP),
+        Checkbox("bankWithdrawDaily", SI_WRITCRAFTER_BANK_WITHDRAW_DAILY, SI_WRITCRAFTER_BANK_WITHDRAW_DAILY_TOOLTIP),
+    }
+end
+
+-- Everything about master writs: crafting and storage, turning in at Rolis, tooltips, and the
+-- rules that decide which writs are worth doing.
 local function MasterWritControls()
     return {
         { type = "header", name = GetString(SI_WRITCRAFTER_HEADER_MASTER) },
+        Checkbox("autoCraft", SI_WRITCRAFTER_AUTOCRAFT, SI_WRITCRAFTER_AUTOCRAFT_TOOLTIP),
+        Checkbox("bankWithdrawMaster", SI_WRITCRAFTER_BANK_WITHDRAW_MASTER, SI_WRITCRAFTER_BANK_WITHDRAW_MASTER_TOOLTIP),
+        Checkbox("rolisTurnIn", SI_WRITCRAFTER_ROLIS_TURN_IN, SI_WRITCRAFTER_ROLIS_TURN_IN_TOOLTIP),
+        Checkbox("rolisClose", SI_WRITCRAFTER_ROLIS_CLOSE, SI_WRITCRAFTER_ROLIS_CLOSE_TOOLTIP),
+        Checkbox("rolisAcceptNext", SI_WRITCRAFTER_ROLIS_ACCEPT_NEXT, SI_WRITCRAFTER_ROLIS_ACCEPT_NEXT_TOOLTIP),
         Checkbox("tooltip", SI_WRITCRAFTER_TOOLTIP_SHOW, SI_WRITCRAFTER_TOOLTIP_SHOW_TOOLTIP),
         Checkbox("tooltipMaterials", SI_WRITCRAFTER_TOOLTIP_MATS, SI_WRITCRAFTER_TOOLTIP_MATS_TOOLTIP),
         {
@@ -160,47 +196,24 @@ local function MasterWritControls()
     }
 end
 
--- Material exclusions: what On/Off means, a button per category that opens the exclusions
--- window on that list, then the live price ceilings that feed the defaults. The material
--- lists live in the window, which rebuilds them each time it opens.
+-- Material exclusions: what On/Off means, one button that opens the exclusions window (it has
+-- its own category menu and rebuilds its lists each time it opens), then the live price
+-- ceilings that feed the defaults.
 local function ExclusionSection()
-    local controls = {
+    return {
         { type = "header", name = GetString(SI_WRITCRAFTER_EXPENSIVE_SUBMENU) },
         { type = "description", text = GetString(SI_WRITCRAFTER_EXPENSIVE_TEXT) },
+        {
+            type = "button",
+            name = GetString(SI_WRITCRAFTER_EXCL_OPEN),
+            func = function() WC.ExclusionsWindow.Open() end,
+        },
+        { type = "submenu", name = GetString(SI_WRITCRAFTER_CEILINGS_SUBMENU), controls = CeilingControls() },
     }
-    for _, category in ipairs(WC.ExclusionsWindow.CATEGORIES) do
-        controls[#controls + 1] = {
-            type  = "button",
-            name  = WC.ExclusionsWindow.CategoryName(category),
-            func  = function() WC.ExclusionsWindow.Open(category) end,
-            width = "half",
-        }
-    end
-    controls[#controls + 1] = { type = "submenu", name = GetString(SI_WRITCRAFTER_CEILINGS_SUBMENU), controls = CeilingControls() }
-    return controls
 end
 
 local function IconControls()
     return {
-        { type = "header", name = GetString(SI_WRITCRAFTER_HEADER_CRAFTING) },
-        Checkbox("autoCraftDaily", SI_WRITCRAFTER_AUTOCRAFT_DAILY, SI_WRITCRAFTER_AUTOCRAFT_DAILY_TOOLTIP),
-        Checkbox("bankWithdrawDaily", SI_WRITCRAFTER_BANK_WITHDRAW_DAILY, SI_WRITCRAFTER_BANK_WITHDRAW_DAILY_TOOLTIP),
-        Checkbox("bankWithdrawMaster", SI_WRITCRAFTER_BANK_WITHDRAW_MASTER, SI_WRITCRAFTER_BANK_WITHDRAW_MASTER_TOOLTIP),
-        Checkbox("craftNotice", SI_WRITCRAFTER_CRAFT_NOTICE, SI_WRITCRAFTER_CRAFT_NOTICE_TOOLTIP),
-        {
-            type     = "submenu",
-            name     = GetString(SI_WRITCRAFTER_SOUNDS_SUBMENU),
-            controls = {
-                Checkbox("soundStart", SI_WRITCRAFTER_SOUND_START, SI_WRITCRAFTER_SOUND_START_TOOLTIP),
-                Checkbox("soundDone", SI_WRITCRAFTER_SOUND_DONE, SI_WRITCRAFTER_SOUND_DONE_TOOLTIP),
-                Checkbox("soundProblem", SI_WRITCRAFTER_SOUND_PROBLEM, SI_WRITCRAFTER_SOUND_PROBLEM_TOOLTIP),
-                Checkbox("soundSlot", SI_WRITCRAFTER_SOUND_SLOT, SI_WRITCRAFTER_SOUND_SLOT_TOOLTIP),
-                Checkbox("soundRunes", SI_WRITCRAFTER_SOUND_RUNES, SI_WRITCRAFTER_SOUND_RUNES_TOOLTIP),
-                Checkbox("soundSuccess", SI_WRITCRAFTER_SOUND_SUCCESS, SI_WRITCRAFTER_SOUND_SUCCESS_TOOLTIP),
-            },
-        },
-        Checkbox("leaveStation", SI_WRITCRAFTER_LEAVE_STATION, SI_WRITCRAFTER_LEAVE_STATION_TOOLTIP),
-        Checkbox("autoCraft", SI_WRITCRAFTER_AUTOCRAFT, SI_WRITCRAFTER_AUTOCRAFT_TOOLTIP),
         { type = "header", name = GetString(SI_WRITCRAFTER_HEADER_ICONS) },
         Checkbox("iconCrafted", SI_WRITCRAFTER_ICON_CRAFTED, SI_WRITCRAFTER_ICON_CRAFTED_TOOLTIP),
         Checkbox("iconRejected", SI_WRITCRAFTER_ICON_REJECTED, SI_WRITCRAFTER_ICON_REJECTED_TOOLTIP),
@@ -276,7 +289,8 @@ function Settings.Init()
             default       = WC.DEFAULTS.logLevel,
         },
     }
-    for _, section in ipairs({ MasterWritControls(), ExclusionSection(), IconControls() }) do
+    for _, section in ipairs({ CraftingControls(), DailyWritControls(), MasterWritControls(),
+                                ExclusionSection(), IconControls() }) do
         for _, control in ipairs(section) do
             options[#options + 1] = control
         end

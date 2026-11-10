@@ -5,36 +5,21 @@ A Lua error popup at any point is a failure. Copy its first few lines.
 
 Only tests still to do are listed. Passed tests are removed; the full milestone 1–2 list is in this file's git history.
 
+## Milestone 5, step 3: Accept & Turn In at Rolis (2026-11-10)
+
+All passed 2026-11-10: RT1–RT10 (settings and keybind; crafted writs accepted one after another, a second of the same kind skipped, writs with banked items left alone, nothing-to-accept message; handed in at Rolis without clicking, conversation closed or left open by the setting, next batch accepted afterwards; nothing picked for unfinished writs, at other NPCs, or with the setting off). QR1 (identical writs: the queued one claims the items) passed too.
+
+## Milestone 5, step 2: queue window extras (2026-11-10)
+
+All passed 2026-11-10: QX1 (Station column), QX3 (station sorting), QX4 and QX5 (Mimic box: follows the setting, hover tooltip, click flips it without queuing, verdict follows), QX6 (a chosen mimic stone used at the station and remembered after a reload), QX7 and QX8 (max gold per voucher box, kept in step with Settings even while open), QX9 (Writ column leads with the craft). Rows that can't be queued fade as a whole, except the Mimic box. QX2 skipped (see Results worth keeping).
+
 ## Milestone 5, step 1: queue window (2026-11-08)
 
-New files, so this deploy needs a **full relog** (character select and back), not `/reloadui`.
+All passed 2026-11-10: QW1–QW13 (list, tooltips, queue and unqueue, override after confirm, can't-queue message, crafted rows, Show filter, sorting, Enqueue/Dequeue all, summary, live updates, keybind, `/wc help`).
 
-| # | Do | Expect |
-|---|---|---|
-| QW1 | `/wc queue` on the writ-heavy character | Window lists every sealed writ in your backpack and bank: the writ's own description in its quality colour, Where (Backpack/Bank), Vouchers, Cost, Per voucher. Station order: blacksmithing, clothing, woodworking, jewelry, alchemy, enchanting, provisioning |
-| QW2 | Hover a row | The writ's tooltip (with WritCrafter's lines) to the left of the window |
-| QW3 | Click a writ that's allowed (empty box) | Box ticked; the writ's inventory badge turns to the queued hammer; right-click on it offers "don't craft". Click again: unticked |
-| QW4 | Click a greyed-out writ (rejected by your settings) | "Queue anyway?" dialog, in front of the window, with the writ and the reason. Confirm: ticked, inventory badge is the queued hammer (not the red X), and the station crafts it. Cancel: nothing changes |
-| QW5 | Click a writ with a red X (can't craft) | Chat: `Can't queue <writ>: <reason>`; nothing queued |
-| QW6 | Writs already crafted | Green check; clicking does nothing |
-| QW7 | Show: Queued / Not queued / Already crafted / Can't craft | Only those rows |
-| QW8 | Click each column heading, then again; then **Sort by station** | Sorts, reverses; Sort by station goes back to station order |
-| QW9 | **Enqueue all**, then **Dequeue all** (also with a Show filter on) | Enqueue all ticks only allowed writs among those shown (never greyed or red X ones); Dequeue all unticks the ones shown |
-| QW10 | Summary line at the bottom | Queued writs, their vouchers, material cost and cost per voucher; already-crafted writs and vouchers. Changes as you tick |
-| QW11 | With the window open, move a writ between backpack and bank, or right-click queue one in the inventory | Within a second the row's Where, or its box, updates |
-| QW12 | Controls > Keybindings > Addons: "Show or hide the master writ queue"; set a key and press it twice | Opens, then closes |
-| QW13 | `/wc help` | Lists `/wc queue` |
+## Fixes of 2026-11-09: alchemy pair search, storage switches
 
-## Fix: alchemy daily missed a plain potion (2026-11-09)
-
-| # | Do | Expect |
-|---|---|---|
-| AD13 | `/reloadui`, then open the alchemy station with **Craft Essence of Stamina** (first try: "none of your solvents and reagent pairs make this", though Lorkhan's Tears and five Restore Stamina reagents were there) | Crafts it, e.g. `Crafting 4 x Essence of Stamina with Lorkhan's Tears, Blessed Thistle, Columbine` (a pair that shares only Restore Stamina). With Debug chat on, no long pause |
-| BS1 | `/reloadui`. Settings → Crafting | "Take writ items out of storage" is now two switches: **Daily writs: use items already in storage** (off) and **Master writs: take items out of storage** (on, or off if you had the old switch off) |
-| BS2 | Daily switch off: leave a finished daily item (e.g. a potion or glyph the daily wants) in the bank, open that station | Crafts a new one; no `you already have ... in storage` message. Opening the bank leaves the stored one there |
-| BS3 | Daily switch off: an alchemy daily whose acquire reagent is only in the bank, open the bank | The reagent is still taken out |
-| BS4 | Daily switch on | Same as before: the station skips the craft (`you already have ... in storage`) and the bank hands it over |
-| BS5 | Master switch off: an accepted master writ whose item is in the bank | The station crafts another; opening the bank takes nothing for master writs. Switch on: as before (skipped, then taken out) |
+All passed 2026-11-10: AD13 (Essence of Stamina crafted), BS1 (the two new switches in Settings), BS2 (daily switch off: a new item crafted, the stored one left in the bank), BS3 (acquire reagent still taken out with the daily switch off), BS4 (daily switch on: station skips, bank hands it over), BS5 (master switch off: an accepted writ's item in the bank, station crafted another, bank took nothing). A sealed writ with its item in the bank still counts as crafted whatever the switch says; the switch only controls taking items out of storage.
 
 ## Milestone 4, step 3: daily enchanting writs (2026-11-05)
 
@@ -85,6 +70,7 @@ Deferred until the free Epic accounts have characters that can craft. Every craf
 | LR1 | Provisioning daily for a recipe this character doesn't know: open the station (nothing crafted), learn the recipe, open the station again (no `/reloadui`). (Main-account characters know every recipe.) | Crafts on the second visit |
 
 ## Results worth keeping
+- **QX2 skipped (2026-11-10):** every set is on the user's Grand Master stations, and the list is shared by all characters on the account, so no writ shows a set station. The `<set> (<zone>)` text (LibSets zone) stays untested until someone with fewer attuned sets uses it.
 - **QO1 (2026-11-08), not a bug:** a queued master writ wasn't crafted because **Craft queued master writs at stations** was off (debug: `auto-craft false`; the writ was still queued and found). The Quests only filter doesn't affect WritCrafter: dailies crafted at a Grand Master station with it ticked.
 - **AD10 skipped (2026-11-07):** solvent in house storage. Moving 31k Alkahest isn't practical, and the solvent lookup only searches backpack, bank and craft bag (as AD11 checks for reagents), so without the solvent nothing is crafted either way.
 - **MM2 (2026-11-06):** the warning clears as stock changes. It can't be watched live, because the bank and mail windows replace the inventory window, but it's right the next time a bag list opens.

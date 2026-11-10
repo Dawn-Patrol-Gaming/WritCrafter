@@ -33,7 +33,10 @@ local STATE_CANNOT   = "cannot"     -- this character can't craft it
 -- In the Show menu's order (the value is the menu index).
 local FILTER_ALL, FILTER_QUEUED, FILTER_NOT_QUEUED, FILTER_DONE, FILTER_CANNOT = 1, 2, 3, 4, 5
 
-local control, list, showCombo, sortHeaders
+-- Station column: where a writ can be crafted, in the order Sort by station groups them.
+local STATION_GRAND_MASTER, STATION_SET, STATION_ANY = 1, 2, 3
+
+local control, list, showCombo, sortHeaders, gpvBox
 local filter = FILTER_ALL
 local sortKey, sortUp   -- nil: station order
 local entries = {}      -- every sealed writ found when the window was last filled
@@ -57,6 +60,43 @@ local function StateOf(entry)
     return STATE_OPEN
 end
 
+-- Where a writ can be crafted: one of your Grand Master stations (if one you've used has the
+-- set), else the set's own station and its zone; alchemy, enchanting and provisioning writs at
+-- any station. Returns the text and its rank for sorting.
+local function StationOf(writ)
+    if writ.kind ~= WC.Master.KIND_SMITHING then
+        return GetString(SI_WRITCRAFTER_QUEUE_STATION_ANY), STATION_ANY
+    end
+    if WC.GrandMaster.HasSet(writ.craft, writ.setId) then
+        return GetString(SI_WRITCRAFTER_QUEUE_STATION_GM), STATION_GRAND_MASTER
+    end
+    local setName = zo_strformat("<<1>>", GetItemSetName(writ.setId))
+    local zoneIds = LibSets.GetZoneIds and LibSets.GetZoneIds(writ.setId)
+    local zoneId = type(zoneIds) == "table" and zoneIds[1]
+    if zoneId then
+        local zoneName = zo_strformat("<<1>>", GetZoneNameById(zoneId))
+        return zo_strformat(SI_WRITCRAFTER_QUEUE_STATION_SET_ZONE, setName, zoneName), STATION_SET
+    end
+    return setName, STATION_SET
+end
+
+-- Mimic stone for a writ: nil when it has no style material (jewelry, alchemy, ...); otherwise
+-- { use, chosen, default, styleItemId }: whether it will use one, whether that was chosen for
+-- this writ, and what the Mimic stones setting would say.
+local function MimicOf(entry)
+    local writ = entry.writ
+    if writ.kind ~= WC.Master.KIND_SMITHING or not (writ.template and writ.template.chapter) then
+        return nil
+    end
+    local styleItemId = GetItemLinkItemId(GetItemStyleMaterialLink(writ.style))
+    local default = WC.Policy.UseMimic(styleItemId) and true or false
+    local choice = WC.Policy.MimicChoice(entry.link)
+    if choice ~= nil then
+        return { use = choice, chosen = true, default = default, styleItemId = styleItemId }
+    end
+    return { use = default, chosen = false, default = default, styleItemId = styleItemId }
+end
+
 -- Every sealed writ WritCrafter understands, with its full verdict (materials, cost, reasons).
 local function BuildEntries()
     local result = {}
@@ -67,12 +107,32 @@ local function BuildEntries()
                 local link = GetItemLink(bagId, slotIndex)
                 local writ = WC.Master.Parse(link)
                 if writ then
-                    -- The game's own one-line description ("Craft a Rubedo Leather Jack; Quality: …").
-                    local text = (GenerateMasterWritBaseText(link) or ""):gsub("%s*\n%s*", " ")
-                    if text == "" then
-                        text = zo_strformat("<<t:1>>", GetItemLinkName(link))
+                    -- The craft, then what to make, then the set for smithing writs:
+                    -- "Blacksmithing: Rubedite Axe (Old Growth Brewer)". Taken from the game's own
+                    -- description: its first line ("Consume to start quest:") is dropped, then
+                    -- everything after the first ";" (quality is the row's colour; the tooltip
+                    -- has the rest), then a leading "Craft a" when it matches this language's
+                    -- pattern (SI_WRITCRAFTER_QUEUE_CRAFT_PREFIX; kept as is otherwise).
+                    local full = GenerateMasterWritBaseText(link) or ""
+                    local body = full:match("\n%s*(.-)%s*$") or full
+                    body = body:gsub("%s*\n%s*", " ")
+                    local item = body:match("^([^;]+)") or body
+                    item = item:gsub(GetString(SI_WRITCRAFTER_QUEUE_CRAFT_PREFIX), "", 1)
+                    item = item:gsub(GetString(SI_WRITCRAFTER_QUEUE_CRAFT_ARTICLE), "", 1)
+                    item = zo_strtrim(item)
+                    if item == "" then
+                        item = zo_strformat("<<t:1>>", GetItemLinkName(link))
                     end
+                    if writ.kind == WC.Master.KIND_SMITHING and writ.setId and writ.setId ~= 0 then
+                        item = zo_strformat(SI_WRITCRAFTER_QUEUE_WRIT_SET, item,
+                            zo_strformat("<<1>>", GetItemSetName(writ.setId)))
+                    end
+                    local text = zo_strformat(SI_WRITCRAFTER_QUEUE_WRIT_TEXT,
+                        zo_strformat("<<1>>", GetCraftingSkillName(writ.craft)), item)
+                    local station, stationRank = StationOf(writ)
                     result[#result + 1] = {
+                        station     = station,
+                        stationRank = stationRank,
                         uid       = WC.Master.UniqueId(bagId, slotIndex),
                         bagId     = bagId,
                         slotIndex = slotIndex,
@@ -88,13 +148,27 @@ local function BuildEntries()
             slotIndex = ZO_GetNextBagSlotIndex(bagId, slotIndex)
         end
     end
+    -- Mimic choices only matter while their writ is around.
+    local present = {}
+    for _, entry in ipairs(result) do
+        present[entry.link] = true
+    end
+    WC.Policy.PruneMimicChoices(present)
     return result
 end
 
+-- Station order: craft by craft in the order you'd walk the stations, and within a craft the
+-- Grand Master writs together, then each set station's together.
 local function StationOrder(a, b)
     local oa, ob = CRAFT_ORDER[a.writ.craft] or 99, CRAFT_ORDER[b.writ.craft] or 99
     if oa ~= ob then
         return oa < ob
+    end
+    if a.stationRank ~= b.stationRank then
+        return a.stationRank < b.stationRank
+    end
+    if a.station ~= b.station then
+        return a.station < b.station
     end
     return a.lower < b.lower
 end
@@ -103,6 +177,7 @@ end
 local SORT_VALUES = {
     name       = function(entry) return entry.lower end,
     where      = function(entry) return entry.inBank and 1 or 0 end,
+    station    = function(entry) return entry.stationRank * 1000 + (CRAFT_ORDER[entry.writ.craft] or 99) end,
     vouchers   = function(entry) return entry.writ.vouchers end,
     cost       = function(entry) return entry.verdict.cost > 0 and entry.verdict.cost or nil end,
     perVoucher = function(entry) return entry.verdict.perVoucher end,
@@ -189,18 +264,38 @@ local STATE_TEXTURE = {
     [STATE_CANNOT]   = CANNOT,
 }
 
+-- Rows that can't simply be queued (rejected by your settings, or not craftable) are faded as a
+-- whole: icon, text, station, Mimic box and numbers. Rejected ones can still be queued by hand.
+local DIM_ALPHA = 0.45
+local DIMMED_PARTS = { "Icon", "Name", "Station", "Where", "Vouchers", "Cost", "PerVoucher" }
+
 local function SetupRow(row, entry)
     local state = StateOf(entry)
+    local dim = (state == STATE_REJECTED or state == STATE_CANNOT) and DIM_ALPHA or 1
+    for _, part in ipairs(DIMMED_PARTS) do
+        row:GetNamedChild(part):SetAlpha(dim)
+    end
     local check = row:GetNamedChild("Check")
     check:SetTexture(STATE_TEXTURE[state])
-    -- Rejected rows are dimmed: they're only queued by hand.
-    check:SetAlpha(state == STATE_REJECTED and 0.4 or 1)
+    check:SetAlpha(state == STATE_REJECTED and DIM_ALPHA or 1)
     row:GetNamedChild("Icon"):SetTexture(GetItemLinkIcon(entry.link))
     local name = GetItemQualityColor(GetItemLinkDisplayQuality(entry.link)):Colorize(entry.text)
     if state == STATE_REJECTED or state == STATE_CANNOT then
         name = "|c808080" .. entry.text .. "|r"
     end
     row:GetNamedChild("Name"):SetText(name)
+    row:GetNamedChild("Station"):SetText(entry.station)
+    -- Mimic: only for writs with a style material that are still to be crafted. A full-strength
+    -- box was chosen for this writ; a faded one follows the Mimic stones setting.
+    local mimicBox = row:GetNamedChild("Mimic")
+    local mimic = (state ~= STATE_DONE and state ~= STATE_CANNOT) and MimicOf(entry) or nil
+    mimicBox:SetHidden(mimic == nil)
+    if mimic then
+        mimicBox:SetTexture(mimic.use and CHECKED or UNCHECKED)
+        -- Not faded with a rejected row: flipping it is often what makes the writ allowed again
+        -- (a style material you've excluded).
+        mimicBox:SetAlpha(mimic.chosen and 1 or 0.5)
+    end
     row:GetNamedChild("Where"):SetText(GetString(entry.inBank and SI_WRITCRAFTER_QUEUE_WHERE_BANK
         or SI_WRITCRAFTER_QUEUE_WHERE_BAG))
     row:GetNamedChild("Vouchers"):SetText(entry.writ.vouchers)
@@ -250,11 +345,62 @@ function Window.OnRowEnter(row)
     -- The writ's own tooltip, with WritCrafter's lines (verdict, reasons, materials, cost).
     InitializeTooltip(ItemTooltip, control, RIGHT, -8, 0, LEFT)
     ItemTooltip:SetBagItem(entry.bagId, entry.slotIndex)
+    -- The row gets the mouse, not the Mimic box inside it, so while the pointer is on this row
+    -- watch whether it's over the box and swap to the box's tooltip there.
+    row.wcOverMimic = false
+    row:SetHandler("OnUpdate", Window.WatchMimicHover)
 end
 
 function Window.OnRowExit(row)
     ZO_ScrollList_MouseExit(list, row)
+    row:SetHandler("OnUpdate", nil)
+    row.wcOverMimic = nil
     ClearTooltip(ItemTooltip)
+    ClearTooltip(InformationTooltip)
+end
+
+function Window.WatchMimicHover(row)
+    local box = row:GetNamedChild("Mimic")
+    local over = not box:IsHidden() and MouseIsOver(box)
+    if over == row.wcOverMimic then
+        return
+    end
+    row.wcOverMimic = over
+    if over then
+        ClearTooltip(ItemTooltip)
+        Window.OnMimicEnter(box)
+    else
+        ClearTooltip(InformationTooltip)
+        local entry = ZO_ScrollList_GetData(row)
+        if entry then
+            InitializeTooltip(ItemTooltip, control, RIGHT, -8, 0, LEFT)
+            ItemTooltip:SetBagItem(entry.bagId, entry.slotIndex)
+        end
+    end
+end
+
+-- Flips the mimic stone for this writ. Landing back on what the setting says clears the choice,
+-- so the writ follows the setting again. Both the row and the box itself may report the same
+-- click, so a second call for the same writ in the same frame is ignored. Returns true when the
+-- writ has a Mimic box (the click was meant for it).
+local lastToggleFrame, lastToggleUid
+local function ToggleMimic(entry)
+    local mimic = MimicOf(entry)
+    if not mimic then
+        return false
+    end
+    local frame = GetFrameTimeMilliseconds()
+    if frame == lastToggleFrame and entry.uid == lastToggleUid then
+        return true
+    end
+    lastToggleFrame, lastToggleUid = frame, entry.uid
+    local use = not mimic.use
+    if use == mimic.default then
+        WC.Policy.SetMimicChoice(entry.link, nil)
+    else
+        WC.Policy.SetMimicChoice(entry.link, use)
+    end
+    return true
 end
 
 function Window.OnRowMouseUp(row, button, upInside)
@@ -263,6 +409,12 @@ function Window.OnRowMouseUp(row, button, upInside)
     end
     local entry = ZO_ScrollList_GetData(row)
     if not entry then
+        return
+    end
+    -- A click on the Mimic box changes the mimic stone, not the queue.
+    local mimicBox = row:GetNamedChild("Mimic")
+    if not mimicBox:IsHidden() and MouseIsOver(mimicBox) and ToggleMimic(entry) then
+        Window.OnMimicEnter(mimicBox)
         return
     end
     local state = StateOf(entry)
@@ -276,6 +428,43 @@ function Window.OnRowMouseUp(row, button, upInside)
             { mainTextParams = { entry.text, entry.verdict.reasons[1] or "" } })
     elseif state == STATE_CANNOT then
         WC.Log.Say(zo_strformat(SI_WRITCRAFTER_QUEUE_CANT, entry.text, entry.verdict.reasons[1] or ""))
+    end
+end
+
+-- "Uses a Crown Mimic Stone" or "Uses Red Diamond Seal", then where that comes from.
+local function MimicTooltipText(mimic)
+    local itemId = mimic.use and WC.Policy.MIMIC_STONE_ID or mimic.styleItemId
+    local item = zo_strformat("<<t:1>>", GetItemLinkName(WC.Inventory.GetLink(itemId)))
+    local how = GetString(mimic.chosen and SI_WRITCRAFTER_QUEUE_MIMIC_TT_CHOSEN or SI_WRITCRAFTER_QUEUE_MIMIC_TT_SETTING)
+    return zo_strformat(SI_WRITCRAFTER_QUEUE_MIMIC_TT, item, how)
+end
+
+function Window.OnMimicEnter(box)
+    local entry = ZO_ScrollList_GetData(box:GetParent())
+    local mimic = entry and MimicOf(entry)
+    if mimic then
+        InitializeTooltip(InformationTooltip, box, BOTTOM, 0, -4)
+        SetTooltipText(InformationTooltip, MimicTooltipText(mimic))
+    end
+end
+
+
+-- Max gold per voucher, typed in the window: the same setting as in Settings.
+function Window.OnGpvCommitted(editBox)
+    local text = editBox:GetText()
+    local value = zo_max(0, zo_floor(tonumber(text) or 0))
+    editBox:SetText(tostring(value))
+    if value ~= WC.settings.maxGoldPerVoucher then
+        WC.settings.maxGoldPerVoucher = value
+        WC.Policy.Changed()
+    end
+end
+
+-- Settings, exclusions, prices or Grand Master sets changed: verdicts and stations may differ.
+function Window.OnPolicyChanged()
+    if control and not control:IsHidden() then
+        entries = BuildEntries()
+        FillList()
     end
 end
 
@@ -306,6 +495,7 @@ function Window.SortByStation()
 end
 
 function Window.Open()
+    gpvBox:SetText(tostring(WC.settings.maxGoldPerVoucher))
     entries = BuildEntries()
     FillList()
     SCENE_MANAGER:ShowTopLevel(control)
@@ -343,12 +533,20 @@ function Window.Init()
     control:GetNamedChild("ByStation"):SetText(GetString(SI_WRITCRAFTER_QUEUE_BY_STATION))
     control:GetNamedChild("EnqueueAll"):SetText(GetString(SI_WRITCRAFTER_QUEUE_ENQUEUE_ALL))
     control:GetNamedChild("DequeueAll"):SetText(GetString(SI_WRITCRAFTER_QUEUE_DEQUEUE_ALL))
+    control:GetNamedChild("Accept"):SetText(GetString(SI_WRITCRAFTER_QUEUE_ACCEPT))
+    control:GetNamedChild("MimicHeading"):SetText(GetString(SI_WRITCRAFTER_QUEUE_COL_MIMIC))
+    control:GetNamedChild("GpvLabel"):SetText(GetString(SI_WRITCRAFTER_QUEUE_GPV))
+    gpvBox = control:GetNamedChild("Gpv"):GetNamedChild("Box")
+    gpvBox:SetTextType(TEXT_TYPE_NUMERIC_UNSIGNED_INT)
+    gpvBox:SetMaxInputChars(6)
 
     -- Click a heading to sort by it, click again to reverse. Text starts A to Z; numbers start
     -- highest first. "Sort by station" goes back to station order.
     local headers = control:GetNamedChild("Headers")
     ZO_SortHeader_Initialize(headers:GetNamedChild("Name"), GetString(SI_WRITCRAFTER_QUEUE_COL_WRIT),
         "name", ZO_SORT_ORDER_UP, TEXT_ALIGN_LEFT, "ZoFontGameBold")
+    ZO_SortHeader_Initialize(headers:GetNamedChild("Station"), GetString(SI_WRITCRAFTER_QUEUE_COL_STATION),
+        "station", ZO_SORT_ORDER_UP, TEXT_ALIGN_LEFT, "ZoFontGameBold")
     ZO_SortHeader_Initialize(headers:GetNamedChild("Where"), GetString(SI_WRITCRAFTER_QUEUE_COL_WHERE),
         "where", ZO_SORT_ORDER_UP, TEXT_ALIGN_LEFT, "ZoFontGameBold")
     ZO_SortHeader_Initialize(headers:GetNamedChild("Vouchers"), GetString(SI_WRITCRAFTER_QUEUE_COL_VOUCHERS),

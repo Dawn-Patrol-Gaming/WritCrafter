@@ -31,6 +31,7 @@ Writs/Master.lua
 Writs/Daily.lua
 Writs/DailyItems.lua
 Writs/Bank.lua
+Writs/Rolis.lua
 Solver/Alchemy.lua
 Rules/Evaluate.lua
 Core/Reservations.lua

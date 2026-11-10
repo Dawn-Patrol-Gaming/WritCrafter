@@ -4,6 +4,9 @@
             <Action name="WRITCRAFTER_TOGGLE_QUEUE">
                 <Down>WritCrafter.QueueWindow.Toggle()</Down>
             </Action>
+            <Action name="WRITCRAFTER_ACCEPT_WRITS">
+                <Down>WritCrafter.Rolis.AcceptCrafted(true)</Down>
+            </Action>
         </Category>
     </Layer>
 </Bindings>

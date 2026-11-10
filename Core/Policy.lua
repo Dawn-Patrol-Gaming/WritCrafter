@@ -105,6 +105,42 @@ function Policy.Changed()
     WC.Reservations.Invalidate()
     WC.InventoryIcons.Refresh()
     WC.ExclusionsWindow.OnPolicyChanged()
+    WC.QueueWindow.OnPolicyChanged()
+end
+
+-- Per-writ mimic choice from the queue window, per character, keyed by the sealed writ's link
+-- (identical writs share it). nil = follow the Mimic stones setting.
+local function MimicChoices()
+    WC.character.mimic = WC.character.mimic or {}
+    return WC.character.mimic
+end
+
+function Policy.MimicChoice(writLink)
+    return writLink and MimicChoices()[writLink]
+end
+
+function Policy.SetMimicChoice(writLink, value)
+    MimicChoices()[writLink] = value
+    Policy.Changed()
+end
+
+-- Forgets choices for writs no longer in this character's bags or the bank.
+function Policy.PruneMimicChoices(presentLinks)
+    local choices = MimicChoices()
+    for link in pairs(choices) do
+        if not presentLinks[link] then
+            choices[link] = nil
+        end
+    end
+end
+
+-- Whether a writ uses a mimic stone: its own choice if it has one, else the setting.
+function Policy.UseMimicFor(writLink, styleMaterialId, ignoreStock)
+    local choice = Policy.MimicChoice(writLink)
+    if choice ~= nil then
+        return choice
+    end
+    return Policy.UseMimic(styleMaterialId, ignoreStock)
 end
 
 function Policy.IsGoldExcluded(craft)

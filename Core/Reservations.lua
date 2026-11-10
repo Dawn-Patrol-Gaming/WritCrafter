@@ -310,7 +310,20 @@ local function Rebuild()
         end
     end
 
-    -- Sealed writs, those in the backpack first.
+    -- Sealed writs: queued ones first, so when two writs ask for the same thing the items go to
+    -- the one being crafted for (otherwise a station crafts for the queued writ, the items land
+    -- on its unqueued twin, and the queued one never shows progress); then those in the backpack
+    -- before the bank, in bag order.
+    for index, entry in ipairs(writs) do
+        entry.order = index
+        entry.queued = WC.Queue.Has(entry.uid)
+    end
+    table.sort(writs, function(a, b)
+        if a.queued ~= b.queued then
+            return a.queued
+        end
+        return a.order < b.order
+    end)
     for _, entry in ipairs(writs) do
         local writ = entry.writ
         local need = writ.required

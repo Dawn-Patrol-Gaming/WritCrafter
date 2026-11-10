@@ -129,6 +129,11 @@ local function UseMimic(writ, styleId)
     if not styleId then
         return false
     end
+    -- A choice made for this writ in the queue window wins over the setting.
+    local choice = WC.Policy.MimicChoice(writ.link)
+    if choice ~= nil then
+        return choice
+    end
     local mode = WC.settings.mimic
     if mode == WC.Policy.MIMIC_ALWAYS then
         return true
@@ -298,3 +303,40 @@ for _, craft in ipairs({ CRAFTING_TYPE_BLACKSMITHING, CRAFTING_TYPE_CLOTHIER,
                          CRAFTING_TYPE_WOODWORKING, CRAFTING_TYPE_JEWELRYCRAFTING }) do
     WC.Daily.RegisterCraft(craft, ResolveDaily, CraftDaily)
 end
+
+-- Grand Master stations -----------------------------------------------------------------------
+-- The sets your Grand Master stations can craft, remembered per craft for the whole account
+-- (on this server) each time you use one, so the queue window knows them anywhere. Sets are
+-- only ever added: a station never forgets an attuned set, and you may have several stations.
+local GrandMaster = {}
+WC.GrandMaster = GrandMaster
+
+local function Known()
+    WC.sv.grandMaster = WC.sv.grandMaster or {}
+    return WC.sv.grandMaster
+end
+
+-- true when one of your Grand Master stations for this craft has the set.
+function GrandMaster.HasSet(craft, setId)
+    local sets = Known()[craft]
+    return sets ~= nil and sets[setId] == true
+end
+
+-- Whether a Grand Master station for this craft has been seen at all.
+function GrandMaster.Seen(craft)
+    return Known()[craft] ~= nil
+end
+
+EVENT_MANAGER:RegisterForEvent(WC.name .. "GrandMaster", EVENT_CRAFTING_STATION_INTERACT, function(_, craft)
+    if GetCraftingInteractionMode() ~= CRAFTING_INTERACTION_MODE_CONSOLIDATED_STATION then
+        return
+    end
+    local known = Known()
+    known[craft] = known[craft] or {}
+    for setIndex = 1, GetNumConsolidatedSmithingSets() do
+        if IsConsolidatedSmithingSetIndexUnlocked(setIndex) then
+            known[craft][GetConsolidatedSmithingItemSetIdByIndex(setIndex)] = true
+        end
+    end
+    WC.QueueWindow.OnPolicyChanged()
+end)
