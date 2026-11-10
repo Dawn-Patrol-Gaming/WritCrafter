@@ -106,6 +106,7 @@ function Policy.Changed()
     WC.InventoryIcons.Refresh()
     WC.ExclusionsWindow.OnPolicyChanged()
     WC.QueueWindow.OnPolicyChanged()
+    WC.Markers.RefreshSoon()
 end
 
 -- Per-writ mimic choice from the queue window, per character, keyed by the sealed writ's link

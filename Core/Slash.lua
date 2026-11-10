@@ -75,6 +75,7 @@ local COMMANDS = {
     debug    = ToggleDebug,
     perf     = function() WC.Perf.Run() end,
     checkdata = function() WC.CheckData.Run() end,
+    stations = function() WC.Markers.Diagnose() end,
     reagents = function() WC.AlchemyDaily.List() end,
     quests   = function() WC.Daily.ListQuests() end,
     queue    = function() WC.QueueWindow.Toggle() end,

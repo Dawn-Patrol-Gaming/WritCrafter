@@ -35,6 +35,7 @@ WC.DEFAULTS = {
     rolisTurnIn       = true,       -- step through the turn-in dialog when you talk to Rolis Hlaalu
     rolisClose        = true,       -- end the conversation after the last master writ is handed in
     rolisAcceptNext   = true,       -- then accept the next batch of crafted writs
+    stationMarkers    = "off",      -- WC.Markers.OFF / ALL / QUEUED: markers over stations for master writs
     tooltip           = true,
     tooltipMaterials  = true,
     iconCrafted       = true,

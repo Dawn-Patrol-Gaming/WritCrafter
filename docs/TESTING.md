@@ -5,6 +5,12 @@ A Lua error popup at any point is a failure. Copy its first few lines.
 
 Only tests still to do are listed. Passed tests are removed; the full milestone 1–2 list is in this file's git history.
 
+## Milestone 5, step 4: station markers (2026-11-10)
+
+All passed 2026-11-10 (SM1–SM12): houses only; every station found from the house's furniture (shipped crafting-station furnishing list, then the name, then what you've used), in your houses and friends'; cyan markers, turned to the camera, gone once the writ is crafted; Off / All Writs in Your Bag / Queued Writs Only; greyed out and nothing drawn while Essential Housing Tools' master writ markers are on; `/wc stations` diagnostic. SM6 not needed.
+
+Milestone 5 is complete.
+
 ## Milestone 5, step 3: Accept & Turn In at Rolis (2026-11-10)
 
 All passed 2026-11-10: RT1–RT10 (settings and keybind; crafted writs accepted one after another, a second of the same kind skipped, writs with banked items left alone, nothing-to-accept message; handed in at Rolis without clicking, conversation closed or left open by the setting, next batch accepted afterwards; nothing picked for unfinished writs, at other NPCs, or with the setting off). QR1 (identical writs: the queued one claims the items) passed too.

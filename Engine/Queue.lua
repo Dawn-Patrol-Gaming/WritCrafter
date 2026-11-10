@@ -18,6 +18,7 @@ local function Changed()
     WC.Reservations.Invalidate()
     WC.InventoryIcons.Refresh()
     WC.QueueWindow.OnQueueChanged()
+    WC.Markers.RefreshSoon()
 end
 
 -- override: queued by hand although your settings reject it (the queue window asks first);

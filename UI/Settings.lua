@@ -154,6 +154,25 @@ local function MasterWritControls()
         Checkbox("rolisTurnIn", SI_WRITCRAFTER_ROLIS_TURN_IN, SI_WRITCRAFTER_ROLIS_TURN_IN_TOOLTIP),
         Checkbox("rolisClose", SI_WRITCRAFTER_ROLIS_CLOSE, SI_WRITCRAFTER_ROLIS_CLOSE_TOOLTIP),
         Checkbox("rolisAcceptNext", SI_WRITCRAFTER_ROLIS_ACCEPT_NEXT, SI_WRITCRAFTER_ROLIS_ACCEPT_NEXT_TOOLTIP),
+        {
+            -- Greyed out (and treated as Off) while Essential Housing Tools marks the stations.
+            type          = "dropdown",
+            name          = GetString(SI_WRITCRAFTER_MARKERS),
+            tooltip       = GetString(SI_WRITCRAFTER_MARKERS_TOOLTIP),
+            choices       = {
+                GetString(SI_WRITCRAFTER_MARKERS_OFF),
+                GetString(SI_WRITCRAFTER_MARKERS_ALL),
+                GetString(SI_WRITCRAFTER_MARKERS_QUEUED),
+            },
+            choicesValues = { WC.Markers.OFF, WC.Markers.ALL, WC.Markers.QUEUED },
+            getFunc       = function() return WC.Markers.Mode() end,
+            setFunc       = function(value)
+                WC.settings.stationMarkers = value
+                WC.Markers.Refresh()
+            end,
+            disabled      = function() return WC.Markers.EhtMarking() end,
+            default       = WC.DEFAULTS.stationMarkers,
+        },
         Checkbox("tooltip", SI_WRITCRAFTER_TOOLTIP_SHOW, SI_WRITCRAFTER_TOOLTIP_SHOW_TOOLTIP),
         Checkbox("tooltipMaterials", SI_WRITCRAFTER_TOOLTIP_MATS, SI_WRITCRAFTER_TOOLTIP_MATS_TOOLTIP),
         {

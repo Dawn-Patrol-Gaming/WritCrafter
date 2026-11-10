@@ -19,6 +19,7 @@ Core/Init.lua
 Data/Alchemy.lua
 Data/Smithing.lua
 Data/Enchanting.lua
+Data/Stations.lua
 Data/PriceDefaults.lua
 
 Core/Log.lua
@@ -44,6 +45,7 @@ UI/Settings.lua
 UI/Tooltip.lua
 UI/InventoryIcons.lua
 UI/ContextMenu.lua
+UI/Markers.lua
 
 Engine/Queue.lua
 Engine/Engine.lua
