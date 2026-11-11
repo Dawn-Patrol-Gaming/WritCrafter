@@ -38,6 +38,23 @@ if ($luajit) {
     Write-Host "LuaJIT not found; skipping scripts\check.lua"
 }
 
+# scripts\check_lua.py too, when Python is installed: it has checks check.lua lacks (a local
+# function called above its definition, 'a, b = x and f()', tonumber of a call).
+$python = (Get-Command python -ErrorAction SilentlyContinue).Source
+if ($python) {
+    Push-Location $source
+    try {
+        & $python -I scripts\check_lua.py
+        if ($LASTEXITCODE -ne 0) {
+            throw "scripts\check_lua.py found problems; not deployed"
+        }
+    } finally {
+        Pop-Location
+    }
+} else {
+    Write-Host "Python not found; skipping scripts\check_lua.py"
+}
+
 robocopy $source $Destination /MIR /XD .git .claude docs scripts tests /XF .gitignore *.md notes_*.txt /NFL /NDL /NJH /NJS /NP | Out-Null
 if ($LASTEXITCODE -ge 8) {
     throw "robocopy failed with exit code $LASTEXITCODE"

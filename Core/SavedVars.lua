@@ -35,6 +35,23 @@ WC.DEFAULTS = {
     rolisTurnIn       = true,       -- step through the turn-in dialog when you talk to Rolis Hlaalu
     rolisClose        = true,       -- end the conversation after the last master writ is handed in
     rolisAcceptNext   = true,       -- then accept the next batch of crafted writs
+    -- Daily writ dialogs, per craft: accept at writ boards, turn in at delivery crates.
+    dailyAccept       = {
+        [CRAFTING_TYPE_BLACKSMITHING] = true, [CRAFTING_TYPE_CLOTHIER] = true, [CRAFTING_TYPE_WOODWORKING] = true,
+        [CRAFTING_TYPE_JEWELRYCRAFTING] = true, [CRAFTING_TYPE_ALCHEMY] = true, [CRAFTING_TYPE_ENCHANTING] = true,
+        [CRAFTING_TYPE_PROVISIONING] = true,
+    },
+    dailyTurnIn       = {
+        [CRAFTING_TYPE_BLACKSMITHING] = true, [CRAFTING_TYPE_CLOTHIER] = true, [CRAFTING_TYPE_WOODWORKING] = true,
+        [CRAFTING_TYPE_JEWELRYCRAFTING] = true, [CRAFTING_TYPE_ALCHEMY] = true, [CRAFTING_TYPE_ENCHANTING] = true,
+        [CRAFTING_TYPE_PROVISIONING] = true,
+    },
+    writStatus        = true,       -- the daily writ status strip
+    writStatusX       = false,      -- its position, once you've moved it (false = default)
+    writStatusY       = false,
+    rewardOpenBoxes   = true,       -- open writ reward boxes as they arrive
+    rewardSummary     = true,       -- list what each box gave in chat
+    rewardActions     = {},         -- [reward kind] = WC.Rewards.* action; missing = leave in bag
     stationMarkers    = "off",      -- WC.Markers.OFF / ALL / QUEUED: markers over stations for master writs
     tooltip           = true,
     tooltipMaterials  = true,

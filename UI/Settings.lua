@@ -136,11 +136,49 @@ local function CraftingControls()
     }
 end
 
+-- One checkbox per craft for a per-craft setting table (dailyAccept, dailyTurnIn).
+local function PerCraftControls(key)
+    local controls = {}
+    for _, craft in ipairs(WC.Dialogs.CRAFTS) do
+        controls[#controls + 1] = {
+            type    = "checkbox",
+            name    = zo_strformat("<<1>>", GetCraftingSkillName(craft)),
+            getFunc = function() return WC.settings[key][craft] == true end,
+            setFunc = function(value) WC.settings[key][craft] = value end,
+            default = WC.DEFAULTS[key][craft] == true,
+        }
+    end
+    return controls
+end
+
 local function DailyWritControls()
     return {
         { type = "header", name = GetString(SI_WRITCRAFTER_HEADER_DAILY) },
         Checkbox("autoCraftDaily", SI_WRITCRAFTER_AUTOCRAFT_DAILY, SI_WRITCRAFTER_AUTOCRAFT_DAILY_TOOLTIP),
         Checkbox("bankWithdrawDaily", SI_WRITCRAFTER_BANK_WITHDRAW_DAILY, SI_WRITCRAFTER_BANK_WITHDRAW_DAILY_TOOLTIP),
+        {
+            type    = "checkbox",
+            name    = GetString(SI_WRITCRAFTER_STATUS_SHOW),
+            tooltip = GetString(SI_WRITCRAFTER_STATUS_SHOW_TOOLTIP),
+            getFunc = function() return WC.settings.writStatus end,
+            setFunc = function(value)
+                WC.settings.writStatus = value
+                WC.WritStatus.Refresh()
+            end,
+            default = WC.DEFAULTS.writStatus,
+        },
+        {
+            type     = "submenu",
+            name     = GetString(SI_WRITCRAFTER_DAILY_ACCEPT_SUBMENU),
+            tooltip  = GetString(SI_WRITCRAFTER_DAILY_ACCEPT_TOOLTIP),
+            controls = PerCraftControls("dailyAccept"),
+        },
+        {
+            type     = "submenu",
+            name     = GetString(SI_WRITCRAFTER_DAILY_TURNIN_SUBMENU),
+            tooltip  = GetString(SI_WRITCRAFTER_DAILY_TURNIN_TOOLTIP),
+            controls = PerCraftControls("dailyTurnIn"),
+        },
     }
 end
 
@@ -231,6 +269,50 @@ local function ExclusionSection()
     }
 end
 
+-- Writ rewards: open boxes, list what they gave, and one action per kind of reward.
+local function RewardControls()
+    local actionNames = {
+        [WC.Rewards.LEAVE]   = SI_WRITCRAFTER_REWARD_LEAVE,
+        [WC.Rewards.DEPOSIT] = SI_WRITCRAFTER_REWARD_DEPOSIT,
+        [WC.Rewards.JUNK]    = SI_WRITCRAFTER_REWARD_JUNK,
+        [WC.Rewards.SELL]    = SI_WRITCRAFTER_REWARD_SELL,
+        [WC.Rewards.OPEN]    = SI_WRITCRAFTER_REWARD_OPEN_ACTION,
+        [WC.Rewards.KEEP_STACK] = SI_WRITCRAFTER_REWARD_KEEP_STACK,
+    }
+    local controls = {
+        { type = "header", name = GetString(SI_WRITCRAFTER_HEADER_REWARDS) },
+        Checkbox("rewardOpenBoxes", SI_WRITCRAFTER_REWARD_OPEN, SI_WRITCRAFTER_REWARD_OPEN_TOOLTIP),
+        Checkbox("rewardSummary", SI_WRITCRAFTER_REWARD_LIST, SI_WRITCRAFTER_REWARD_LIST_TOOLTIP),
+        { type = "description", text = GetString(SI_WRITCRAFTER_REWARD_ACTIONS_TEXT) },
+    }
+    for _, kind in ipairs(WC.Rewards.KINDS) do
+        local names, values = {}, {}
+        for _, action in ipairs(kind.actions) do
+            -- For containers, Leave in Bag reads "Leave Closed".
+            local nameId = actionNames[action]
+            if action == WC.Rewards.LEAVE and (kind.key == "writContainers" or kind.key == "surveyContainers"
+                or kind.key == "containers") then
+                nameId = SI_WRITCRAFTER_REWARD_LEAVE_CLOSED
+            end
+            names[#names + 1] = GetString(nameId)
+            values[#values + 1] = action
+        end
+        controls[#controls + 1] = {
+            type          = "dropdown",
+            name          = GetString(_G["SI_WRITCRAFTER_REWARD_KIND_" .. kind.key:upper()]),
+            choices       = names,
+            choicesValues = values,
+            getFunc       = function() return WC.Rewards.ActionFor(kind.key) end,
+            setFunc       = function(value)
+                -- Stored only when it differs from the kind's default.
+                WC.settings.rewardActions[kind.key] = value ~= WC.Rewards.DefaultFor(kind.key) and value or nil
+            end,
+            default       = WC.Rewards.DefaultFor(kind.key),
+        }
+    end
+    return controls
+end
+
 local function IconControls()
     return {
         { type = "header", name = GetString(SI_WRITCRAFTER_HEADER_ICONS) },
@@ -309,7 +391,7 @@ function Settings.Init()
         },
     }
     for _, section in ipairs({ CraftingControls(), DailyWritControls(), MasterWritControls(),
-                                ExclusionSection(), IconControls() }) do
+                                RewardControls(), ExclusionSection(), IconControls() }) do
         for _, control in ipairs(section) do
             options[#options + 1] = control
         end

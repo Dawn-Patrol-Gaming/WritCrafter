@@ -58,7 +58,7 @@ local function CraftAlchemy(writ, status)
     for _, itemId in ipairs(combo) do
         materials[#materials + 1] = { itemId = itemId, count = iterations }
     end
-    WC.Engine.SayCrafting(iterations * perCraft, resultLink, materials)
+    WC.Engine.SayCrafting(iterations * perCraft, resultLink, materials, status.required - status.have)
     WC.Engine.CraftSounds({ SOUNDS.ALCHEMY_SOLVENT_PLACED, SOUNDS.ALCHEMY_REAGENT_PLACED,
         SOUNDS.ALCHEMY_REAGENT_PLACED, SOUNDS.ALCHEMY_REAGENT_PLACED }, SOUNDS.ALCHEMY_CREATE_TOOLTIP_GLOW_SUCCESS)
     CraftAlchemyItem(solventBag, solventSlot, r1Bag, r1Slot, r2Bag, r2Slot, r3Bag, r3Slot, iterations)
@@ -369,7 +369,7 @@ local function CraftDaily(condition, plan)
         { itemId = plan.solvent, count = iterations },
         { itemId = usedPair[1], count = iterations },
         { itemId = usedPair[2], count = iterations },
-    })
+    }, remaining)
     -- Like the game's own UI: only the slotted reagents' bag/slot pairs, then the batch count.
     args[#args + 1] = iterations
     WC.Engine.CraftSounds({ SOUNDS.ALCHEMY_SOLVENT_PLACED, SOUNDS.ALCHEMY_REAGENT_PLACED,

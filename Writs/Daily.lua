@@ -204,7 +204,9 @@ function Daily.IsAlchemyQuest(condition)
 end
 
 local function Resolve(skill, condition)
-    local owner = claims[condition.quest]
+    -- A quest already known to be another craft's (claimed this session, or its name learned on an
+    -- earlier day) isn't searched by this craft.
+    local owner = claims[condition.quest] or WC.Dialogs.LearnedCraft(condition.quest)
     if owner and owner ~= skill then
         return nil
     end
@@ -216,6 +218,7 @@ local function Resolve(skill, condition)
         resolved[skill][condition.text] = hit
         if hit then
             claims[condition.quest] = skill
+            WC.Dialogs.LearnWritQuest(condition.quest, skill)   -- for writ boards and crates
         end
     end
     return hit or nil
@@ -234,6 +237,17 @@ function Daily.ForgetFailures(skill)
             answers[text] = nil
         end
     end
+end
+
+-- Whether a daily quest still has a task this craft would make (or can't make), e.g. after a
+-- station visit: none left means its crafting is done and it's waiting for delivery.
+function Daily.HasCraftWork(skill, quest)
+    for _, condition in ipairs(Daily.Conditions()) do
+        if condition.quest == quest and condition.current < condition.max and Resolve(skill, condition) then
+            return true
+        end
+    end
+    return false
 end
 
 local function DailyJobs(skill)

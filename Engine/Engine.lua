@@ -53,6 +53,7 @@ local worked = {}    -- [id] = true: crafted for during this visit
 local finished = 0   -- jobs finished during this visit
 local announced = false  -- the "crafting started" notice was shown this visit
 local startPlayed = false  -- its sound was played (just before the first craft call)
+local dailyQuests = {}   -- [quest] = true: daily writs crafted for during this visit
 local problems = 0       -- jobs that couldn't be crafted this visit
 local firstProblem       -- the first problem's text, for the banner
 
@@ -93,6 +94,7 @@ local function Corner(text)
         end
     end, CORNER_MS)
 end
+Engine.Corner = Corner   -- also used by writ rewards for their progress
 
 -- A notice: its sound (if that sound's setting is on) and, with stringId, a short top-right
 -- message (if on-screen notices are on). soundSetting names the setting for this sound.
@@ -191,7 +193,12 @@ function Engine.CraftSounds(placed, done)
     end
 end
 
-function Engine.SayCrafting(count, resultLink, materials)
+-- needed (optional): how many the writ still needed; anything above it is extra (skills make
+-- several potions or dishes per craft), handed to the Extra Crafted Items reward action.
+function Engine.SayCrafting(count, resultLink, materials, needed)
+    if needed and count > needed then
+        WC.Rewards.ExpectExtra(resultLink, count - needed)
+    end
     local parts = {}
     for _, material in ipairs(materials or {}) do
         local name = material.name
@@ -222,6 +229,13 @@ end
 -- your own crafting, and stays open when there's something to read in chat.
 local function Finish()
     WC.DailyItems.Begin(nil)   -- every craft's items have landed by now
+    -- Daily writs crafted for here with nothing left for this craft: ready to deliver.
+    for quest in pairs(dailyQuests) do
+        if not WC.Daily.HasCraftWork(craftSkill, quest) then
+            WC.WritStatus.MarkReady(quest)
+        end
+    end
+    ZO_ClearTable(dailyQuests)
     local crafted = finished > 0
     if crafted then
         Say(SI_WRITCRAFTER_CRAFT_DONE, finished, CraftName(craftSkill))
@@ -379,6 +393,9 @@ function Step()
                         startPlayed = true
                         Notice("soundStart", sound, SI_WRITCRAFTER_ALERT_START,
                             WritKinds(jobs), CraftName(craftSkill))
+                    end
+                    if issued and job.source == "daily" and job.quest then
+                        dailyQuests[job.quest] = true
                     end
                     if issued == "moved" then
                         -- Not a craft (e.g. a reagent moved into the backpack): no craft event
@@ -595,6 +612,7 @@ local function OnStationOpened(_, skill)
         ZO_ClearTable(skipped)
         ZO_ClearTable(waits)
         ZO_ClearTable(worked)
+        ZO_ClearTable(dailyQuests)
         WC.Reservations.EnsureFresh()
         Step()
     end, SETTLE_MS)

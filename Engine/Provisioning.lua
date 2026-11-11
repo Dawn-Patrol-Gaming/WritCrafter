@@ -21,7 +21,7 @@ local function CraftRecipe(listIndex, recipeIndex, remaining)
         local link = GetRecipeIngredientItemLink(listIndex, recipeIndex, ingredientIndex)
         materials[#materials + 1] = { itemId = GetItemLinkItemId(link), count = (perRecipe or 1) * iterations }
     end
-    WC.Engine.SayCrafting(iterations * perCraft, GetRecipeResultItemLink(listIndex, recipeIndex), materials)
+    WC.Engine.SayCrafting(iterations * perCraft, GetRecipeResultItemLink(listIndex, recipeIndex), materials, remaining)
     WC.Engine.CraftSounds(nil, nil)
     CraftProvisionerItem(listIndex, recipeIndex, iterations)
     return true

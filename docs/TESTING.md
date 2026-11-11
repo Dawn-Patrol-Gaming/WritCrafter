@@ -5,6 +5,32 @@ A Lua error popup at any point is a failure. Copy its first few lines.
 
 Only tests still to do are listed. Passed tests are removed; the full milestone 1–2 list is in this file's git history.
 
+## Daily writ status strip (2026-11-10)
+
+New file, so a **full relog**.
+
+All passed 2026-11-11: WS1–WS8 (default spot above the health, magicka and stamina bars, draggable straight away after a reset; seven craft icons, amber to craft, cyan once crafted, green once turned in, gone after the last turn-in; kept through reloads; movable, position remembered, hidden over menus and by its setting; the game's own icons). Cyan comes from WritCrafter finishing at the station with nothing left to craft for that writ: the game doesn't call a writ waiting for delivery complete. The game's own "quest advanced, main step changed" signal doesn't come when a writ's crafting is done, only when the goods are placed in the crate (seen 2026-11-11), so a writ crafted by hand stays amber until it's turned in.
+
+
+## Daily writ dialogs: writ boards and delivery crates (2026-11-10)
+
+New file, so a **full relog**.
+
+Passed 2026-11-10: WD1–WD4 (settings; boards accept the ticked crafts' writs and close; crates turn writs in). WD8 answered: the number the game passes with a dialog option is always 0 (Rolis, boards, crates), so options carry no quest; board options read `<Examine the Blacksmith Writs.>`, which contain the learned quest names. WD5 passed (unticked craft: crate left alone). WD10 passed: the delivery crate reported `unit type 3, an object: true` and was turned in through that route; a writ container from the reward stayed closed and a Shipment of Ounces was opened. WD12 passed 2026-11-11: every ticked writ taken from both boards in one go; the board sometimes falls back to its front page without telling add-ons, so WritCrafter now looks at the page half a second after each accept and picks Pull itself (a little slower than Dolgubon's; the pauses can be shortened in milestone 7). WD6, WD7 and WD9 passed 2026-11-11: a writ that would hand over an excluded reagent is left at the crate; other NPCs' finished quests are left alone; all seven daily writ quest names are learned (`blacksmith writ = 1`, `clothier writ = 2`, `enchanter writ = 3`, `alchemist writ = 4`, `provisioner writ = 5`, `woodworker writ = 6`, `jewelry crafting writ = 7`). WD11 passed 2026-11-11 (second character, names learned on the first): each smithing station only searched its own writ's tasks and its Deliver Goods task. All daily writ dialog tests are done.
+
+
+## Milestone 6, step 1: writ reward boxes (2026-11-10)
+
+New file, so this deploy needs a **full relog**. Set a few actions first in Settings → Writ Rewards (e.g. Survey Reports → Deposit, Repair Kits → Sell, Recipes → Junk).
+
+Passed 2026-11-11: RW1 (Writ Rewards settings), RW2 (boxes open by themselves, one chat line each), RW3 (Junk), RW4 (Deposit at the bank), RW5 (Sell at a merchant), RW15 (no loot window flashing), RK1 (recipes split by quality, Keep a Stack, Sell the Rest offered), RX2 (extra crafted items sold at a merchant, the writ's own kept). Also passed: RW7 (automatic opening off: boxes stay closed), RW10 and RW13 (Master Writ, Survey and Other Containers settings), RX1 (Extra Crafted Potions, Poisons & Food setting). RW12, RW14, RW16 and RW17 passed 2026-11-11: survey containers set to Open are opened; shipments inside boxes are opened and sorted; the corner counts the boxes; every box opened during quick crate turn-ins (one attempt ignored by the game and retried). A box landing while another box is being opened is listed as that box's contents in chat, though it's still opened. RK3 and RX3 passed 2026-11-11: Keep a Stack sold exactly what the boxes gave above a full stack (1 repair kit, 3 soul gems), nothing you had before; several Deposit items (three extra crafted stacks and a survey) all went into the bank. RW6 passed 2026-11-11: with 2 free slots the box stayed closed; once room was made and the house storage closed, both waiting boxes opened by themselves. (A completely full backpack stops the game itself from finishing the turn-in; Sign the Manifest again once there's room.) RK2 passed 2026-11-11: green recipes sold; a blue recipe marked `(to deposit)` and taken by the bank (`Deposited 1`). RW11 passed 2026-11-11: an Unknown Jewelry Crafter Writ (a master writ container) stayed closed on Leave Closed. RW19 dropped: the "Unknown ... Writ" items boxes give are master writ containers, so they follow Master Writ Containers, not Sealed Master Writs (that one only applies to the sealed writs inside an opened container); the undeposited Unknown Blacksmithing Writ was on Leave Closed. RX4 passed 2026-11-11: with extras on Leave in Bag, no `Extra from crafting` line and the 3 extra potions stayed in the bag through the bank and a merchant. Also seen 2026-11-11: an alchemy writ whose acquire reagent (Mudcrab Chitin) is excluded was left at the crate with the `Not turning in` message, as intended. RW9 dropped: master writ turn-ins at Rolis give only vouchers and gold, no box.
+
+| # | Do | Expect |
+|---|---|---|
+| RW8 | Other containers (a style page, a box from a dungeon, a mail attachment) | Never opened by WritCrafter: only a container arriving within a few seconds of completing a crafting quest counts |
+| RW20 | Optional, rare: only happens when placing the goods frees no slot, i.e. a provisioning or alchemy daily whose extras stay in the same stack (or an acquire reagent from the craft bag). Fill the backpack completely after crafting it, then turn it in | Chat: `Can't turn in <writ>: your backpack is full ...`; the writ stays at Sign the Manifest. Make room, talk to the crate again: it's turned in (seen 2026-11-11 with a provisioner writ, no message then). Gear writs free their own slots when the goods are placed, so they never hit this |
+| RW18 | Settings → Writ Rewards: **Exemplary Gear (for Research)** after Intricate Gear (Leave in Bag by default); set it to Deposit, get a purple traited piece from a box (e.g. an Exemplary Swift Ring), open the bank | Chat marks it `(to deposit)` and the bank takes it. Any purple (or gold) weapon, armor or jewelry piece with a trait other than ornate or intricate counts; the white and green gear boxes give (e.g. a Rubedite Maul) is left alone |
+
 ## Milestone 5, step 4: station markers (2026-11-10)
 
 All passed 2026-11-10 (SM1–SM12): houses only; every station found from the house's furniture (shipped crafting-station furnishing list, then the name, then what you've used), in your houses and friends'; cyan markers, turned to the camera, gone once the writ is crafted; Off / All Writs in Your Bag / Queued Writs Only; greyed out and nothing drawn while Essential Housing Tools' master writ markers are on; `/wc stations` diagnostic. SM6 not needed.
@@ -14,6 +40,10 @@ Milestone 5 is complete.
 ## Milestone 5, step 3: Accept & Turn In at Rolis (2026-11-10)
 
 All passed 2026-11-10: RT1–RT10 (settings and keybind; crafted writs accepted one after another, a second of the same kind skipped, writs with banked items left alone, nothing-to-accept message; handed in at Rolis without clicking, conversation closed or left open by the setting, next batch accepted afterwards; nothing picked for unfinished writs, at other NPCs, or with the setting off). QR1 (identical writs: the queued one claims the items) passed too.
+
+| # | Do | Expect |
+|---|---|---|
+| RT11 | With an accepted (unfinished) enchanting master writ and many crafted enchanting writs in the backpack, press Accept crafted writs | No enchanting writ is used at all (first try 2026-11-10: it went through the bag trying each one); the other crafts' writs are accepted, one per craft. With nothing else to accept: `No crafted master writs in your backpack to accept (or you already have their quests).` straight away |
 
 ## Milestone 5, step 2: queue window extras (2026-11-10)
 

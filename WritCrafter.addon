@@ -33,6 +33,8 @@ Writs/Daily.lua
 Writs/DailyItems.lua
 Writs/Bank.lua
 Writs/Rolis.lua
+Writs/Dialogs.lua
+Rewards/Rewards.lua
 Solver/Alchemy.lua
 Rules/Evaluate.lua
 Core/Reservations.lua
@@ -46,6 +48,7 @@ UI/Tooltip.lua
 UI/InventoryIcons.lua
 UI/ContextMenu.lua
 UI/Markers.lua
+UI/WritStatus.lua
 
 Engine/Queue.lua
 Engine/Engine.lua

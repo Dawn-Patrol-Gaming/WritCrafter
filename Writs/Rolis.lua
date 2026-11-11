@@ -75,8 +75,14 @@ local function AcceptNext()
         FinishAccepting()
         return
     end
+    -- Crafts that already have an accepted master writ quest: the game would refuse another, so
+    -- none of their writs is tried (no waiting on refusals through a bag full of writs).
+    local active = {}
+    for _, entry in ipairs(WC.Master.Accepted()) do
+        active[entry.writ.craft] = true
+    end
     for _, candidate in ipairs((Candidates())) do
-        if not run.skipped[candidate.uid] and not run.skippedCraft[candidate.craft] then
+        if not run.skipped[candidate.uid] and not run.skippedCraft[candidate.craft] and not active[candidate.craft] then
             run.waiting = { uid = candidate.uid, craft = candidate.craft }
             if IsProtectedFunction("UseItem") then
                 CallSecureProtected("UseItem", candidate.bagId, candidate.slotIndex)
@@ -129,6 +135,7 @@ end
 local function OnQuestAdded()
     if run and run.waiting then
         run.accepted = run.accepted + 1
+        run.skippedCraft[run.waiting.craft] = true   -- one of each craft per batch
         run.waiting = nil
         zo_callLater(AcceptNext, NEXT_WRIT_MS)
     end
