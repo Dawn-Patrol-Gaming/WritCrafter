@@ -100,12 +100,7 @@ function Status.Refresh()
 end
 
 local function RefreshSoon()
-    local name = WC.name .. "WritStatusRefresh"
-    EVENT_MANAGER:UnregisterForUpdate(name)
-    EVENT_MANAGER:RegisterForUpdate(name, 300, function()
-        EVENT_MANAGER:UnregisterForUpdate(name)
-        Status.Refresh()
-    end)
+    WC.Util.Later("WritStatusRefresh", 300, Status.Refresh)
 end
 Status.RefreshSoon = RefreshSoon
 
@@ -149,7 +144,7 @@ local function OnIconEnter(icon)
     local status = statuses[icon.wcCraft] or NONE
     InitializeTooltip(InformationTooltip, icon, BOTTOM, 0, -4)
     SetTooltipText(InformationTooltip, zo_strformat(SI_WRITCRAFTER_STATUS_TOOLTIP,
-        zo_strformat("<<1>>", GetCraftingSkillName(icon.wcCraft)), GetString(STATUS_TEXT[status])))
+        WC.Util.CraftName(icon.wcCraft), GetString(STATUS_TEXT[status])))
 end
 
 function Status.Init()

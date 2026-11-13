@@ -3,9 +3,7 @@ local WC = WritCrafter
 local Slash = {}
 WC.Slash = Slash
 
-local function ItemName(link)
-    return zo_strformat("<<t:1>>", GetItemLinkName(link))
-end
+local ItemName = WC.Util.ItemName
 
 local function ShowStock(rest)
     local itemId, link = WC.Inventory.ParseItemArg(rest)

@@ -24,10 +24,8 @@ end
 
 local function ForEachSlot(fn)
     for _, bagId in ipairs(SCANNED_BAGS) do
-        local slotIndex = ZO_GetNextBagSlotIndex(bagId)
-        while slotIndex do
+        for slotIndex in WC.Inventory.Slots(bagId) do
             fn(bagId, slotIndex)
-            slotIndex = ZO_GetNextBagSlotIndex(bagId, slotIndex)
         end
     end
 end

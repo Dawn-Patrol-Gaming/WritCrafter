@@ -16,9 +16,7 @@ WC.Rolis = Rolis
 local OFFER_TIMEOUT_MS = 3000   -- no offer by then: the game refused the writ
 local NEXT_WRIT_MS     = 300    -- pause between writs, so the journal settles
 
-local function Say(stringId, ...)
-    WC.Log.Say(zo_strformat(stringId, ...))
-end
+local Say = WC.Util.Say
 
 -- Accepting ------------------------------------------------------------------------------------
 
@@ -28,12 +26,11 @@ local run   -- { accepted, skipped = {uid}, skippedCraft = {craft}, waiting = {u
 -- crafted writs still have their items in the bank (turning in needs them in the backpack).
 local function Candidates()
     local list, banked = {}, 0
-    local slotIndex = ZO_GetNextBagSlotIndex(BAG_BACKPACK)
-    while slotIndex do
+    for slotIndex in WC.Inventory.Slots(BAG_BACKPACK) do
         if GetItemType(BAG_BACKPACK, slotIndex) == ITEMTYPE_MASTER_WRIT
             and not WC.Inventory.IsProtected(BAG_BACKPACK, slotIndex) then
             local writ = WC.Master.Parse(GetItemLink(BAG_BACKPACK, slotIndex))
-            local uid = WC.Master.UniqueId(BAG_BACKPACK, slotIndex)
+            local uid = WC.Util.UniqueId(BAG_BACKPACK, slotIndex)
             local status = writ and WC.Reservations.GetWritStatus(uid)
             if status and status.crafted then
                 if status.inBackpack >= status.required then
@@ -43,7 +40,6 @@ local function Candidates()
                 end
             end
         end
-        slotIndex = ZO_GetNextBagSlotIndex(BAG_BACKPACK, slotIndex)
     end
     return list, banked
 end
@@ -84,11 +80,7 @@ local function AcceptNext()
     for _, candidate in ipairs((Candidates())) do
         if not run.skipped[candidate.uid] and not run.skippedCraft[candidate.craft] and not active[candidate.craft] then
             run.waiting = { uid = candidate.uid, craft = candidate.craft }
-            if IsProtectedFunction("UseItem") then
-                CallSecureProtected("UseItem", candidate.bagId, candidate.slotIndex)
-            else
-                UseItem(candidate.bagId, candidate.slotIndex)
-            end
+            WC.Util.UseItem(candidate.bagId, candidate.slotIndex)
             local uid = candidate.uid
             zo_callLater(function() Rolis.OfferTimeout(uid) end, OFFER_TIMEOUT_MS)
             return

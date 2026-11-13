@@ -16,6 +16,7 @@
 Strings/en.lua
 
 Core/Init.lua
+Core/Util.lua
 Data/Alchemy.lua
 Data/Smithing.lua
 Data/Enchanting.lua
@@ -39,6 +40,7 @@ Solver/Alchemy.lua
 Rules/Evaluate.lua
 Core/Reservations.lua
 
+UI/Notices.lua
 UI/ExclusionsWindow.xml
 UI/ExclusionsWindow.lua
 UI/QueueWindow.xml

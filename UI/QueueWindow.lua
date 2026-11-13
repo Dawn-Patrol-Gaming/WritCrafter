@@ -101,8 +101,7 @@ end
 local function BuildEntries()
     local result = {}
     for _, bagId in ipairs(BAGS) do
-        local slotIndex = ZO_GetNextBagSlotIndex(bagId)
-        while slotIndex do
+        for slotIndex in WC.Inventory.Slots(bagId) do
             if GetItemType(bagId, slotIndex) == ITEMTYPE_MASTER_WRIT then
                 local link = GetItemLink(bagId, slotIndex)
                 local writ = WC.Master.Parse(link)
@@ -121,19 +120,19 @@ local function BuildEntries()
                     item = item:gsub(GetString(SI_WRITCRAFTER_QUEUE_CRAFT_ARTICLE), "", 1)
                     item = zo_strtrim(item)
                     if item == "" then
-                        item = zo_strformat("<<t:1>>", GetItemLinkName(link))
+                        item = WC.Util.ItemName(link)
                     end
                     if writ.kind == WC.Master.KIND_SMITHING and writ.setId and writ.setId ~= 0 then
                         item = zo_strformat(SI_WRITCRAFTER_QUEUE_WRIT_SET, item,
                             zo_strformat("<<1>>", GetItemSetName(writ.setId)))
                     end
                     local text = zo_strformat(SI_WRITCRAFTER_QUEUE_WRIT_TEXT,
-                        zo_strformat("<<1>>", GetCraftingSkillName(writ.craft)), item)
+                        WC.Util.CraftName(writ.craft), item)
                     local station, stationRank = StationOf(writ)
                     result[#result + 1] = {
                         station     = station,
                         stationRank = stationRank,
-                        uid       = WC.Master.UniqueId(bagId, slotIndex),
+                        uid       = WC.Util.UniqueId(bagId, slotIndex),
                         bagId     = bagId,
                         slotIndex = slotIndex,
                         link      = link,
@@ -145,7 +144,6 @@ local function BuildEntries()
                     }
                 end
             end
-            slotIndex = ZO_GetNextBagSlotIndex(bagId, slotIndex)
         end
     end
     -- Mimic choices only matter while their writ is around.
@@ -188,24 +186,7 @@ local function SortRows(rows)
         table.sort(rows, StationOrder)
         return
     end
-    local valueOf = SORT_VALUES[sortKey]
-    local values = {}
-    for _, entry in ipairs(rows) do
-        values[entry] = valueOf(entry)
-    end
-    table.sort(rows, function(a, b)
-        local va, vb = values[a], values[b]
-        if va == vb then
-            return StationOrder(a, b)
-        elseif va == nil then
-            return false
-        elseif vb == nil then
-            return true
-        elseif sortUp then
-            return va < vb
-        end
-        return va > vb
-    end)
+    WC.Util.SortRows(rows, SORT_VALUES[sortKey], sortUp, StationOrder)
 end
 
 local function UpdateSummary()
@@ -246,12 +227,7 @@ local function FillList()
     SortRows(rows)
     shown = rows
 
-    ZO_ScrollList_Clear(list)
-    local dataList = ZO_ScrollList_GetDataList(list)
-    for _, entry in ipairs(rows) do
-        dataList[#dataList + 1] = ZO_ScrollList_CreateDataEntry(ROW_TYPE, entry)
-    end
-    ZO_ScrollList_Commit(list)
+    WC.Util.FillScrollList(list, ROW_TYPE, rows)
     control:GetNamedChild("Empty"):SetHidden(#entries > 0)
     UpdateSummary()
 end
@@ -434,7 +410,7 @@ end
 -- "Uses a Crown Mimic Stone" or "Uses Red Diamond Seal", then where that comes from.
 local function MimicTooltipText(mimic)
     local itemId = mimic.use and WC.Policy.MIMIC_STONE_ID or mimic.styleItemId
-    local item = zo_strformat("<<t:1>>", GetItemLinkName(WC.Inventory.GetLink(itemId)))
+    local item = WC.Util.ItemName(itemId)
     local how = GetString(mimic.chosen and SI_WRITCRAFTER_QUEUE_MIMIC_TT_CHOSEN or SI_WRITCRAFTER_QUEUE_MIMIC_TT_SETTING)
     return zo_strformat(SI_WRITCRAFTER_QUEUE_MIMIC_TT, item, how)
 end
@@ -513,13 +489,7 @@ function Window.Toggle()
     end
 end
 
-local function FillCombo(combo, items, onSelect)
-    combo:SetSortsItems(false)
-    combo:ClearItems()
-    for _, item in ipairs(items) do
-        combo:AddItem(combo:CreateItemEntry(item.name, function() onSelect(item.value) end))
-    end
-end
+local FillCombo = WC.Util.FillCombo
 
 function Window.Init()
     control = WritCrafterQueueWindow

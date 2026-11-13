@@ -9,9 +9,7 @@ local function Color(hex, text)
     return string.format("|c%s%s|r", hex, text)
 end
 
-local function ItemName(itemId)
-    return zo_strformat("<<t:1>>", GetItemLinkName(WC.Inventory.GetLink(itemId)))
-end
+local ItemName = WC.Util.ItemName
 
 -- uid is known only for writs in your bags; it adds the "already crafted" line.
 local function AddWritLines(control, link, uid)
@@ -61,7 +59,7 @@ local function AddWritLines(control, link, uid)
     end
     if uid and WC.Queue.Has(uid) then
         control:AddLine(Color(GOLD, zo_strformat(SI_WRITCRAFTER_TT_QUEUED,
-            zo_strformat("<<1>>", GetCraftingSkillName(writ.craft)))))
+            WC.Util.CraftName(writ.craft))))
     end
     local reasonColor = verdict.status == Rules.CANNOT and RED or ORANGE
     for _, reason in ipairs(verdict.reasons) do
@@ -115,7 +113,7 @@ function Tooltip.Init()
     ZO_PostHook(ItemTooltip, "SetBagItem", function(control, bagId, slotIndex)
         local link = GetItemLink(bagId, slotIndex)
         if WC.Master.Parse(link) then
-            AddWritLines(control, link, WC.Master.UniqueId(bagId, slotIndex))
+            AddWritLines(control, link, WC.Util.UniqueId(bagId, slotIndex))
             return
         end
         local quest = WC.DailyItems.QuestFor(bagId, slotIndex)

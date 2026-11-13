@@ -224,18 +224,21 @@ local function Resolve(skill, condition)
     return hit or nil
 end
 
--- Called as a station opens: for crafts whose answers depend on what you own, answers from last
--- time that failed (nothing found, or a material missing) are worked out again, since you may
--- have fetched it since. Other crafts' answers, and searches that can't change, are kept.
-function Daily.ForgetFailures(skill)
-    local answers = resolved[skill]
-    if not (answers and retryFailures[skill]) then
-        return
-    end
+-- Drops the answers that failed (nothing found, or a material missing) from one craft's answers.
+local function DropFailures(answers)
     for text, plan in pairs(answers) do
         if plan == false or plan.problem then
             answers[text] = nil
         end
+    end
+end
+
+-- Called as a station opens: for crafts whose answers depend on what you own, answers from last
+-- time that failed are worked out again, since you may have fetched the material since. Other
+-- crafts' answers, and searches that can't change, are kept.
+function Daily.ForgetFailures(skill)
+    if resolved[skill] and retryFailures[skill] then
+        DropFailures(resolved[skill])
     end
 end
 
@@ -342,11 +345,7 @@ function Daily.Init()
     -- A new recipe or style can make a writ item that wasn't found before: search again.
     local function ForgetAllFailures()
         for _, answers in pairs(resolved) do
-            for text, plan in pairs(answers) do
-                if plan == false or plan.problem then
-                    answers[text] = nil
-                end
-            end
+            DropFailures(answers)
         end
     end
     for _, event in ipairs({ EVENT_RECIPE_LEARNED, EVENT_MULTIPLE_RECIPES_LEARNED, EVENT_STYLE_LEARNED }) do

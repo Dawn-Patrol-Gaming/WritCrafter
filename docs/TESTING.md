@@ -5,6 +5,69 @@ A Lua error popup at any point is a failure. Copy its first few lines.
 
 Only tests still to do are listed. Passed tests are removed; the full milestone 1–2 list is in this file's git history.
 
+## Milestone 6, step 2: deconstruct writ rewards (2026-11-13)
+
+Only a `/reloadui`. Set Settings → Writ Rewards → **Ornate Gear**, **Intricate Gear** and **Glyphs** to the new **Deconstruct** (only items from writ boxes opened after this change count; ones already in your bag aren't marked). Debug chat on.
+
+Passed 2026-11-13: DC1 (the Deconstruct choice), DC2 (pieces marked `(to deconstruct)` and kept), DC6 (enchanting station with nothing marked: nothing happened). Also seen: a Platinum Necklace, a Ruby Ash Inferno Staff, a Rubedite Girdle and Rubedo Leather Boots were each taken apart at their own station (`Deconstructing 1 writ reward item(s).`). The glyph that day was left alone because Glyphs was still on Leave in Bag when its box opened. DC5 passed 2026-11-13: Giladil the Ragpicker took 5 marked pieces of four kinds (a necklace, a bow, a jerkin, a cuirass and a glyph) apart in one batch (`Deconstructing 5 writ reward item(s).`), so glyphs come apart too. A marked piece locked afterwards was left alone (2026-11-13). Still to see: writ crafting and deconstruction in the same station visit (DC3), glyphs at the enchanting station (DC4). Debug chat now names the station: `Clothing station (2) opened: ...`, `Deconstruction assistant or station (0) opened: ...`.
+
+| # | Do | Expect |
+|---|---|---|
+| DC3 | Keep one marked piece overnight (e.g. a staff marked `(to deconstruct)`: don't visit an assistant or the woodworking station). Next day, pick up the dailies and open the woodworking station | The writ items are crafted first, then `Deconstructing 1 writ reward item(s).` and the staff is taken apart, then the station closes as usual. Checks that leaving the station after writ crafting doesn't cut the deconstruction off |
+| DC4 | Open the enchanting station | Marked glyphs are extracted together |
+| DC7 | If a batch doesn't go through | Within about 8 seconds: `Writ rewards to deconstruct ... no progress` (or a similar message) and the red banner, no hang. Say what you saw, with the Debug lines |
+
+## Hand Over Excluded Reagents (2026-11-12)
+
+All passed 2026-11-13: HX1 (the setting), HX2 (with it on, an alchemy writ whose acquire task wanted excluded Spider Egg was turned in at the crate; potions still weren't crafted with excluded reagents). HX3 (off) is the old behaviour, already passed as WD6.
+
+## Settings scope: back to Account Wide (2026-11-12)
+
+Checked offline with the real settings code (account values never overwritten; the character's own come back when switched to again). In game:
+
+| # | Do | Expect |
+|---|---|---|
+| SC1 | On one character: Settings → This character only; change a few settings (e.g. a reward action, Show Daily Writ Status). Switch back to Account Wide | The panel shows the Account Wide values again, not this character's changes. Log on to another character on Account Wide: its settings are unchanged. Switch the first character to This character only again: its own changes are back |
+
+## Milestone 7, batch A: speed (2026-11-11)
+
+Nothing should behave differently; it should just be quicker, mostly at alchemy stations. Only a `/reloadui`. Tests that need daily writs or reward boxes wait for another day.
+
+Passed 2026-11-11 (on the full milestone 7 build, after a relog): OA1 (`/wc checkdata`: every check matches), OA2 (queue window verdicts and costs), OA3 (master alchemy writ: 16 Essence of Ravage Health in 4 batches), OA4 (master enchanting writ). OA5 dropped: it needs FCO ItemSaver, which isn't installed (materials can't be locked in the game itself). The check that skips FCO-marked stacks is the same one as before; only where it runs moved. OA6 and OA7 passed 2026-11-13 (full daily run): alchemy and enchanting dailies crafted as before (`/wc reagents` not rerun); reward boxes opened, the bank and a merchant took what they should.
+
+| # | Do | Expect |
+|---|---|---|
+
+## Milestone 7, batch B: shared helpers (2026-11-11)
+
+New file (Core/Util.lua), so a **full relog**. Copies of small helpers (item and craft names, chat lines, item IDs, using and moving items, house storage, the "once things settle" delay) now come from one file, and bag loops share one helper. Nothing should look or behave differently; a Lua error anywhere is the thing to watch for.
+
+Passed 2026-11-11: OB5 (`/wc stations` found all 15 stations and marked the 4 for queued writs; `/wc checkdata`, `/wc stock` and `/wc perf` as before; the stock scan, which now also records station slots, takes 3.4 ms for 801 stacks). OB1–OB4 passed 2026-11-11: badges and tooltips in the inventory, bank and house storage; the queue window and right-click queueing; queued master writs of all seven crafts crafted (smithing created with a mimic stone and improved to Epic or Legendary, provisioning 8 in two batches, alchemy 16, enchanting glyphs); Rolis accepted and turned in 7, then 2, then 1 (journal full in between). OB7 passed 2026-11-13: a full daily run (boards, all seven stations, crates, reward boxes, merchant, bank) on the new code. OB6 passed 2026-11-13: craft names in the Settings per-craft lists.
+
+| # | Do | Expect |
+|---|---|---|
+
+## Milestone 7, batch C: duplicated logic (2026-11-11)
+
+Only a `/reloadui`. Master writ parsing (sealed writs and accepted quests now share one builder; checked offline against the old code on every craft, both sources, legacy alchemy effects included: identical), the alchemy pair lists, the engine's master writ jobs, the batch-count step of every crafter, and the daily "search again" rule each exist once now. Nothing should behave differently.
+
+Passed 2026-11-11: OC1 (queue window verdicts, vouchers, costs and descriptions for writs of every craft). OC3 passed 2026-11-13: daily writs at every station, same crafts and batch counts as before.
+
+| # | Do | Expect |
+|---|---|---|
+| OC2 | Craft a queued master writ of each kind you have; then accept one and craft it as an accepted writ | Same items and batch counts as before (alchemy and provisioning in several batches where they used to be) |
+| OC4 | Next day: a daily that needs something you don't have, fetch it, open the station again | Searched again and crafted, as before |
+
+## Milestone 7, batch D: UI sharing and tidying (2026-11-11)
+
+New file (UI/Notices.lua), so a **full relog**. The queue and exclusion windows share their sorting, dropdowns and list refill; the corner message and problem banner moved out of the crafting engine into their own file; small tidy-ups. Nothing should look or behave differently.
+
+Passed 2026-11-11: OD1 (queue window sorting, filter, Sort by station), OD2 (exclusions window categories, filter, search, sorting). OD6 passed 2026-11-13: the `Opening writ rewards: X of N` corner counter during a daily run. OD3 passed 2026-11-13: the top-right `crafting started` and `done` messages. OD4 passed 2026-11-13: the red `WritCrafter couldn't craft everything` banner, naming the excluded reagents an alchemy daily needed; after allowing some and reopening the station, it crafted.
+
+| # | Do | Expect |
+|---|---|---|
+| OD5 | Use a Grand Master station, then open the queue window | Station column still knows its sets |
+
 ## Daily writ status strip (2026-11-10)
 
 New file, so a **full relog**.
@@ -23,13 +86,11 @@ Passed 2026-11-10: WD1–WD4 (settings; boards accept the ticked crafts' writs a
 
 New file, so this deploy needs a **full relog**. Set a few actions first in Settings → Writ Rewards (e.g. Survey Reports → Deposit, Repair Kits → Sell, Recipes → Junk).
 
-Passed 2026-11-11: RW1 (Writ Rewards settings), RW2 (boxes open by themselves, one chat line each), RW3 (Junk), RW4 (Deposit at the bank), RW5 (Sell at a merchant), RW15 (no loot window flashing), RK1 (recipes split by quality, Keep a Stack, Sell the Rest offered), RX2 (extra crafted items sold at a merchant, the writ's own kept). Also passed: RW7 (automatic opening off: boxes stay closed), RW10 and RW13 (Master Writ, Survey and Other Containers settings), RX1 (Extra Crafted Potions, Poisons & Food setting). RW12, RW14, RW16 and RW17 passed 2026-11-11: survey containers set to Open are opened; shipments inside boxes are opened and sorted; the corner counts the boxes; every box opened during quick crate turn-ins (one attempt ignored by the game and retried). A box landing while another box is being opened is listed as that box's contents in chat, though it's still opened. RK3 and RX3 passed 2026-11-11: Keep a Stack sold exactly what the boxes gave above a full stack (1 repair kit, 3 soul gems), nothing you had before; several Deposit items (three extra crafted stacks and a survey) all went into the bank. RW6 passed 2026-11-11: with 2 free slots the box stayed closed; once room was made and the house storage closed, both waiting boxes opened by themselves. (A completely full backpack stops the game itself from finishing the turn-in; Sign the Manifest again once there's room.) RK2 passed 2026-11-11: green recipes sold; a blue recipe marked `(to deposit)` and taken by the bank (`Deposited 1`). RW11 passed 2026-11-11: an Unknown Jewelry Crafter Writ (a master writ container) stayed closed on Leave Closed. RW19 dropped: the "Unknown ... Writ" items boxes give are master writ containers, so they follow Master Writ Containers, not Sealed Master Writs (that one only applies to the sealed writs inside an opened container); the undeposited Unknown Blacksmithing Writ was on Leave Closed. RX4 passed 2026-11-11: with extras on Leave in Bag, no `Extra from crafting` line and the 3 extra potions stayed in the bag through the bank and a merchant. Also seen 2026-11-11: an alchemy writ whose acquire reagent (Mudcrab Chitin) is excluded was left at the crate with the `Not turning in` message, as intended. RW9 dropped: master writ turn-ins at Rolis give only vouchers and gold, no box.
+Passed 2026-11-11: RW1 (Writ Rewards settings), RW2 (boxes open by themselves, one chat line each), RW3 (Junk), RW4 (Deposit at the bank), RW5 (Sell at a merchant), RW15 (no loot window flashing), RK1 (recipes split by quality, Keep a Stack, Sell the Rest offered), RX2 (extra crafted items sold at a merchant, the writ's own kept). Also passed: RW7 (automatic opening off: boxes stay closed), RW10 and RW13 (Master Writ, Survey and Other Containers settings), RX1 (Extra Crafted Potions, Poisons & Food setting). RW12, RW14, RW16 and RW17 passed 2026-11-11: survey containers set to Open are opened; shipments inside boxes are opened and sorted; the corner counts the boxes; every box opened during quick crate turn-ins (one attempt ignored by the game and retried). A box landing while another box is being opened is listed as that box's contents in chat, though it's still opened. RK3 and RX3 passed 2026-11-11: Keep a Stack sold exactly what the boxes gave above a full stack (1 repair kit, 3 soul gems), nothing you had before; several Deposit items (three extra crafted stacks and a survey) all went into the bank. RW6 passed 2026-11-11: with 2 free slots the box stayed closed; once room was made and the house storage closed, both waiting boxes opened by themselves. (A completely full backpack stops the game itself from finishing the turn-in; Sign the Manifest again once there's room.) RK2 passed 2026-11-11: green recipes sold; a blue recipe marked `(to deposit)` and taken by the bank (`Deposited 1`). RW11 passed 2026-11-11: an Unknown Jewelry Crafter Writ (a master writ container) stayed closed on Leave Closed. RW19 dropped: the "Unknown ... Writ" items boxes give are master writ containers, so they follow Master Writ Containers, not Sealed Master Writs (that one only applies to the sealed writs inside an opened container); the undeposited Unknown Blacksmithing Writ was on Leave Closed. RX4 passed 2026-11-11: with extras on Leave in Bag, no `Extra from crafting` line and the 3 extra potions stayed in the bag through the bank and a merchant. Also seen 2026-11-11: an alchemy writ whose acquire reagent (Mudcrab Chitin) is excluded was left at the crate with the `Not turning in` message, as intended. RW8 passed 2026-11-12: containers that weren't writ rewards were left unopened while reward boxes were being handled. RW18 passed 2026-11-13: an Exemplary Swift Necklace from a jewelry box was marked `(to deposit)` and taken by the bank, along with an Unknown Blacksmithing Writ (Master Writ Containers → Deposit). RW9 dropped: master writ turn-ins at Rolis give only vouchers and gold, no box.
 
 | # | Do | Expect |
 |---|---|---|
-| RW8 | Other containers (a style page, a box from a dungeon, a mail attachment) | Never opened by WritCrafter: only a container arriving within a few seconds of completing a crafting quest counts |
 | RW20 | Optional, rare: only happens when placing the goods frees no slot, i.e. a provisioning or alchemy daily whose extras stay in the same stack (or an acquire reagent from the craft bag). Fill the backpack completely after crafting it, then turn it in | Chat: `Can't turn in <writ>: your backpack is full ...`; the writ stays at Sign the Manifest. Make room, talk to the crate again: it's turned in (seen 2026-11-11 with a provisioner writ, no message then). Gear writs free their own slots when the goods are placed, so they never hit this |
-| RW18 | Settings → Writ Rewards: **Exemplary Gear (for Research)** after Intricate Gear (Leave in Bag by default); set it to Deposit, get a purple traited piece from a box (e.g. an Exemplary Swift Ring), open the bank | Chat marks it `(to deposit)` and the bank takes it. Any purple (or gold) weapon, armor or jewelry piece with a trait other than ornate or intricate counts; the white and green gear boxes give (e.g. a Rubedite Maul) is left alone |
 
 ## Milestone 5, step 4: station markers (2026-11-10)
 

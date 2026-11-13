@@ -7,12 +7,7 @@ WC.Reservations = Reservations
 -- its storage chests too (their contents can only be read there). Scan order matters: items
 -- closest to hand are assigned first.
 local BASE_BAGS = { BAG_BACKPACK, BAG_BANK, BAG_SUBSCRIBER_BANK }
-local HOUSE_BAGS = {}
-if BAG_HOUSE_BANK_ONE and BAG_HOUSE_BANK_TEN then
-    for bagId = BAG_HOUSE_BANK_ONE, BAG_HOUSE_BANK_TEN do
-        HOUSE_BAGS[#HOUSE_BAGS + 1] = bagId
-    end
-end
+local HOUSE_BAGS = WC.Util.HOUSE_BAGS
 
 local SCANNED = {}
 for _, list in ipairs({ BASE_BAGS, HOUSE_BAGS }) do
@@ -22,7 +17,7 @@ for _, list in ipairs({ BASE_BAGS, HOUSE_BAGS }) do
 end
 
 local function ScannedBags()
-    if #HOUSE_BAGS == 0 or not (IsOwnerOfCurrentHouse and IsOwnerOfCurrentHouse()) then
+    if not WC.Util.InOwnHouse() then
         return BASE_BAGS
     end
     local bags = { unpack(BASE_BAGS) }
@@ -57,14 +52,12 @@ function Reservations.IsCandidateType(itemType)
     return CANDIDATE_TYPES[itemType] ~= nil
 end
 
-local GENERIC_LINK = "|H1:item:%d:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0|h|h"
-
 -- Shape of a template's sample item: equip slot, armor weight, weapon type.
 local shapeCache = {}
 local function TemplateShape(template)
     local shape = shapeCache[template.sample]
     if not shape then
-        local link = string.format(GENERIC_LINK, template.sample)
+        local link = WC.Inventory.GenericLink(template.sample)
         shape = {
             equip  = GetItemLinkEquipType(link),
             armor  = GetItemLinkArmorType(link),
@@ -234,13 +227,12 @@ local function Rebuild()
     local writs, byKey = {}, {}
     candidateCount = 0
     for _, bagId in ipairs(ScannedBags()) do
-        local slotIndex = ZO_GetNextBagSlotIndex(bagId)
-        while slotIndex do
+        for slotIndex in WC.Inventory.Slots(bagId) do
             local itemType = GetItemType(bagId, slotIndex)
             if itemType == ITEMTYPE_MASTER_WRIT then
                 local writ = WC.Master.Parse(GetItemLink(bagId, slotIndex))
                 if writ then
-                    writs[#writs + 1] = { uid = WC.Master.UniqueId(bagId, slotIndex), writ = writ, bagId = bagId }
+                    writs[#writs + 1] = { uid = WC.Util.UniqueId(bagId, slotIndex), writ = writ, bagId = bagId }
                 end
             else
                 local kind = CANDIDATE_TYPES[itemType]
@@ -265,7 +257,6 @@ local function Rebuild()
                     end
                 end
             end
-            slotIndex = ZO_GetNextBagSlotIndex(bagId, slotIndex)
         end
     end
 

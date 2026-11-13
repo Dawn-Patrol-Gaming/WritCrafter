@@ -12,9 +12,7 @@ local RECORD_MS = 10000   -- longest a craft's new items can take to land
 local items                 -- WC.character.dailyItems: [unique ID] = quest name
 local recording, recordUntil
 
-local function UniqueId(bagId, slotIndex)
-    return Id64ToString(GetItemUniqueId(bagId, slotIndex))
-end
+local UniqueId = WC.Util.UniqueId
 
 -- [bagId][slotIndex] = quest, or false for "none": answers remembered until that slot changes,
 -- so drawing rows doesn't build an item ID string per slot every time.

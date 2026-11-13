@@ -83,6 +83,14 @@ function Policy.IsExcluded(itemId)
     return Policy.IsExpensive(itemId)
 end
 
+-- Whether a daily writ's "acquire" task may not hand this reagent or solvent over: it's excluded,
+-- and Hand Over Excluded Reagents is off. With that setting on, exclusions still decide what's
+-- crafted with, but an acquire task gets its item (taken out of the craft bag or bank, and
+-- turned in at the crate).
+function Policy.BlocksAcquire(itemId)
+    return Policy.IsExcluded(itemId) and not WC.settings.dailyAcquireExcluded
+end
+
 function Policy.IsExcludedByDefault(itemId)
     if WC.Data.Alchemy.REAGENTS[itemId] then
         return not Policy.IsReagentAllowedByDefault(itemId)

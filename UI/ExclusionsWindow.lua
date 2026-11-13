@@ -54,7 +54,7 @@ function Window.CategoryName(category)
     if category == Window.STYLE then
         return GetString(SI_WRITCRAFTER_EXPENSIVE_STYLE)
     end
-    return zo_strformat("<<1>>", GetCraftingSkillName(category))
+    return WC.Util.CraftName(category)
 end
 
 local control, list, categoryCombo, showCombo, searchBox, sortHeaders
@@ -91,7 +91,7 @@ local function BuildMembers()
         if not Belongs(category, link) then
             return
         end
-        local name = zo_strformat("<<t:1>>", GetItemLinkName(link))
+        local name = WC.Util.ItemName(link)
         if name == "" then
             return
         end
@@ -208,28 +208,15 @@ local SORT_VALUES = {
     price = function(entry) return WC.Price.Get(WC.Inventory.GetLink(entry.itemId)) end,
 }
 
+local function ByName(a, b)
+    return a.lower < b.lower
+end
+
 local function SortRows(rows)
     if not sortKey then
         return   -- members are already in natural order
     end
-    local valueOf = SORT_VALUES[sortKey]
-    local values = {}
-    for _, entry in ipairs(rows) do
-        values[entry] = valueOf(entry)
-    end
-    table.sort(rows, function(a, b)
-        local va, vb = values[a], values[b]
-        if va == vb then
-            return a.lower < b.lower
-        elseif va == nil then
-            return false
-        elseif vb == nil then
-            return true
-        elseif sortUp then
-            return va < vb
-        end
-        return va > vb
-    end)
+    WC.Util.SortRows(rows, SORT_VALUES[sortKey], sortUp, ByName)
 end
 
 -- Rebuilds the visible rows for the current category, filter, search and sort.
@@ -254,12 +241,7 @@ local function FillList()
     SortRows(rows)
     shown = rows
 
-    ZO_ScrollList_Clear(list)
-    local dataList = ZO_ScrollList_GetDataList(list)
-    for _, entry in ipairs(rows) do
-        dataList[#dataList + 1] = ZO_ScrollList_CreateDataEntry(ROW_TYPE, entry)
-    end
-    ZO_ScrollList_Commit(list)
+    WC.Util.FillScrollList(list, ROW_TYPE, rows)
     UpdateSummary()
 end
 
@@ -349,13 +331,7 @@ function Window.OnPolicyChanged()
     end
 end
 
-local function FillCombo(combo, entries, onSelect)
-    combo:SetSortsItems(false)
-    combo:ClearItems()
-    for _, item in ipairs(entries) do
-        combo:AddItem(combo:CreateItemEntry(item.name, function() onSelect(item.value) end))
-    end
-end
+local FillCombo = WC.Util.FillCombo
 
 local function IndexOf(values, value)
     for index, v in ipairs(values) do

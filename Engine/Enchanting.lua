@@ -30,9 +30,7 @@ local function RuneSounds(pBag, pSlot, eBag, eSlot, aBag, aSlot)
     end
 end
 
-local function ItemName(itemId)
-    return zo_strformat("<<t:1>>", GetItemLinkName(WC.Inventory.GetLink(itemId)))
-end
+local ItemName = WC.Util.ItemName
 
 -- Enchanting: the writ's potency rune (additive or subtractive for its level), essence rune
 -- and aspect rune (from the quality). One glyph per batch. The resulting glyph is checked
@@ -61,14 +59,11 @@ local function CraftEnchanting(writ, status)
         return false, GetString(SI_WRITCRAFTER_CRAFT_WRONG_RESULT)
     end
 
-    local iterations = status.required - status.have
     local maxIterations, result = GetMaxIterationsPossibleForEnchantingItem(pBag, pSlot, eBag, eSlot, aBag, aSlot)
-    if not maxIterations or maxIterations == 0 then
-        return false, GetString("SI_TRADESKILLRESULT", result)
-    end
-    iterations = zo_min(iterations, maxIterations)
-    if not AreAllEnchantingRunesKnown(pBag, pSlot, eBag, eSlot, aBag, aSlot) then
-        iterations = 1
+    local iterations, reason = WC.Engine.Batches(status.required - status.have, maxIterations, result,
+        AreAllEnchantingRunesKnown(pBag, pSlot, eBag, eSlot, aBag, aSlot))
+    if not iterations then
+        return false, reason
     end
 
     WC.Engine.SayCrafting(iterations, resultLink, {
@@ -90,16 +85,7 @@ WC.Engine.RegisterCrafter(WC.Master.KIND_ENCHANTING, CraftEnchanting)
 
 local ASPECT_ORDER = { 45850, 45851, 45852, 45853, 45854 }   -- Ta, Jejota, Denata, Rekuta, Kuta
 
-local function Locations(itemIds)
-    local where = {}
-    for _, itemId in ipairs(itemIds) do
-        local bagId, slotIndex = WC.Inventory.FindForStation(itemId)
-        if bagId then
-            where[itemId] = { bagId, slotIndex }
-        end
-    end
-    return where
-end
+local Locations = WC.Inventory.Locations
 
 local function GlyphLink(where, potency, essence, aspect)
     local p, e, a = where[potency], where[essence], where[aspect]
@@ -123,7 +109,7 @@ end
 -- same in every game language, so this also tells enchanting conditions apart from other crafts'.
 local function AspectNamed(text)
     for _, aspect in ipairs(ASPECT_ORDER) do
-        local name = zo_strformat("<<t:1>>", GetItemLinkName(WC.Inventory.GetLink(aspect)))
+        local name = ItemName(aspect)
         if name ~= "" and text:find("%f[%w]" .. name .. "%f[%W]") then
             return aspect
         end
@@ -135,7 +121,7 @@ end
 local function EssenceNamed(text)
     local best, bestLength
     for glyphId, glyph in pairs(WC.Data.Enchanting.GLYPHS) do
-        local name = zo_strformat("<<t:1>>", GetItemLinkName(WC.Inventory.GetLink(glyphId)))
+        local name = ItemName(glyphId)
         -- Base glyph names may carry a potency word ("Trifling Glyph of ..."); try without it too.
         for _, candidate in ipairs({ name, (name:gsub("^%S+%s+", "", 1)) }) do
             if #candidate > 0 and text:find(candidate, 1, true) and (not bestLength or #candidate > bestLength) then
@@ -225,12 +211,10 @@ local function CraftDaily(condition, plan)
     end
     local p, e, a = where[plan.potency], where[plan.essence], where[aspect]
     local maxIterations, result = GetMaxIterationsPossibleForEnchantingItem(p[1], p[2], e[1], e[2], a[1], a[2])
-    if not maxIterations or maxIterations == 0 then
-        return false, GetString("SI_TRADESKILLRESULT", result)
-    end
-    local iterations = zo_min(condition.max - condition.current, maxIterations)
-    if not AreAllEnchantingRunesKnown(p[1], p[2], e[1], e[2], a[1], a[2]) then
-        iterations = 1
+    local iterations, reason = WC.Engine.Batches(condition.max - condition.current, maxIterations, result,
+        AreAllEnchantingRunesKnown(p[1], p[2], e[1], e[2], a[1], a[2]))
+    if not iterations then
+        return false, reason
     end
     WC.Engine.SayCrafting(iterations, resultLink, {
         { itemId = plan.potency, count = iterations },

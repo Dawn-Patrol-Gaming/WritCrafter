@@ -33,9 +33,7 @@ local WRIT_NAMES = {
 
 local OFFER_TIMEOUT_MS = 3000
 
-local function Say(stringId, ...)
-    WC.Log.Say(zo_strformat(stringId, ...))
-end
+local Say = WC.Util.Say
 
 -- Daily writ quest names learned from the journal, account-wide: [lower-case name] = craft.
 local function Learned()
@@ -249,14 +247,14 @@ local function OnQuestCompleteDialog(_, journalIndex)
     end
     local itemId = AcquireItems()[quest]
     if WC.settings.logLevel >= WC.Log.LEVEL_DEBUG then
-        local name = itemId and zo_strformat("<<t:1>>", GetItemLinkName(WC.Inventory.GetLink(itemId))) or "none"
+        local name = itemId and WC.Util.ItemName(itemId) or "none"
         WC.Log.Debug(string.format("Turn-in of %s (craft %s): acquire item %s, excluded: %s, reagent: %s", quest,
             tostring(craft), name, tostring(itemId and WC.Policy.IsExcluded(itemId)),
             tostring(itemId and WC.Data.Alchemy.REAGENTS[itemId] ~= nil)))
     end
-    if itemId and WC.Policy.IsExcluded(itemId) then
+    if itemId and WC.Policy.BlocksAcquire(itemId) then
         Say(SI_WRITCRAFTER_DELIVER_EXCLUDED, quest,
-            zo_strformat("<<t:1>>", GetItemLinkName(WC.Inventory.GetLink(itemId))))
+            WC.Util.ItemName(itemId))
         return
     end
     -- The reward box needs a free slot: with none, the game doesn't finish the writ (it stays at
@@ -312,14 +310,9 @@ end
 -- a short pause, so the game's own dialog window has settled first; events that arrive during
 -- the pause (both events for one page) become a single answer to whatever page is up by then.
 local PAGE_PAUSE_MS = 200
-local PAGE_UPDATE = WC.name .. "DialogPage"
 -- The option count is read when the page is answered, not taken from the event.
 function Page.Schedule(source, delayMs)
-    EVENT_MANAGER:UnregisterForUpdate(PAGE_UPDATE)
-    EVENT_MANAGER:RegisterForUpdate(PAGE_UPDATE, delayMs or PAGE_PAUSE_MS, function()
-        EVENT_MANAGER:UnregisterForUpdate(PAGE_UPDATE)
-        HandlePage(source)
-    end)
+    WC.Util.Later("DialogPage", delayMs or PAGE_PAUSE_MS, function() HandlePage(source) end)
 end
 
 local function OnChatterBegin()

@@ -8,9 +8,7 @@ Rules.CANNOT   = "cannot"     -- can't be crafted by this character (knowledge, 
 Rules.REJECTED = "rejected"   -- could be crafted, but your settings say no
 Rules.OK       = "ok"
 
-local function ItemName(itemId)
-    return zo_strformat("<<t:1>>", GetItemLinkName(WC.Inventory.GetLink(itemId)))
-end
+local ItemName = WC.Util.ItemName
 
 local function NameList(itemIds)
     local names = {}

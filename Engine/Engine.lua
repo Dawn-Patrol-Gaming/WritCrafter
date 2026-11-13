@@ -26,6 +26,7 @@ local SETTLE_MS = 300     -- after a craft completes, let the bag updates land b
 local BUSY_RETRY_MS = 200
 local WAIT_MS = 300
 local MAX_WAITS = 10      -- per job and visit, so a station that never becomes ready can't loop
+local REWARDS_TIMEOUT_MS = 8000   -- longest a batch of writ rewards takes to come apart
 
 -- Master writ crafters, by writ kind: function(writ, status) -> as Job.Craft; and optional
 -- progress functions (writ, status) -> number (default: items made).
@@ -62,39 +63,10 @@ local function Problem(text)
     firstProblem = firstProblem or text
 end
 
-
 local LEAVE_DELAY_MS = 800   -- let the "done" sound and alert play before leaving
 
--- A short message in the top-right corner, drawn above the crafting window. Its right edge stays
--- put, so longer text grows to the left. WritCrafter's own label rather than the game's alert
--- list, whose layout isn't ours to change.
-local CORNER_MS = 4000
-local corner
-
-local function Corner(text)
-    if not corner then
-        corner = WINDOW_MANAGER:CreateTopLevelWindow(WC.name .. "Corner")
-        corner:SetDrawTier(DT_HIGH)
-        corner:SetDrawLayer(DL_OVERLAY)
-        corner:SetMouseEnabled(false)
-        corner:SetDimensions(10, 10)
-        corner:SetAnchor(TOPRIGHT, GuiRoot, TOPRIGHT, -40, 4)   -- above the station's tab icons
-        corner.label = WINDOW_MANAGER:CreateControl(WC.name .. "CornerText", corner, CT_LABEL)
-        corner.label:SetFont("ZoFontWinH2")
-        corner.label:SetColor(1, 0.9, 0.6, 1)
-        corner.label:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
-        corner.label:SetAnchor(TOPRIGHT, corner, TOPRIGHT, 0, 0)
-    end
-    corner.label:SetText(text)
-    corner:SetHidden(false)
-    corner.shownAt = GetGameTimeMilliseconds()
-    zo_callLater(function()
-        if GetGameTimeMilliseconds() - corner.shownAt >= CORNER_MS - 50 then
-            corner:SetHidden(true)
-        end
-    end, CORNER_MS)
-end
-Engine.Corner = Corner   -- also used by writ rewards for their progress
+local Corner = WC.Notices.Corner
+local Banner = WC.Notices.Banner
 
 -- A notice: its sound (if that sound's setting is on) and, with stringId, a short top-right
 -- message (if on-screen notices are on). soundSetting names the setting for this sound.
@@ -107,48 +79,6 @@ local function Notice(soundSetting, sound, stringId, ...)
     end
 end
 
--- A large message in the middle of the screen, drawn above the crafting window: the game's own
--- centre-screen announcements are part of the HUD, which is hidden at a station, and chat is
--- rolled up there too, so the banner carries the reason itself.
-local BANNER_MS = 6000
-local banner
-
-local function BannerLabel(name, font, offsetY)
-    local label = WINDOW_MANAGER:CreateControl(WC.name .. name, banner, CT_LABEL)
-    label:SetFont(font)
-    label:SetColor(1, 0.45, 0.3, 1)
-    label:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
-    label:SetDimensionConstraints(0, 0, 1100, 0)
-    label:SetAnchor(TOP, banner, TOP, 0, offsetY)
-    return label
-end
-
-local function Banner(title, detail)
-    if not WC.settings.craftNotice then
-        return
-    end
-    if not banner then
-        banner = WINDOW_MANAGER:CreateTopLevelWindow(WC.name .. "Banner")
-        banner:SetDrawTier(DT_HIGH)
-        banner:SetDrawLayer(DL_OVERLAY)
-        banner:SetMouseEnabled(false)
-        banner:SetDimensions(1100, 200)
-        banner:SetAnchor(CENTER, GuiRoot, CENTER, 0, -200)
-        banner.title = BannerLabel("BannerTitle", "ZoFontCallout3", 0)
-        banner.detail = BannerLabel("BannerDetail", "ZoFontWinH1", 70)
-        banner.detail:SetColor(1, 0.8, 0.6, 1)
-    end
-    banner.title:SetText(title)
-    banner.detail:SetText(detail or "")
-    banner:SetHidden(false)
-    banner.shownAt = GetGameTimeMilliseconds()
-    zo_callLater(function()
-        if GetGameTimeMilliseconds() - banner.shownAt >= BANNER_MS - 50 then
-            banner:SetHidden(true)
-        end
-    end, BANNER_MS)
-end
-
 -- Banner for problems: the first one, plus how many more are in chat.
 local function ProblemBanner()
     local detail = firstProblem or ""
@@ -158,12 +88,8 @@ local function ProblemBanner()
     Banner(GetString(SI_WRITCRAFTER_BANNER_PROBLEM), detail)
 end
 
-local function Say(stringId, ...)
-    WC.Log.Say(zo_strformat(stringId, ...))
-end
+local Say = WC.Util.Say
 
--- "Crafting 16 x Damage Stamina Poison IX with Alkahest, Stinkhorn, Imp Stool". materials is
--- a list of { itemId = id } or { name = text }, each with an optional total count.
 -- Station sounds for a craft WritCrafter starts. Crafting through the API skips the station
 -- screen, so the sounds of slotting items never play; these stand in for them. placed: sounds
 -- played in quick succession now (e.g. solvent, then reagents); done: played when the craft
@@ -193,6 +119,21 @@ function Engine.CraftSounds(placed, done)
     end
 end
 
+-- How many batches a craft call makes: what's wanted, capped by what the materials allow; one
+-- batch while the result is still unknown to you (the game's rule: the first craft teaches it).
+-- Returns the count, or nil and the game's reason when nothing can be made.
+function Engine.Batches(wanted, maxIterations, result, known)
+    if not maxIterations or maxIterations == 0 then
+        return nil, GetString("SI_TRADESKILLRESULT", result)
+    end
+    if known == false then
+        return 1
+    end
+    return zo_min(wanted, maxIterations)
+end
+
+-- "Crafting 16 x Damage Stamina Poison IX with Alkahest, Stinkhorn, Imp Stool". materials is
+-- a list of { itemId = id } or { name = text }, each with an optional total count.
 -- needed (optional): how many the writ still needed; anything above it is extra (skills make
 -- several potions or dishes per craft), handed to the Extra Crafted Items reward action.
 function Engine.SayCrafting(count, resultLink, materials, needed)
@@ -202,7 +143,7 @@ function Engine.SayCrafting(count, resultLink, materials, needed)
     local parts = {}
     for _, material in ipairs(materials or {}) do
         local name = material.name
-            or zo_strformat("<<t:1>>", GetItemLinkName(WC.Inventory.GetLink(material.itemId)))
+            or WC.Util.ItemName(material.itemId)
         if material.count and material.count > 1 then
             name = material.count .. " x " .. name
         end
@@ -215,9 +156,7 @@ function Engine.SayCrafting(count, resultLink, materials, needed)
     end
 end
 
-local function CraftName(skill)
-    return zo_strformat("<<1>>", GetCraftingSkillName(skill))
-end
+local CraftName = WC.Util.CraftName
 
 local function Stop()
     running = false
@@ -276,7 +215,7 @@ end
 local function WritKinds(jobs)
     local daily, master = false, false
     for _, job in ipairs(jobs) do
-        if job.State() == "active" then
+        if job.State() == "active" then   -- (reward jobs are neither)
             daily = daily or job.source == "daily"
             master = master or job.source == "master"
         end
@@ -326,10 +265,12 @@ function Step()
     for _, job in ipairs(jobs) do
         present[job.id] = true
     end
-    for id in pairs(worked) do
+    for id, kind in pairs(worked) do
         if not present[id] then
             worked[id] = nil
-            finished = finished + 1
+            if kind ~= "rewards" then
+                finished = finished + 1
+            end
             if waiting and waiting.id == id then
                 waiting = nil
             end
@@ -359,7 +300,9 @@ function Step()
                     waiting = nil
                 end
                 if worked[id] then
-                    finished = finished + 1
+                    if worked[id] ~= "rewards" then
+                        finished = finished + 1   -- writ items only: deconstructing rewards isn't one
+                    end
                     worked[id] = nil
                 end
                 if job.OnDone then
@@ -386,7 +329,7 @@ function Step()
                         end
                         issued, reason = false, GetString(SI_WRITCRAFTER_CRAFT_STATION_NOT_READY)
                     end
-                    if issued and not announced then
+                    if issued and not announced and job.source ~= "rewards" then
                         announced = true
                         -- The sound is normally already played by CraftSounds; not for a move.
                         local sound = not startPlayed and SOUNDS.QUEST_OBJECTIVE_STARTED or nil
@@ -406,8 +349,18 @@ function Step()
                         return
                     end
                     if issued then
-                        worked[id] = true
+                        worked[id] = job.source == "rewards" and "rewards" or true
                         waiting = { id = id, progress = job.Progress() }
+                        if job.source == "rewards" then
+                            -- In case taking things apart doesn't report like a craft does, look
+                            -- again after a while rather than waiting for ever.
+                            local thisWait = waiting
+                            zo_callLater(function()
+                                if running and waiting == thisWait then
+                                    Step()
+                                end
+                            end, REWARDS_TIMEOUT_MS)
+                        end
                         return   -- EVENT_CRAFT_COMPLETED continues the run
                     end
                     skipped[id] = true
@@ -422,6 +375,23 @@ function Step()
     Finish()
 end
 
+-- A master writ's progress number, and its craft call, shared by sealed and accepted writs.
+local function WritProgress(writ, status)
+    local progress = progressOf[writ.kind]
+    return progress and progress(writ, status) or status.have
+end
+
+local function CraftWrit(writ, status, skill)
+    local crafter = crafters[writ.kind]
+    if not crafter then
+        return false, zo_strformat(SI_WRITCRAFTER_CRAFT_NOT_YET, CraftName(skill))
+    end
+    if not status then
+        return false
+    end
+    return crafter(writ, status)
+end
+
 -- Built-in job source: queued sealed master writs for this station's craft.
 local function MasterJobs(skill)
     local jobs = {}
@@ -434,7 +404,7 @@ local function MasterJobs(skill)
             jobs[#jobs + 1] = {
                 id = "master:" .. uid,
                 source = "master",
-                label = zo_strformat("<<t:1>>", GetItemLinkName(writ.link)),
+                label = WC.Util.ItemName(writ.link),
                 State = function()
                     local status = Status()
                     if not status then
@@ -444,11 +414,7 @@ local function MasterJobs(skill)
                 end,
                 Progress = function()
                     local status = Status()
-                    if not status then
-                        return 0
-                    end
-                    local progress = progressOf[writ.kind]
-                    return progress and progress(writ, status) or status.have
+                    return status and WritProgress(writ, status) or 0
                 end,
                 Check = function()
                     local verdict = WC.Rules.Evaluate(writ)
@@ -462,11 +428,7 @@ local function MasterJobs(skill)
                     return true
                 end,
                 Craft = function()
-                    local crafter = crafters[writ.kind]
-                    if not crafter then
-                        return false, zo_strformat(SI_WRITCRAFTER_CRAFT_NOT_YET, CraftName(skill))
-                    end
-                    return crafter(writ, Status())
+                    return CraftWrit(writ, Status(), skill)
                 end,
                 OnDone = function() WC.Queue.Remove(uid) end,
                 OnGone = function()
@@ -534,11 +496,7 @@ local function AcceptedJobs(skill)
             end,
             Progress = function()
                 local status = Status()
-                if not status then
-                    return math.huge
-                end
-                local progress = progressOf[writ.kind]
-                return progress and progress(writ, status) or status.have
+                return status and WritProgress(writ, status) or math.huge
             end,
             -- Matched like the badge and the bank pickup (the game's own condition check
             -- didn't count a bank item for an accepted master writ).
@@ -559,19 +517,25 @@ local function AcceptedJobs(skill)
                 return true
             end,
             Craft = function()
-                local crafter = crafters[writ.kind]
-                local status = Status()
-                if not crafter then
-                    return false, zo_strformat(SI_WRITCRAFTER_CRAFT_NOT_YET, CraftName(skill))
-                end
-                if not status then
-                    return false
-                end
-                return crafter(writ, status)
+                return CraftWrit(writ, Status(), skill)
             end,
         }
     end
     return jobs
+end
+
+-- For Debug chat: what kind of station this is, e.g. "Clothing station (2)", "Grand Master
+-- Blacksmithing station (1)", "Deconstruction assistant or station (0)".
+local function StationName(skill)
+    local mode = GetCraftingInteractionMode()
+    if CRAFTING_INTERACTION_MODE_UNIVERSAL_DECONSTRUCTION and mode == CRAFTING_INTERACTION_MODE_UNIVERSAL_DECONSTRUCTION then
+        return string.format("Deconstruction assistant or station (%d)", skill)
+    end
+    if skill == 0 then
+        return string.format("Station with no craft (0, mode %s)", tostring(mode))
+    end
+    local grandMaster = mode == CRAFTING_INTERACTION_MODE_CONSOLIDATED_STATION and "Grand Master " or ""
+    return string.format("%s%s station (%d)", grandMaster, CraftName(skill), skill)
 end
 
 local function OnStationOpened(_, skill)
@@ -585,6 +549,7 @@ local function OnStationOpened(_, skill)
             return
         end
         -- Idle unless there's writ work for this craft.
+        WC.Inventory.Invalidate()   -- FCO ItemSaver marks change without a bag event
         WC.Daily.ForgetFailures(skill)
         local jobs = CollectJobs(skill)
         if WC.settings.logLevel >= WC.Log.LEVEL_DEBUG then
@@ -599,7 +564,7 @@ local function OnStationOpened(_, skill)
                 accepted[#accepted + 1] = string.format("%s (%d/%d)", entry.condition.quest,
                     entry.condition.current, entry.condition.max)
             end
-            WC.Log.Debug(string.format("Station %d opened: %d job(s); auto-craft %s; queued: %s; accepted: %s", skill, #jobs,
+            WC.Log.Debug(string.format("%s opened: %d job(s); auto-craft %s; queued: %s; accepted: %s", StationName(skill), #jobs,
                 tostring(WC.settings.autoCraft), #queued > 0 and table.concat(queued, ", ") or "none",
                 #accepted > 0 and table.concat(accepted, ", ") or "none"))
         end

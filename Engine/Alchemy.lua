@@ -1,8 +1,6 @@
 local WC = WritCrafter
 
-local function ItemName(itemId)
-    return zo_strformat("<<t:1>>", GetItemLinkName(WC.Inventory.GetLink(itemId)))
-end
+local ItemName = WC.Util.ItemName
 
 local function StationStock(itemId)
     local _, _, total = WC.Inventory.FindForStation(itemId)
@@ -43,15 +41,12 @@ local function CraftAlchemy(writ, status)
     end
 
     local perCraft = zo_max(GetAlchemyResultQuantity(solventBag, solventSlot, 1) or 1, 1)
-    local iterations = zo_ceil((status.required - status.have) / perCraft)
     local maxIterations, result = GetMaxIterationsPossibleForAlchemyItem(solventBag, solventSlot,
         r1Bag, r1Slot, r2Bag, r2Slot, r3Bag, r3Slot)
-    if not maxIterations or maxIterations == 0 then
-        return false, GetString("SI_TRADESKILLRESULT", result)
-    end
-    iterations = zo_min(iterations, maxIterations)
-    if prospective ~= PROSPECTIVE_ALCHEMY_RESULT_KNOWN then
-        iterations = 1
+    local iterations, reason = WC.Engine.Batches(zo_ceil((status.required - status.have) / perCraft),
+        maxIterations, result, prospective == PROSPECTIVE_ALCHEMY_RESULT_KNOWN)
+    if not iterations then
+        return false, reason
     end
 
     local materials = { { itemId = writ.solvent.itemId, count = iterations } }
@@ -73,38 +68,12 @@ WC.Engine.RegisterCrafter(WC.Master.KIND_ALCHEMY, CraftAlchemy)
 
 local REAGENTS = WC.Data.Alchemy.REAGENTS
 local SOLVENT_TYPES = { [ITEMTYPE_POTION_BASE] = true, [ITEMTYPE_POISON_BASE] = true }
-local SOLVENT_BAGS = { BAG_VIRTUAL, BAG_BACKPACK, BAG_BANK, BAG_SUBSCRIBER_BANK }
-
 -- Solvent item IDs you own anywhere a station can use.
 local function OwnedSolvents()
-    local ids, seen = {}, {}
-    for _, bagId in ipairs(SOLVENT_BAGS) do
-        local slotIndex = ZO_GetNextBagSlotIndex(bagId)
-        while slotIndex do
-            if SOLVENT_TYPES[GetItemType(bagId, slotIndex)] then
-                local itemId = GetItemId(bagId, slotIndex)
-                if not seen[itemId] then
-                    seen[itemId] = true
-                    ids[#ids + 1] = itemId
-                end
-            end
-            slotIndex = ZO_GetNextBagSlotIndex(bagId, slotIndex)
-        end
-    end
-    return ids
+    return WC.Inventory.OwnedItemIds(SOLVENT_TYPES)
 end
 
--- Where each item is right now (bag, slot), looked up once per search.
-local function Locations(itemIds)
-    local where = {}
-    for _, itemId in ipairs(itemIds) do
-        local bagId, slotIndex = WC.Inventory.FindForStation(itemId)
-        if bagId then
-            where[itemId] = { bagId, slotIndex }
-        end
-    end
-    return where
-end
+local Locations = WC.Inventory.Locations
 
 -- Bag/slot arguments for a solvent and reagents from a location table, or nil.
 local function Args(where, solventId, reagents)
@@ -168,6 +137,29 @@ local function PairsForEffects(reagents, effects)
     return list
 end
 
+-- Every pair of the given reagents that shares an effect, each pair once.
+local function UniquePairs(reagents)
+    local list, seen = {}, {}
+    for _, effectPairs in pairs(PairsByEffect(reagents)) do
+        for _, pair in ipairs(effectPairs) do
+            local key = pair[1] .. ":" .. pair[2]
+            if not seen[key] then
+                seen[key] = true
+                list[#list + 1] = pair
+            end
+        end
+    end
+    return list
+end
+
+-- Where your reagents and solvents are, for a search over them.
+local function ReagentAndSolventLocations(reagents, solvents)
+    local all = {}
+    for _, id in ipairs(reagents) do all[#all + 1] = id end
+    for _, id in ipairs(solvents) do all[#all + 1] = id end
+    return Locations(all)
+end
+
 local function OwnedReagents()
     local owned = {}
     for itemId in pairs(REAGENTS) do
@@ -192,19 +184,10 @@ local function ResolveDaily(condition)
     -- time; this only finds the solvent and the effect.
     local owned = OwnedReagents()
     local solvents = OwnedSolvents()
-    local all = {}
-    for _, id in ipairs(owned) do all[#all + 1] = id end
-    for _, id in ipairs(solvents) do all[#all + 1] = id end
-    local where = Locations(all)
-    local candidates, seen = {}, {}
-    for _, effectPairs in pairs(PairsByEffect(owned)) do
-        for _, pair in ipairs(effectPairs) do
-            local key = pair[1] .. ":" .. pair[2]
-            if not seen[key] then
-                seen[key] = true
-                candidates[#candidates + 1] = { pair = pair, shared = SharedEffects(pair) }
-            end
-        end
+    local where = ReagentAndSolventLocations(owned, solvents)
+    local candidates = {}
+    for _, pair in ipairs(UniquePairs(owned)) do
+        candidates[#candidates + 1] = { pair = pair, shared = SharedEffects(pair) }
     end
     table.sort(candidates, function(x, y)
         if #x.shared ~= #y.shared then
@@ -242,11 +225,7 @@ local function MoveToBackpack(itemId, quantity)
         return false, GetString(SI_WRITCRAFTER_CRAFT_BACKPACK_FULL)
     end
     quantity = zo_min(quantity, count)
-    if IsProtectedFunction("RequestMoveItem") then
-        CallSecureProtected("RequestMoveItem", BAG_VIRTUAL, itemId, BAG_BACKPACK, emptySlot, quantity)
-    else
-        RequestMoveItem(BAG_VIRTUAL, itemId, BAG_BACKPACK, emptySlot, quantity)
-    end
+    WC.Util.MoveItem(BAG_VIRTUAL, itemId, BAG_BACKPACK, emptySlot, quantity)
     WC.Log.Say(zo_strformat(SI_WRITCRAFTER_MOVING, quantity, ItemName(itemId)))
     return true
 end
@@ -255,7 +234,7 @@ local function CraftDaily(condition, plan)
     local remaining = condition.max - condition.current
     if plan.acquire then
         local itemId = plan.acquire
-        if WC.Policy.IsExcluded(itemId) then
+        if WC.Policy.BlocksAcquire(itemId) then
             return false, zo_strformat(SI_WRITCRAFTER_CRAFT_EXCLUDED_REAGENT, ItemName(itemId))
         end
         local moved, reason = MoveToBackpack(itemId, remaining)
@@ -289,7 +268,7 @@ local function CraftDaily(condition, plan)
         local fits = WC.Daily.Fulfils(link, condition) and true or false
         if WC.settings.logLevel >= WC.Log.LEVEL_DEBUG then
             WC.Log.Debug(string.format("Alchemy daily: %s + %s -> %s%s: %s", ItemName(pair[1]), ItemName(pair[2]),
-                (link and link ~= "") and zo_strformat("<<t:1>>", GetItemLinkName(link)) or "no result",
+                (link and link ~= "") and ItemName(link) or "no result",
                 known == PROSPECTIVE_ALCHEMY_RESULT_KNOWN and "" or " (undiscovered traits)",
                 fits and "fits the writ" or "doesn't fit"))
         end
@@ -358,12 +337,10 @@ local function CraftDaily(condition, plan)
     end
     local perCraft = zo_max(GetAlchemyResultQuantity(args[1], args[2], 1) or 1, 1)
     local maxIterations, result = GetMaxIterationsPossibleForAlchemyItem(unpack(args))
-    if not maxIterations or maxIterations == 0 then
-        return false, GetString("SI_TRADESKILLRESULT", result)
-    end
-    local iterations = zo_min(zo_ceil(remaining / perCraft), maxIterations)
-    if prospective ~= PROSPECTIVE_ALCHEMY_RESULT_KNOWN then
-        iterations = 1
+    local iterations, reason = WC.Engine.Batches(zo_ceil(remaining / perCraft), maxIterations, result,
+        prospective == PROSPECTIVE_ALCHEMY_RESULT_KNOWN)
+    if not iterations then
+        return false, reason
     end
     WC.Engine.SayCrafting(iterations * perCraft, resultLink, {
         { itemId = plan.solvent, count = iterations },
@@ -406,21 +383,9 @@ function AlchemyDaily.List()
     WC.Inventory.Invalidate()   -- counts right after moving things to house storage
     local owned = OwnedReagents()
     local solvents = OwnedSolvents()
-    local all = {}
-    for _, id in ipairs(owned) do all[#all + 1] = id end
-    for _, id in ipairs(solvents) do all[#all + 1] = id end
-    local where = Locations(all)
+    local where = ReagentAndSolventLocations(owned, solvents)
     -- Every owned pair sharing an effect, each once: the only pairs WritCrafter would try.
-    local candidates, seen = {}, {}
-    for _, effectPairs in pairs(PairsByEffect(owned)) do
-        for _, pair in ipairs(effectPairs) do
-            local key = pair[1] .. ":" .. pair[2]
-            if not seen[key] then
-                seen[key] = true
-                candidates[#candidates + 1] = pair
-            end
-        end
-    end
+    local candidates = UniquePairs(owned)
     table.sort(candidates, function(x, y)
         return ItemName(x[1]) .. ItemName(x[2]) < ItemName(y[1]) .. ItemName(y[2])
     end)

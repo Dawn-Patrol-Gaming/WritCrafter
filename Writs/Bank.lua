@@ -28,13 +28,9 @@ local FINISHED_TYPES = {
     [ITEMTYPE_WEAPON] = true, [ITEMTYPE_ARMOR] = true,
 }
 
-local function Say(stringId, ...)
-    WC.Log.Say(zo_strformat(stringId, ...))
-end
+local Say = WC.Util.Say
 
-local function ItemName(itemId)
-    return zo_strformat("<<t:1>>", GetItemLinkName(WC.Inventory.GetLink(itemId)))
-end
+local ItemName = WC.Util.ItemName
 
 -- Empty backpack slots, so each move gets its own destination (moves land asynchronously).
 local function EmptySlots()
@@ -48,11 +44,7 @@ local function EmptySlots()
 end
 
 local function Move(bagId, slotIndex, destSlot, quantity)
-    if IsProtectedFunction("RequestMoveItem") then
-        CallSecureProtected("RequestMoveItem", bagId, slotIndex, BAG_BACKPACK, destSlot, quantity)
-    else
-        RequestMoveItem(bagId, slotIndex, BAG_BACKPACK, destSlot, quantity)
-    end
+    WC.Util.MoveItem(bagId, slotIndex, BAG_BACKPACK, destSlot, quantity)
 end
 
 -- A finished item WritCrafter may hand to a daily writ: gear only when plain (no trait, normal
@@ -93,19 +85,17 @@ local function StoredItems()
         return storedItems
     end
     local bags = { BAG_BANK, BAG_SUBSCRIBER_BANK }
-    if BAG_HOUSE_BANK_ONE and BAG_HOUSE_BANK_TEN and IsOwnerOfCurrentHouse and IsOwnerOfCurrentHouse() then
-        for bagId = BAG_HOUSE_BANK_ONE, BAG_HOUSE_BANK_TEN do
+    if WC.Util.InOwnHouse() then
+        for _, bagId in ipairs(WC.Util.HOUSE_BAGS) do
             bags[#bags + 1] = bagId
         end
     end
     storedItems = {}
     for _, bagId in ipairs(bags) do
-        local slotIndex = ZO_GetNextBagSlotIndex(bagId)
-        while slotIndex do
+        for slotIndex in WC.Inventory.Slots(bagId) do
             if FINISHED_TYPES[GetItemType(bagId, slotIndex)] and MayTake(bagId, slotIndex) then
                 storedItems[#storedItems + 1] = { bagId = bagId, slotIndex = slotIndex }
             end
-            slotIndex = ZO_GetNextBagSlotIndex(bagId, slotIndex)
         end
     end
     return storedItems
@@ -142,7 +132,7 @@ local function OpenedBags(bankBag)
     if bankBag == BAG_BANK then
         return BANK_BAGS
     end
-    if BAG_HOUSE_BANK_ONE and BAG_HOUSE_BANK_TEN and bankBag >= BAG_HOUSE_BANK_ONE and bankBag <= BAG_HOUSE_BANK_TEN then
+    if WC.Util.IsHouseBag(bankBag) then
         return { bankBag }
     end
 end
@@ -158,8 +148,10 @@ local function OnOpenBank(_, bankBag)
     local function Take(match, need, dailyQuest)
         local moved, name = 0, nil
         for _, bagId in ipairs(bags) do
-            local slotIndex = ZO_GetNextBagSlotIndex(bagId)
-            while slotIndex and need > 0 do
+            for slotIndex in WC.Inventory.Slots(bagId) do
+                if need <= 0 then
+                    break
+                end
                 if match(bagId, slotIndex) then
                     local destSlot = empties[nextEmpty]
                     if not destSlot then
@@ -176,7 +168,6 @@ local function OnOpenBank(_, bankBag)
                     need = need - quantity
                     moved = moved + quantity
                 end
-                slotIndex = ZO_GetNextBagSlotIndex(bagId, slotIndex)
             end
         end
         if moved > 0 then
@@ -225,7 +216,7 @@ local function OnOpenBank(_, bankBag)
             local itemId = WC.Daily.AcquireItem(condition)
             local left
             if itemId then
-                if WC.Policy.IsExcluded(itemId) then
+                if WC.Policy.BlocksAcquire(itemId) then
                     Say(SI_WRITCRAFTER_BANK_EXCLUDED, ItemName(itemId))
                     left = need
                 else

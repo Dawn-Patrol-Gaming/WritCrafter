@@ -23,6 +23,7 @@ WC.DEFAULTS = {
     autoCraft         = true,       -- craft queued master writs at stations
     autoCraftDaily    = true,       -- craft daily writ quests at stations
     bankWithdrawDaily = false,      -- daily writs: use finished items in storage (take out, don't craft)
+    dailyAcquireExcluded = false,   -- daily writs: hand over excluded reagents an acquire task asks for
     bankWithdrawMaster = true,      -- master writs: take their crafted items out of storage
     craftNotice       = true,       -- on-screen alerts and the failure banner
     soundStart        = true,       -- sound when writ crafting starts at a station

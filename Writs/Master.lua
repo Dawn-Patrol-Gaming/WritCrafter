@@ -47,18 +47,50 @@ local function RequiredCount(link, fallback)
     return fallback
 end
 
-local function ParseFields(link)
-    -- Fields after the link type: 4 = item ID, 10-15 = the six writ fields, 24 = reward.
+-- Fills in a writ's craft-specific fields. A sealed writ's link and an accepted quest's master
+-- writ details carry the same facts, laid out differently; both are read into these names
+-- first: itemId (glyph, food or drink), templateId, materialId (enchanting level, alchemy
+-- solvent), quality, setId, trait, style, and effects (the three alchemy effects).
+local function Fill(writ, fields)
+    if writ.kind == Master.KIND_SMITHING then
+        writ.templateId = fields.templateId
+        writ.template   = WC.Data.Smithing.TEMPLATES[fields.templateId]
+        writ.quality    = fields.quality
+        writ.setId      = fields.setId
+        writ.trait      = fields.trait
+        writ.style      = fields.style
+    elseif writ.kind == Master.KIND_ENCHANTING then
+        writ.glyphId = fields.itemId
+        writ.glyph   = WC.Data.Enchanting.GLYPHS[fields.itemId]
+        writ.level   = WC.Data.Enchanting.LEVELS[fields.materialId]
+        writ.quality = fields.quality
+    elseif writ.kind == Master.KIND_ALCHEMY then
+        local Alchemy = WC.Data.Alchemy
+        writ.solvent = Alchemy.SOLVENTS[fields.materialId]
+        writ.effects = {}
+        for index, effect in ipairs(fields.effects) do
+            writ.effects[index] = Alchemy.Normalize(effect)
+        end
+    else
+        writ.resultId = fields.itemId
+    end
+    return writ
+end
+
+-- A sealed writ link's fields. After the link type: 4 = item ID, 10-15 = the six writ fields
+-- (smithing: template, -, quality, set, trait, style; enchanting: glyph, level, quality; alchemy:
+-- solvent, three effects; provisioning: the dish), 24 = reward.
+local function LinkFields(link, kind)
     local f = { ZO_LinkHandler_ParseLink(link) }
+    local n = {}
+    for i = 10, 15 do
+        n[i] = tonumber(f[i]) or 0
+    end
     return {
-        f10 = tonumber(f[10]) or 0,
-        f11 = tonumber(f[11]) or 0,
-        f12 = tonumber(f[12]) or 0,
-        f13 = tonumber(f[13]) or 0,
-        f14 = tonumber(f[14]) or 0,
-        f15 = tonumber(f[15]) or 0,
-        reward = tonumber(f[24]) or 0,
-    }
+        itemId = n[10], templateId = n[10], quality = n[12], setId = n[13], trait = n[14], style = n[15],
+        materialId = kind == Master.KIND_ALCHEMY and n[10] or n[11],
+        effects = { n[11], n[12], n[13] },
+    }, tonumber(f[24]) or 0
 end
 
 local function Build(link)
@@ -69,40 +101,24 @@ local function Build(link)
     if not craft then
         return nil   -- holiday writs and anything new
     end
-    local f = ParseFields(link)
-    local writ = {
+    local kind = KIND_BY_CRAFT[craft]
+    local fields, reward = LinkFields(link, kind)
+    -- How many: the writ's own text, else the usual count. A provisioning writ's sealed text
+    -- ("Craft a Longfin Pasty…") gives no number, but the quest asks for 8, two batches of four
+    -- with the provisioning quantity passives (as WritWorthy and Dolgubon's craft it).
+    local fallback = 1
+    if kind == Master.KIND_ALCHEMY then
+        fallback = WC.Data.Alchemy.MASTER_REQUIRED
+    elseif kind == Master.KIND_PROVISIONING then
+        fallback = Master.PROVISIONING_REQUIRED
+    end
+    return Fill({
         link     = link,
         craft    = craft,
-        kind     = KIND_BY_CRAFT[craft],
-        vouchers = zo_round(f.reward / 10000),
-    }
-    if writ.kind == Master.KIND_SMITHING then
-        writ.templateId = f.f10
-        writ.template   = WC.Data.Smithing.TEMPLATES[f.f10]
-        writ.quality    = f.f12
-        writ.setId      = f.f13
-        writ.trait      = f.f14
-        writ.style      = f.f15
-        writ.required   = RequiredCount(link, 1)
-    elseif writ.kind == Master.KIND_ENCHANTING then
-        writ.glyphId  = f.f10
-        writ.glyph    = WC.Data.Enchanting.GLYPHS[f.f10]
-        writ.level    = WC.Data.Enchanting.LEVELS[f.f11]
-        writ.quality  = f.f12
-        writ.required = RequiredCount(link, 1)
-    elseif writ.kind == Master.KIND_ALCHEMY then
-        local Alchemy = WC.Data.Alchemy
-        writ.solvent  = Alchemy.SOLVENTS[f.f10]
-        writ.effects  = { Alchemy.Normalize(f.f11), Alchemy.Normalize(f.f12), Alchemy.Normalize(f.f13) }
-        writ.required = RequiredCount(link, Alchemy.MASTER_REQUIRED)
-    else
-        writ.resultId = f.f10
-        -- The sealed text ("Craft a Longfin Pasty…") gives no number, but the quest asks for 8,
-        -- two batches of four with the provisioning quantity passives (as WritWorthy and
-        -- Dolgubon's craft it).
-        writ.required = RequiredCount(link, Master.PROVISIONING_REQUIRED)
-    end
-    return writ
+        kind     = kind,
+        vouchers = zo_round(reward / 10000),
+        required = RequiredCount(link, fallback),
+    }, fields)
 end
 
 -- Returns the parsed writ for a sealed master writ link, or nil.
@@ -140,47 +156,26 @@ function Master.IsWritInfo(info)
 end
 
 local function FromInfo(info, required)
-    local itemId, materialId, craft, quality = info.itemId, info.materialId, info.craft, info.quality
-    local templateId, setId, trait, style = info.templateId, info.setId, info.trait, info.style
-    local encodedEffects = info.effects
-    local kind = KIND_BY_CRAFT[craft]
+    local kind = KIND_BY_CRAFT[info.craft]
     if not kind then
         return nil
     end
     -- Smithing writs name a template and no item; the others name the item.
     if kind == Master.KIND_SMITHING then
-        if not templateId or templateId == 0 then
+        if (info.templateId or 0) == 0 then
             return nil
         end
-    elseif not itemId or itemId == 0 then
+    elseif (info.itemId or 0) == 0 then
         return nil
     end
-    local writ = { craft = craft, kind = kind, required = required, vouchers = 0 }
-    if kind == Master.KIND_SMITHING then
-        writ.templateId = templateId
-        writ.template   = WC.Data.Smithing.TEMPLATES[templateId]
-        writ.quality    = quality
-        writ.setId      = setId
-        writ.trait      = trait
-        writ.style      = style
-    elseif kind == Master.KIND_ENCHANTING then
-        writ.glyphId = itemId
-        writ.glyph   = WC.Data.Enchanting.GLYPHS[itemId]
-        writ.level   = WC.Data.Enchanting.LEVELS[materialId]
-        writ.quality = quality
-    elseif kind == Master.KIND_ALCHEMY then
-        local Alchemy = WC.Data.Alchemy
-        local packed = encodedEffects or 0
-        writ.solvent = Alchemy.SOLVENTS[materialId]
-        writ.effects = {
-            Alchemy.Normalize(zo_floor(packed / 65536) % 64),
-            Alchemy.Normalize(zo_floor(packed / 256) % 64),
-            Alchemy.Normalize(packed % 64),
-        }
-    else
-        writ.resultId = itemId
-    end
-    return writ
+    -- The quest packs the three alchemy effects into one number, one per byte.
+    local packed = info.effects or 0
+    local fields = {
+        itemId = info.itemId, templateId = info.templateId, materialId = info.materialId,
+        quality = info.quality, setId = info.setId, trait = info.trait, style = info.style,
+        effects = { zo_floor(packed / 65536) % 64, zo_floor(packed / 256) % 64, packed % 64 },
+    }
+    return Fill({ craft = info.craft, kind = kind, required = required, vouchers = 0 }, fields)
 end
 
 Master.FromInfo = FromInfo
@@ -255,9 +250,4 @@ function Master.OnJournalChanged(event, ...)
     elseif event == EVENT_QUEST_ADDED then
         ZO_ClearTable(searched)
     end
-end
-
--- Stable per-item key, so state survives the writ moving between bag and bank.
-function Master.UniqueId(bagId, slotIndex)
-    return Id64ToString(GetItemUniqueId(bagId, slotIndex))
 end

@@ -15,11 +15,12 @@ WC.Rewards = Rewards
 
 Rewards.LEAVE, Rewards.DEPOSIT, Rewards.JUNK, Rewards.SELL = "leave", "deposit", "junk", "sell"
 Rewards.OPEN = "open"   -- writ and survey containers only: unpack them
+Rewards.DECONSTRUCT = "deconstruct"   -- at the next matching station or deconstruction assistant
 Rewards.KEEP_STACK = "keepStack"   -- at merchants, sell what rewards gave beyond one full stack
 
 -- Reward kinds, in settings order, with the actions each allows.
 local L, D, J, S, O = Rewards.LEAVE, Rewards.DEPOSIT, Rewards.JUNK, Rewards.SELL, Rewards.OPEN
-local K = Rewards.KEEP_STACK
+local K, X = Rewards.KEEP_STACK, Rewards.DECONSTRUCT
 Rewards.KINDS = {
     -- Containers of sealed master writs or survey reports stay closed unless you choose Open.
     { key = "writContainers",  actions = { L, O, D } },
@@ -31,12 +32,12 @@ Rewards.KINDS = {
     { key = "surveys",     actions = { L, D, J, S } },
     { key = "masterWrits", actions = { L, D } },
     { key = "repairKits",  actions = { L, D, J, S, K } },
-    { key = "ornate",      actions = { L, D, J, S } },
-    { key = "intricate",   actions = { L, D, J, S } },
+    { key = "ornate",      actions = { L, D, J, S, X } },
+    { key = "intricate",   actions = { L, D, J, S, X } },
     -- Purple gear with a trait to research ("Exemplary Swift Ring"); worth banking or selling.
     { key = "researchGear", actions = { L, D, J, S } },
     { key = "soulGems",    actions = { L, D, K } },
-    { key = "glyphs",      actions = { L, D, J, S } },
+    { key = "glyphs",      actions = { L, D, J, S, X } },
     -- Recipes by quality: e.g. sell the green ones, bank the blue and purple ones for a guild trader.
     { key = "recipesFine",     actions = { L, D, J, S } },   -- white and green
     { key = "recipesSuperior", actions = { L, D, J, S } },   -- blue
@@ -54,13 +55,9 @@ local OPEN_GAP_MS     = 1200    -- between boxes
 local RETRY_MS        = 3000    -- after the game didn't open a box
 local MAX_ATTEMPTS    = 3       -- tries per box before it's left for you
 
-local function Say(stringId, ...)
-    WC.Log.Say(zo_strformat(stringId, ...))
-end
+local Say = WC.Util.Say
 
-local function Uid(bagId, slotIndex)
-    return Id64ToString(GetItemUniqueId(bagId, slotIndex))
-end
+local Uid = WC.Util.UniqueId
 
 -- Saved per character: boxes waiting to be opened, and items waiting for the bank or a merchant.
 local function State()
@@ -168,14 +165,13 @@ end
 
 -- Items WritCrafter may act on: not locked, not FCO ItemSaver-marked, not set aside for a writ.
 local function MayTouch(bagId, slotIndex)
-    return not IsItemPlayerLocked(bagId, slotIndex)
-        and not WC.Inventory.IsProtected(bagId, slotIndex)
+    return not WC.Inventory.IsProtected(bagId, slotIndex)   -- locked or FCO ItemSaver-marked
         and WC.Reservations.GetReserved(bagId, slotIndex) == 0
 end
 
 local function Takeable(slotIndex, entry)
     local stack = GetSlotStackSize(BAG_BACKPACK, slotIndex)
-    if IsItemPlayerLocked(BAG_BACKPACK, slotIndex) or WC.Inventory.IsProtected(BAG_BACKPACK, slotIndex) then
+    if WC.Inventory.IsProtected(BAG_BACKPACK, slotIndex) then
         return 0
     end
     if entry.extra then
@@ -290,16 +286,21 @@ local ACTION_STRING = {
     [Rewards.SELL]    = SI_WRITCRAFTER_REWARD_DID_SELL,
     [Rewards.OPEN]    = SI_WRITCRAFTER_REWARD_DID_OPEN,
     [Rewards.KEEP_STACK] = SI_WRITCRAFTER_REWARD_DID_KEEP_STACK,
+    [Rewards.DECONSTRUCT] = SI_WRITCRAFTER_REWARD_DID_DECONSTRUCT,
 }
 
-local function FindByUid(uid)
-    local slotIndex = ZO_GetNextBagSlotIndex(BAG_BACKPACK)
-    while slotIndex do
-        if Uid(BAG_BACKPACK, slotIndex) == uid then
-            return slotIndex
-        end
-        slotIndex = ZO_GetNextBagSlotIndex(BAG_BACKPACK, slotIndex)
+-- Backpack slots by unique ID: [uid] = slotIndex, read in one pass, so looking up every waiting
+-- box or remembered item costs one walk over the backpack instead of one walk each.
+local function BackpackSlots()
+    local slots = {}
+    for slotIndex in WC.Inventory.Slots(BAG_BACKPACK) do
+        slots[Uid(BAG_BACKPACK, slotIndex)] = slotIndex
     end
+    return slots
+end
+
+local function FindByUid(uid)
+    return BackpackSlots()[uid]
 end
 
 -- Progress through a run of boxes, shown in the top-right corner: "Opening writ rewards: 3 of 12".
@@ -341,15 +342,15 @@ end
 
 local function Progress(text)
     if WC.settings.craftNotice then
-        WC.Engine.Corner(text)
+        WC.Notices.Corner(text)
     end
 end
 
 -- How many boxes are still waiting (a stack of containers counts each one).
-local function WaitingCount()
+local function WaitingCount(slots)
     local count = 0
     for uid in pairs(State().rewardBoxes) do
-        local slotIndex = FindByUid(uid)
+        local slotIndex = slots[uid]
         if slotIndex then
             count = count + GetSlotStackSize(BAG_BACKPACK, slotIndex)
         end
@@ -376,22 +377,19 @@ function Rewards.OpenWaiting()
         or GetInteractionType() ~= INTERACTION_NONE then
         return
     end
-    local slotIndex = FindByUid(uid)
+    local slots = BackpackSlots()
+    local slotIndex = slots[uid]
     if not slotIndex then
         boxes[uid] = nil   -- opened by hand, moved or gone
         zo_callLater(Rewards.OpenWaiting, 0)
         return
     end
-    local waiting = WaitingCount()   -- this box included
+    local waiting = WaitingCount(slots)   -- this box included
     runOpened = runOpened + 1
     Progress(zo_strformat(SI_WRITCRAFTER_REWARD_PROGRESS, runOpened, runOpened - 1 + waiting))
     opening = { uid = uid, gave = {}, stack = GetSlotStackSize(BAG_BACKPACK, slotIndex) }
     opening.untilMs = GetFrameTimeMilliseconds() + LOOT_WINDOW_MS
-    if IsProtectedFunction("UseItem") then
-        CallSecureProtected("UseItem", BAG_BACKPACK, slotIndex)
-    else
-        UseItem(BAG_BACKPACK, slotIndex)
-    end
+    WC.Util.UseItem(BAG_BACKPACK, slotIndex)
     zo_callLater(function()
         if opening and opening.uid == uid and GetFrameTimeMilliseconds() >= opening.untilMs then
             FinishOpening()
@@ -518,9 +516,10 @@ local function OnOpenBank(_, bankBag)
     local todo = State().rewardTodo
     local moved = 0
     local empties, nextEmpty = nil, 1
+    local slots = BackpackSlots()
     for uid, entry in pairs(todo) do
         if entry.action == Rewards.DEPOSIT then
-            local slotIndex = FindByUid(uid)
+            local slotIndex = slots[uid]
             if not slotIndex then
                 todo[uid] = nil
             elseif Takeable(slotIndex, entry) > 0 then
@@ -533,11 +532,7 @@ local function OnOpenBank(_, bankBag)
                 nextEmpty = nextEmpty + 1
                 local destBag, destSlot = dest[1], dest[2]
                 local quantity = Takeable(slotIndex, entry)
-                if IsProtectedFunction("RequestMoveItem") then
-                    CallSecureProtected("RequestMoveItem", BAG_BACKPACK, slotIndex, destBag, destSlot, quantity)
-                else
-                    RequestMoveItem(BAG_BACKPACK, slotIndex, destBag, destSlot, quantity)
-                end
+                WC.Util.MoveItem(BAG_BACKPACK, slotIndex, destBag, destSlot, quantity)
                 todo[uid] = nil
                 moved = moved + 1
             else
@@ -554,9 +549,10 @@ end
 local function OnOpenStore()
     local todo = State().rewardTodo
     local sold = 0
+    local slots = BackpackSlots()
     for uid, entry in pairs(todo) do
         if entry.action == Rewards.SELL then
-            local slotIndex = FindByUid(uid)
+            local slotIndex = slots[uid]
             local quantity = slotIndex and Takeable(slotIndex, entry) or 0
             if quantity > 0 then
                 SellInventoryItem(BAG_BACKPACK, slotIndex, quantity)
@@ -583,8 +579,7 @@ function Rewards.SellBeyondStack()
         return
     end
     local byItem = {}   -- [itemId] = { maxStack, slots = { { slotIndex, count } } }
-    local slotIndex = ZO_GetNextBagSlotIndex(BAG_BACKPACK)
-    while slotIndex do
+    for slotIndex in WC.Inventory.Slots(BAG_BACKPACK) do
         local itemId = GetItemId(BAG_BACKPACK, slotIndex)
         local link = fromRewards[itemId] and GetItemLink(BAG_BACKPACK, slotIndex)
         local kind = link and Rewards.KindOf(link)
@@ -597,7 +592,6 @@ function Rewards.SellBeyondStack()
             entry.slots[#entry.slots + 1] = { slotIndex = slotIndex, count = count }
             entry.total = entry.total + count
         end
-        slotIndex = ZO_GetNextBagSlotIndex(BAG_BACKPACK, slotIndex)
     end
     for itemId, entry in pairs(byItem) do
         local excess = zo_min(entry.total - entry.maxStack, fromRewards[itemId].quantity)
@@ -619,7 +613,93 @@ function Rewards.SellBeyondStack()
     ZO_ClearTable(fromRewards)
 end
 
+-- Deconstruction --------------------------------------------------------------------------------
+-- Items marked Deconstruct are taken apart at the next crafting station that can (the gear's own
+-- craft, enchanting for glyphs), or at a deconstruction assistant, which takes everything. All of
+-- them at once, in one batch, the way the game's deconstruction screen sends several selected
+-- items (Dolgubon's did them one at a time, which usually stopped after one or two). It runs as a
+-- job of the crafting engine, after any writ crafting at that station.
+
+local MAX_PER_BATCH = 50   -- the rest go in the next batch
+
+-- Which station takes an item apart: enchanting for glyphs, the gear's own craft otherwise.
+local function DeconstructCraft(bagId, slotIndex)
+    if GLYPHS[GetItemType(bagId, slotIndex)] then
+        return CRAFTING_TYPE_ENCHANTING
+    end
+    return GetItemLinkCraftingSkillType(GetItemLink(bagId, slotIndex))
+end
+
+-- A deconstruction assistant (or any universal deconstruction station) takes every craft's items.
+local function AtUniversalDeconstruction()
+    return CRAFTING_INTERACTION_MODE_UNIVERSAL_DECONSTRUCTION ~= nil
+        and GetCraftingInteractionMode() == CRAFTING_INTERACTION_MODE_UNIVERSAL_DECONSTRUCTION
+end
+
+-- Reward items waiting to be taken apart here: { uid, slotIndex, quantity }. Items gone, locked
+-- or set aside for a writ since are forgotten.
+local function DeconstructItems(skill)
+    local todo = State().rewardTodo
+    local items, slots = {}, nil
+    local universal = AtUniversalDeconstruction()
+    for uid, entry in pairs(todo) do
+        if entry.action == Rewards.DECONSTRUCT then
+            slots = slots or BackpackSlots()
+            local slotIndex = slots[uid]
+            if not slotIndex then
+                todo[uid] = nil
+            elseif universal or DeconstructCraft(BAG_BACKPACK, slotIndex) == skill then
+                local quantity = Takeable(slotIndex, entry)
+                if quantity > 0 then
+                    items[#items + 1] = { uid = uid, slotIndex = slotIndex, quantity = quantity }
+                else
+                    todo[uid] = nil
+                end
+            end
+        end
+    end
+    return items
+end
+
+local function DeconstructJobs(skill)
+    if not next(State().rewardTodo) or #DeconstructItems(skill) == 0 then
+        return {}
+    end
+    return { {
+        id       = "rewards:deconstruct",
+        source   = "rewards",
+        label    = GetString(SI_WRITCRAFTER_REWARD_DECONSTRUCT_LABEL),
+        State    = function() return #DeconstructItems(skill) > 0 and "active" or "done" end,
+        Progress = function() return -#DeconstructItems(skill) end,
+        Craft    = function()
+            local items = DeconstructItems(skill)
+            if #items == 0 then
+                return false
+            end
+            PrepareDeconstructMessage()
+            local added = 0
+            for index, item in ipairs(items) do
+                if index > MAX_PER_BATCH then
+                    break
+                end
+                if AddItemToDeconstructMessage(BAG_BACKPACK, item.slotIndex, item.quantity) then
+                    added = added + 1
+                else
+                    State().rewardTodo[item.uid] = nil   -- the game won't take this one apart: forget it
+                end
+            end
+            if added == 0 then
+                return false, GetString(SI_WRITCRAFTER_REWARD_DECONSTRUCT_NONE)
+            end
+            SendDeconstructMessage()
+            Say(SI_WRITCRAFTER_REWARD_DECONSTRUCTING, added)
+            return true
+        end,
+    } }
+end
+
 function Rewards.Init()
+    WC.Engine.AddJobSource(DeconstructJobs)
     local namespace = WC.name .. "Rewards"
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_QUEST_COMPLETE, OnQuestComplete)
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, OnSlotUpdate)
@@ -650,11 +730,6 @@ function Rewards.Init()
         if opening or not next(State().rewardBoxes) then
             return
         end
-        local name = namespace .. "Retry"
-        EVENT_MANAGER:UnregisterForUpdate(name)
-        EVENT_MANAGER:RegisterForUpdate(name, 1500, function()
-            EVENT_MANAGER:UnregisterForUpdate(name)
-            Rewards.OpenWaiting()
-        end)
+        WC.Util.Later("RewardsRetry", 1500, Rewards.OpenWaiting)
     end)
 end

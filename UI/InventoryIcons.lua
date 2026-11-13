@@ -63,7 +63,7 @@ local function BadgeFor(bagId, slotIndex)
         if not writ then
             return nil
         end
-        local uid = WC.Master.UniqueId(bagId, slotIndex)
+        local uid = WC.Util.UniqueId(bagId, slotIndex)
         local status = WC.Reservations.GetWritStatus(uid)
         if settings.iconCrafted and status and status.crafted then
             return TEXTURE_CRAFTED, 0.25, 0.85, 0.25

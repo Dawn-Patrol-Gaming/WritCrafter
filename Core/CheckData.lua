@@ -9,7 +9,7 @@ WC.CheckData = CheckData
 local SHOWN = 10   -- problems listed per area unless debug chat messages are on
 
 local function Name(itemId)
-    return zo_strformat("<<t:1>>", GetItemLinkName(WC.Inventory.GetLink(itemId)))
+    return WC.Util.ItemName(itemId)
 end
 
 local function Effects(set)
@@ -279,7 +279,7 @@ local function CheckSmithing()
         checked = checked + 1
         local sample = WC.Inventory.GetLink(t.sample)
         local mat = WC.Inventory.GetLink(t.mat)
-        local craftName = zo_strformat("<<1>>", GetCraftingSkillName(t.craft))
+        local craftName = WC.Util.CraftName(t.craft)
         if GetItemLinkCraftingSkillType(sample) ~= t.craft then
             problems[#problems + 1] = zo_strformat(SI_WRITCRAFTER_CHECK_TEMPLATE, templateId, Name(t.sample), craftName)
         elseif GetItemLinkItemType(mat) ~= MATERIAL_TYPE[t.craft] then
@@ -293,7 +293,7 @@ local function CheckSmithing()
             if GetItemLinkItemType(link) ~= BOOSTER_TYPE[craft]
                 or GetItemLinkFunctionalQuality(link) ~= tier + 1 then
                 problems[#problems + 1] = zo_strformat(SI_WRITCRAFTER_CHECK_BOOSTER, itemId, Name(itemId),
-                    zo_strformat("<<1>>", GetCraftingSkillName(craft)), tier)
+                    WC.Util.CraftName(craft), tier)
             end
         end
     end

@@ -72,7 +72,7 @@ local function GoldControls()
     for _, craft in ipairs(GOLD_CRAFTS) do
         controls[#controls + 1] = {
             type    = "checkbox",
-            name    = zo_strformat("<<1>>", GetCraftingSkillName(craft)),
+            name    = WC.Util.CraftName(craft),
             getFunc = function() return WC.settings.excludeGold[craft] == true end,
             setFunc = function(value)
                 WC.settings.excludeGold[craft] = value or nil
@@ -142,7 +142,7 @@ local function PerCraftControls(key)
     for _, craft in ipairs(WC.Dialogs.CRAFTS) do
         controls[#controls + 1] = {
             type    = "checkbox",
-            name    = zo_strformat("<<1>>", GetCraftingSkillName(craft)),
+            name    = WC.Util.CraftName(craft),
             getFunc = function() return WC.settings[key][craft] == true end,
             setFunc = function(value) WC.settings[key][craft] = value end,
             default = WC.DEFAULTS[key][craft] == true,
@@ -156,6 +156,7 @@ local function DailyWritControls()
         { type = "header", name = GetString(SI_WRITCRAFTER_HEADER_DAILY) },
         Checkbox("autoCraftDaily", SI_WRITCRAFTER_AUTOCRAFT_DAILY, SI_WRITCRAFTER_AUTOCRAFT_DAILY_TOOLTIP),
         Checkbox("bankWithdrawDaily", SI_WRITCRAFTER_BANK_WITHDRAW_DAILY, SI_WRITCRAFTER_BANK_WITHDRAW_DAILY_TOOLTIP),
+        Checkbox("dailyAcquireExcluded", SI_WRITCRAFTER_ACQUIRE_EXCLUDED, SI_WRITCRAFTER_ACQUIRE_EXCLUDED_TOOLTIP),
         {
             type    = "checkbox",
             name    = GetString(SI_WRITCRAFTER_STATUS_SHOW),
@@ -278,6 +279,7 @@ local function RewardControls()
         [WC.Rewards.SELL]    = SI_WRITCRAFTER_REWARD_SELL,
         [WC.Rewards.OPEN]    = SI_WRITCRAFTER_REWARD_OPEN_ACTION,
         [WC.Rewards.KEEP_STACK] = SI_WRITCRAFTER_REWARD_KEEP_STACK,
+        [WC.Rewards.DECONSTRUCT] = SI_WRITCRAFTER_REWARD_DECONSTRUCT,
     }
     local controls = {
         { type = "header", name = GetString(SI_WRITCRAFTER_HEADER_REWARDS) },

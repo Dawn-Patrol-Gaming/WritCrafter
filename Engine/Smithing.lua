@@ -22,17 +22,14 @@ local IMPROVE_GLOW = {
     [CRAFTING_TYPE_JEWELRYCRAFTING] = SOUNDS.JEWELRYCRAFTER_IMPROVE_TOOLTIP_GLOW_SUCCESS,
 }
 
-local function ItemName(link)
-    return zo_strformat("<<t:1>>", GetItemLinkName(link))
-end
+local ItemName = WC.Util.ItemName
 
 -- The writ's piece below the writ's quality, crafted, in the backpack, not locked or
 -- FCO ItemSaver-marked and not already set aside for another writ: the piece to improve.
 -- Returns bag, slot, quality (the highest-quality such piece).
 local function FindBasePiece(writ)
     local bestSlot, bestQuality
-    local slotIndex = ZO_GetNextBagSlotIndex(BAG_BACKPACK)
-    while slotIndex do
+    for slotIndex in WC.Inventory.Slots(BAG_BACKPACK) do
         local itemType = GetItemType(BAG_BACKPACK, slotIndex)
         if (itemType == ITEMTYPE_WEAPON or itemType == ITEMTYPE_ARMOR)
             and not IsItemPlayerLocked(BAG_BACKPACK, slotIndex) then
@@ -45,7 +42,6 @@ local function FindBasePiece(writ)
                 bestSlot, bestQuality = slotIndex, quality
             end
         end
-        slotIndex = ZO_GetNextBagSlotIndex(BAG_BACKPACK, slotIndex)
     end
     if bestSlot then
         return BAG_BACKPACK, bestSlot, bestQuality
@@ -171,8 +167,9 @@ local function CraftSmithing(writ, status)
     local useMimic = UseMimic(writ, styleId)
     local maxIterations, result = GetMaxIterationsPossibleForSmithingItem(patternIndex, materialIndex,
         quantity, styleId, traitIndex, useMimic)
-    if not maxIterations or maxIterations == 0 then
-        return false, GetString("SI_TRADESKILLRESULT", result)
+    local canMake, reason = WC.Engine.Batches(1, maxIterations, result)
+    if not canMake then
+        return false, reason
     end
     local materials = {
         { itemId = GetItemLinkItemId(GetSmithingPatternMaterialItemLink(patternIndex, materialIndex)), count = quantity },
@@ -191,9 +188,7 @@ local function CraftSmithing(writ, status)
     return true
 end
 
-for _, kind in ipairs({ WC.Master.KIND_SMITHING }) do
-    WC.Engine.RegisterCrafter(kind, CraftSmithing, SmithingProgress)
-end
+WC.Engine.RegisterCrafter(WC.Master.KIND_SMITHING, CraftSmithing, SmithingProgress)
 
 -- Daily writs: a plain piece (no trait, normal quality) in any material and style. The game says
 -- which pattern and material fulfil the condition; the style is the allowed style material you
@@ -278,13 +273,12 @@ local function CraftDaily(condition)
     if plan.style == false then
         return false, zo_strformat(SI_WRITCRAFTER_CRAFT_NO_STYLE, ItemName(plan.link))
     end
-    local remaining = condition.max - condition.current
     local maxIterations, result = GetMaxIterationsPossibleForSmithingItem(plan.pattern, plan.material,
         plan.quantity, plan.style, NO_TRAIT, false)
-    if not maxIterations or maxIterations == 0 then
-        return false, GetString("SI_TRADESKILLRESULT", result)
+    local iterations, reason = WC.Engine.Batches(condition.max - condition.current, maxIterations, result)
+    if not iterations then
+        return false, reason
     end
-    local iterations = zo_min(remaining, maxIterations)
     local materials = {
         { itemId = GetItemLinkItemId(GetSmithingPatternMaterialItemLink(plan.pattern, plan.material)),
           count = plan.quantity * iterations },
@@ -327,7 +321,8 @@ function GrandMaster.Seen(craft)
     return Known()[craft] ~= nil
 end
 
-EVENT_MANAGER:RegisterForEvent(WC.name .. "GrandMaster", EVENT_CRAFTING_STATION_INTERACT, function(_, craft)
+-- Learns the sets of each Grand Master station you use.
+local function OnStationInteract(_, craft)
     if GetCraftingInteractionMode() ~= CRAFTING_INTERACTION_MODE_CONSOLIDATED_STATION then
         return
     end
@@ -339,4 +334,8 @@ EVENT_MANAGER:RegisterForEvent(WC.name .. "GrandMaster", EVENT_CRAFTING_STATION_
         end
     end
     WC.QueueWindow.OnPolicyChanged()
-end)
+end
+
+function GrandMaster.Init()
+    EVENT_MANAGER:RegisterForEvent(WC.name .. "GrandMaster", EVENT_CRAFTING_STATION_INTERACT, OnStationInteract)
+end

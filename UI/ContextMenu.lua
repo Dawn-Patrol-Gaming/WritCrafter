@@ -30,8 +30,8 @@ local function OnContextMenu(inventorySlot)
     -- station, or take it off the queue. Only offered for writs WritCrafter would craft.
     local writ = GetItemType(bagId, slotIndex) == ITEMTYPE_MASTER_WRIT and WC.Master.Parse(link)
     if writ then
-        local uid = WC.Master.UniqueId(bagId, slotIndex)
-        local station = zo_strformat("<<1>>", GetCraftingSkillName(writ.craft))
+        local uid = WC.Util.UniqueId(bagId, slotIndex)
+        local station = WC.Util.CraftName(writ.craft)
         if WC.Queue.Has(uid) then
             AddCustomMenuItem(GetString(SI_WRITCRAFTER_MENU_UNQUEUE), function()
                 WC.Queue.Remove(uid)

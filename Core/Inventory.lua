@@ -9,7 +9,21 @@ local STOCK_BAGS = { BAG_BACKPACK, BAG_BANK, BAG_SUBSCRIBER_BANK, BAG_VIRTUAL }
 
 local GENERIC_LINK = "|H1:item:%d:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0|h|h"
 
--- [itemId] = { backpack, bank, craftBag, locked, link, stackable }
+-- Every filled slot of a bag: for slotIndex in Inventory.Slots(bagId) do ... end
+local function Slots(bagId)
+    return function(_, slotIndex)
+        return ZO_GetNextBagSlotIndex(bagId, slotIndex)
+    end, nil, nil
+end
+Inventory.Slots = Slots
+
+-- An item's bare link (no level, quality or crafter): what the item ID alone says.
+function Inventory.GenericLink(itemId)
+    return string.format(GENERIC_LINK, itemId)
+end
+
+-- [itemId] = { backpack, bank, craftBag, locked, link, stackable, and for crafting stations:
+-- stationBag, stationSlot, stationCount, stationRank, stationTotal (see FindForStation) }
 local stock = {}
 local dirty = true
 
@@ -42,8 +56,7 @@ local function Rebuild()
     stackCount = 0
     local linkCache = WC.linkCache
     for _, bagId in ipairs(STOCK_BAGS) do
-        local slotIndex = ZO_GetNextBagSlotIndex(bagId)
-        while slotIndex do
+        for slotIndex in Slots(bagId) do
             local itemId = GetItemId(bagId, slotIndex)
             if itemId and itemId ~= 0 then
                 stackCount = stackCount + 1
@@ -70,13 +83,22 @@ local function Rebuild()
                 end
                 if IsSlotLocked(bagId, slotIndex) then
                     entry.locked = entry.locked + count
+                else
+                    -- Where a station would take it from: craft bag, else the largest backpack
+                    -- stack, else the largest bank stack.
+                    local rank = bagId == BAG_VIRTUAL and 0 or (bagId == BAG_BACKPACK and 1 or 2)
+                    entry.stationTotal = (entry.stationTotal or 0) + count
+                    if not entry.stationRank or rank < entry.stationRank
+                        or (rank == entry.stationRank and count > entry.stationCount) then
+                        entry.stationBag, entry.stationSlot = bagId, slotIndex
+                        entry.stationCount, entry.stationRank = count, rank
+                    end
                 end
                 -- Only stackables (materials, consumables) are worth remembering for price lookups.
                 if entry.stackable and not linkCache[itemId] then
                     linkCache[itemId] = entry.link
                 end
             end
-            slotIndex = ZO_GetNextBagSlotIndex(bagId, slotIndex)
         end
     end
     dirty = false
@@ -151,29 +173,39 @@ end
 -- in that same order (the craft bag, else the largest backpack stack, else the largest bank
 -- stack), and the total usable at a station; nil when there's none. Craft bag items stay
 -- usable after ESO Plus lapses, so its count is read whatever the subscription.
-local STATION_BAGS = { BAG_BACKPACK, BAG_BANK, BAG_SUBSCRIBER_BANK }
-
-function Inventory.FindForStation(itemId)
-    local bestBag, bestSlot, bestCount, bestRank, total = nil, nil, 0, nil, 0
-    local craftBagCount = GetSlotStackSize(BAG_VIRTUAL, itemId) or 0
-    if craftBagCount > 0 then
-        bestBag, bestSlot, bestCount, bestRank, total = BAG_VIRTUAL, itemId, craftBagCount, 0, craftBagCount
+-- Read from the stock scan, so a search over many materials (alchemy tries every reagent)
+-- doesn't walk the bags once per material. The slot is checked before it's handed out, in case
+-- a bag change hasn't been reported yet; a stale one forces a fresh scan.
+local function StationEntry(itemId)
+    if dirty then
+        Rebuild()
     end
-    for _, bagId in ipairs(STATION_BAGS) do
-        local rank = bagId == BAG_BACKPACK and 1 or 2
-        local slotIndex = ZO_GetNextBagSlotIndex(bagId)
-        while slotIndex do
-            if GetItemId(bagId, slotIndex) == itemId and not Inventory.IsProtected(bagId, slotIndex) then
-                local count = GetSlotStackSize(bagId, slotIndex)
-                total = total + count
-                if not bestRank or rank < bestRank or (rank == bestRank and count > bestCount) then
-                    bestBag, bestSlot, bestCount, bestRank = bagId, slotIndex, count, rank
-                end
-            end
-            slotIndex = ZO_GetNextBagSlotIndex(bagId, slotIndex)
+    return stock[itemId]
+end
+
+-- Where each item would be taken from at a station, looked up once: [itemId] = { bag, slot }
+-- (items you have none of are left out).
+function Inventory.Locations(itemIds)
+    local where = {}
+    for _, itemId in ipairs(itemIds) do
+        local bagId, slotIndex = Inventory.FindForStation(itemId)
+        if bagId then
+            where[itemId] = { bagId, slotIndex }
         end
     end
-    return bestBag, bestSlot, total
+    return where
+end
+
+function Inventory.FindForStation(itemId)
+    local entry = StationEntry(itemId)
+    if entry and entry.stationBag and GetItemId(entry.stationBag, entry.stationSlot) ~= itemId then
+        Rebuild()
+        entry = stock[itemId]
+    end
+    if not (entry and entry.stationBag) then
+        return nil, nil, 0
+    end
+    return entry.stationBag, entry.stationSlot, entry.stationTotal
 end
 
 -- Item IDs you own of the given item types ({ [ITEMTYPE_x] = true }), anywhere a crafting
@@ -181,8 +213,7 @@ end
 function Inventory.OwnedItemIds(itemTypes)
     local ids, seen = {}, {}
     for _, bagId in ipairs({ BAG_VIRTUAL, BAG_BACKPACK, BAG_BANK, BAG_SUBSCRIBER_BANK }) do
-        local slotIndex = ZO_GetNextBagSlotIndex(bagId)
-        while slotIndex do
+        for slotIndex in Slots(bagId) do
             if itemTypes[GetItemType(bagId, slotIndex)] then
                 local itemId = GetItemId(bagId, slotIndex)
                 if itemId ~= 0 and not seen[itemId] then
@@ -190,7 +221,6 @@ function Inventory.OwnedItemIds(itemTypes)
                     ids[#ids + 1] = itemId
                 end
             end
-            slotIndex = ZO_GetNextBagSlotIndex(bagId, slotIndex)
         end
     end
     table.sort(ids)
@@ -201,7 +231,7 @@ end
 -- link cache is saved between sessions, so this never forces a scan; new items join it at the
 -- next stock scan.
 function Inventory.GetLink(itemId)
-    return WC.linkCache[itemId] or string.format(GENERIC_LINK, itemId)
+    return WC.linkCache[itemId] or Inventory.GenericLink(itemId)
 end
 
 -- Compares our per-bag counts with the game's own GetItemLinkStacks totals for every
@@ -213,13 +243,11 @@ function Inventory.SelfTest()
     -- Only the self-test needs this, so the normal scan doesn't pay for it.
     local mixed = {}
     for _, bagId in ipairs(STOCK_BAGS) do
-        local slotIndex = ZO_GetNextBagSlotIndex(bagId)
-        while slotIndex do
+        for slotIndex in Slots(bagId) do
             local entry = stock[GetItemId(bagId, slotIndex)]
             if entry and GetItemLink(bagId, slotIndex) ~= entry.link then
                 mixed[entry] = true
             end
-            slotIndex = ZO_GetNextBagSlotIndex(bagId, slotIndex)
         end
     end
     local checked, skipped, mismatches = 0, 0, {}

@@ -145,16 +145,14 @@ local function WritsToMark(mode)
             end
         end
     else
-        local slotIndex = ZO_GetNextBagSlotIndex(BAG_BACKPACK)
-        while slotIndex do
+        for slotIndex in WC.Inventory.Slots(BAG_BACKPACK) do
             if GetItemType(BAG_BACKPACK, slotIndex) == ITEMTYPE_MASTER_WRIT then
                 local writ = WC.Master.Parse(GetItemLink(BAG_BACKPACK, slotIndex))
-                local status = writ and WC.Reservations.GetWritStatus(WC.Master.UniqueId(BAG_BACKPACK, slotIndex))
+                local status = writ and WC.Reservations.GetWritStatus(WC.Util.UniqueId(BAG_BACKPACK, slotIndex))
                 if writ and not (status and status.crafted) and WC.Rules.GetStatus(writ) ~= WC.Rules.CANNOT then
                     Add(writ)
                 end
             end
-            slotIndex = ZO_GetNextBagSlotIndex(BAG_BACKPACK, slotIndex)
         end
     end
     -- Accepted master writs still to craft, in either mode.
@@ -187,7 +185,7 @@ local function CraftWords()
     if not craftWords then
         craftWords = {}
         for _, craft in ipairs(STATION_CRAFTS) do
-            local name = zo_strformat("<<1>>", GetCraftingSkillName(craft)):lower()
+            local name = WC.Util.CraftName(craft):lower()
             local word = name:match("^(%S+)")
             if word then
                 craftWords[#craftWords + 1] = { craft = craft, word = word }
@@ -429,9 +427,7 @@ end
 
 local LIST_SHOWN = 15
 
-local function Say(text)
-    WC.Log.Say(text)
-end
+local Say = WC.Log.Say
 
 local function Distance(x, y, z)
     local _, px, py, pz = GetUnitRawWorldPosition("player")
@@ -442,9 +438,7 @@ local function Distance(x, y, z)
     return zo_sqrt(dx * dx + dy * dy + dz * dz) / 100
 end
 
-local function CraftName(craft)
-    return zo_strformat("<<1>>", GetCraftingSkillName(craft))
-end
+local CraftName = WC.Util.CraftName
 
 function Markers.Diagnose()
     local eht
