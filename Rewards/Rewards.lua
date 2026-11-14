@@ -18,34 +18,35 @@ Rewards.OPEN = "open"   -- writ and survey containers only: unpack them
 Rewards.DECONSTRUCT = "deconstruct"   -- at the next matching station or deconstruction assistant
 Rewards.KEEP_STACK = "keepStack"   -- at merchants, sell what rewards gave beyond one full stack
 
--- Reward kinds, in settings order, with the actions each allows.
+-- Reward kinds, in settings order, with the actions each allows and the default (Leave in bag
+-- when none is given).
 local L, D, J, S, O = Rewards.LEAVE, Rewards.DEPOSIT, Rewards.JUNK, Rewards.SELL, Rewards.OPEN
 local K, X = Rewards.KEEP_STACK, Rewards.DECONSTRUCT
 Rewards.KINDS = {
     -- Containers of sealed master writs or survey reports stay closed unless you choose Open.
-    { key = "writContainers",  actions = { L, O, D } },
-    { key = "surveyContainers", actions = { L, O, D } },
+    { key = "writContainers",  actions = { L, O, D }, default = D },
+    { key = "surveyContainers", actions = { L, O, D }, default = D },
     -- Any other container a box gives ("Shipment of Ingots"): opened by default, like Dolgubon's.
     { key = "containers",       actions = { L, O, D }, default = O },
-    { key = "materials",   actions = { L, D, J, S } },
-    { key = "improvement", actions = { L, D, J, S } },
-    { key = "surveys",     actions = { L, D, J, S } },
-    { key = "masterWrits", actions = { L, D } },
-    { key = "repairKits",  actions = { L, D, J, S, K } },
-    { key = "ornate",      actions = { L, D, J, S, X } },
-    { key = "intricate",   actions = { L, D, J, S, X } },
+    { key = "materials",   actions = { L, D, J, S }, default = D },
+    { key = "improvement", actions = { L, D, J, S }, default = D },
+    { key = "surveys",     actions = { L, D, J, S }, default = D },
+    { key = "masterWrits", actions = { L, D }, default = D },
+    { key = "repairKits",  actions = { L, D, J, S, K }, default = K },
+    { key = "ornate",      actions = { L, D, J, S, X }, default = X },
+    { key = "intricate",   actions = { L, D, J, S, X }, default = X },
     -- Purple gear with a trait to research ("Exemplary Swift Ring"); worth banking or selling.
-    { key = "researchGear", actions = { L, D, J, S } },
-    { key = "soulGems",    actions = { L, D, K } },
-    { key = "glyphs",      actions = { L, D, J, S, X } },
+    { key = "researchGear", actions = { L, D, J, S }, default = D },
+    { key = "soulGems",    actions = { L, D, K }, default = K },
+    { key = "glyphs",      actions = { L, D, J, S, X }, default = X },
     -- Recipes by quality: e.g. sell the green ones, bank the blue and purple ones for a guild trader.
-    { key = "recipesFine",     actions = { L, D, J, S } },   -- white and green
-    { key = "recipesSuperior", actions = { L, D, J, S } },   -- blue
-    { key = "recipesEpic",     actions = { L, D, J, S } },   -- purple and gold
-    { key = "psijic",      actions = { L, D } },
+    { key = "recipesFine",     actions = { L, D, J, S }, default = S },   -- white and green
+    { key = "recipesSuperior", actions = { L, D, J, S }, default = D },   -- blue
+    { key = "recipesEpic",     actions = { L, D, J, S }, default = D },   -- purple and gold
+    { key = "psijic",      actions = { L, D }, default = D },
     -- Not from boxes: what a writ craft makes beyond what the writ needs (potions, poisons, food,
     -- drink; skills make several per craft). They share a stack with the writ's items, so no Junk.
-    { key = "extras",      actions = { L, D, S } },
+    { key = "extras",      actions = { L, D, S }, default = S },
 }
 
 local BOX_WINDOW_MS   = 8000    -- a container this soon after a crafting quest completes is its reward

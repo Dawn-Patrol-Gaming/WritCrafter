@@ -23,14 +23,14 @@ WC.DEFAULTS = {
     autoCraft         = true,       -- craft queued master writs at stations
     autoCraftDaily    = true,       -- craft daily writ quests at stations
     bankWithdrawDaily = false,      -- daily writs: use finished items in storage (take out, don't craft)
-    dailyAcquireExcluded = false,   -- daily writs: hand over excluded reagents an acquire task asks for
+    dailyAcquireExcluded = true,    -- daily writs: hand over excluded reagents an acquire task asks for
     bankWithdrawMaster = true,      -- master writs: take their crafted items out of storage
     acceptGuard       = true,       -- ask before accepting a sealed master writ you can't craft
     craftNotice       = true,       -- on-screen alerts and the failure banner
-    soundStart        = true,       -- sound when writ crafting starts at a station
-    soundDone         = true,       -- sound when it's done
+    soundStart        = false,      -- sound when writ crafting starts at a station
+    soundDone         = false,      -- sound when it's done
     soundProblem      = true,       -- sound when something couldn't be crafted
-    soundSlot         = true,       -- slotting sounds (solvent/reagents, runes, item placed)
+    soundSlot         = false,      -- slotting sounds (solvent/reagents, runes, item placed)
     soundRunes        = true,       -- enchanting's spoken rune names
     soundSuccess      = true,       -- the station's success sound as each item is made
     leaveStation      = true,       -- leave the station once writ crafting there is done
@@ -53,8 +53,8 @@ WC.DEFAULTS = {
     writStatusY       = false,
     rewardOpenBoxes   = true,       -- open writ reward boxes as they arrive
     rewardSummary     = true,       -- list what each box gave in chat
-    rewardActions     = {},         -- [reward kind] = WC.Rewards.* action; missing = leave in bag
-    stationMarkers    = "off",      -- WC.Markers.OFF / ALL / QUEUED: markers over stations for master writs
+    rewardActions     = {},         -- [reward kind] = WC.Rewards.* action; missing = the kind's default (Rewards.KINDS)
+    stationMarkers    = "queued",   -- WC.Markers.OFF / ALL / QUEUED: markers over stations for master writs
     tooltip           = true,
     tooltipMaterials  = true,
     iconCrafted       = true,
@@ -62,7 +62,7 @@ WC.DEFAULTS = {
     iconQueued        = true,
     iconMissing       = true,
     iconReserved      = true,
-    iconOffsetX       = 0,
+    iconOffsetX       = -25,
     iconOffsetY       = 0,
 }
 

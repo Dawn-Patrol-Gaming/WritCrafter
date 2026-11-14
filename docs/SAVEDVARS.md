@@ -92,7 +92,7 @@ and which are not pruned key by key.
 | `autoCraftDaily` | `true` | Craft daily writ quests at stations |
 | `bankWithdrawDaily` | `false` | Daily writs: take finished items out of storage instead of crafting |
 | `bankWithdrawMaster` | `true` | Master writs: take their crafted items out of storage. (Before 2026-11-09 one `bankWithdraw` key covered both; `PruneRemoved` carries an old `false` over) |
-| `dailyAcquireExcluded` | `false` | Hand Over Excluded Reagents: an alchemy writ's "acquire" reagent is handed over even if excluded |
+| `dailyAcquireExcluded` | `true` | Hand Over Excluded Reagents: an alchemy writ's "acquire" reagent is handed over even if excluded |
 | `acceptGuard` | `true` | Ask before accepting a sealed master writ you can't craft (`Writs/AcceptGuard.lua`) |
 | `leaveStation` | `true` | Leave the station once writ crafting there is done |
 
@@ -112,34 +112,39 @@ and which are not pruned key by key.
 |---|---|---|
 | `rewardOpenBoxes` | `true` | Open writ reward boxes as they arrive |
 | `rewardSummary` | `true` | List what each box gave in chat |
-| `rewardActions` | `{}` | `[kind] = action`, one entry per reward kind you've changed. A missing kind uses its default: Leave in Bag, except `containers` (Open) |
+| `rewardActions` | `{}` | `[kind] = action`, one entry per reward kind you've changed from its default. A missing kind uses its default from `Rewards.KINDS` (table below) |
 
 Actions: `"leave"`, `"deposit"` (next bank visit), `"junk"` (now), `"sell"` (next merchant),
 `"open"` (containers only), `"deconstruct"` (next matching station or deconstruction assistant),
 `"keepStack"` (at merchants, sell what rewards gave beyond one full stack).
 
-Kinds, in settings order, with the actions each allows (`Rewards.KINDS`):
+Kinds, in settings order, with the actions each allows and its default (`Rewards.KINDS`; a kind
+with no `default` there is Leave in Bag). The defaults were set to the author's own choices on
+2026-11-14.
 
-| Kind | Allowed | What it is |
-|---|---|---|
-| `writContainers` | leave, open, deposit | "Unknown ... Writ" containers of sealed master writs |
-| `surveyContainers` | leave, open, deposit | Containers of survey reports |
-| `containers` | leave, open, deposit | Any other container ("Shipment of Ingots"); default Open |
-| `materials` | leave, deposit, junk, sell | Anything the craft bag takes: raw and refined materials, runes, reagents |
-| `improvement` | leave, deposit, junk, sell | Smithing improvement boosters (tempers, resins, tannins, platings) |
-| `surveys` | leave, deposit, junk, sell | Survey reports |
-| `masterWrits` | leave, deposit | Sealed master writs |
-| `repairKits` | leave, deposit, junk, sell, keepStack | Repair kits |
-| `ornate` | leave, deposit, junk, sell, deconstruct | Ornate gear and jewelry |
-| `intricate` | leave, deposit, junk, sell, deconstruct | Intricate gear and jewelry |
-| `researchGear` | leave, deposit, junk, sell | Purple or gold gear with a trait (other than ornate or intricate) to research |
-| `soulGems` | leave, deposit, keepStack | Soul gems |
-| `glyphs` | leave, deposit, junk, sell, deconstruct | Glyphs |
-| `recipesFine` | leave, deposit, junk, sell | White and green recipes |
-| `recipesSuperior` | leave, deposit, junk, sell | Blue recipes |
-| `recipesEpic` | leave, deposit, junk, sell | Purple and gold recipes |
-| `psijic` | leave, deposit | Psijic Ambrosia recipe fragments |
-| `extras` | leave, deposit, sell | Not from boxes: what a writ craft makes beyond what the writ needs (potions, poisons, food) |
+| Kind | Allowed | Default | What it is |
+|---|---|---|---|
+| `writContainers` | leave, open, deposit | deposit | "Unknown ... Writ" containers of sealed master writs |
+| `surveyContainers` | leave, open, deposit | deposit | Containers of survey reports |
+| `containers` | leave, open, deposit | open | Any other container ("Shipment of Ingots") |
+| `materials` | leave, deposit, junk, sell | deposit | Anything the craft bag takes: raw and refined materials, runes, reagents |
+| `improvement` | leave, deposit, junk, sell | deposit | Smithing improvement boosters (tempers, resins, tannins, platings) |
+| `surveys` | leave, deposit, junk, sell | deposit | Survey reports |
+| `masterWrits` | leave, deposit | deposit | Sealed master writs |
+| `repairKits` | leave, deposit, junk, sell, keepStack | keepStack | Repair kits |
+| `ornate` | leave, deposit, junk, sell, deconstruct | deconstruct | Ornate gear and jewelry |
+| `intricate` | leave, deposit, junk, sell, deconstruct | deconstruct | Intricate gear and jewelry |
+| `researchGear` | leave, deposit, junk, sell | deposit | Purple or gold gear with a trait (other than ornate or intricate) to research |
+| `soulGems` | leave, deposit, keepStack | keepStack | Soul gems |
+| `glyphs` | leave, deposit, junk, sell, deconstruct | deconstruct | Glyphs |
+| `recipesFine` | leave, deposit, junk, sell | sell | White and green recipes |
+| `recipesSuperior` | leave, deposit, junk, sell | deposit | Blue recipes |
+| `recipesEpic` | leave, deposit, junk, sell | deposit | Purple and gold recipes |
+| `psijic` | leave, deposit | deposit | Psijic Ambrosia recipe fragments |
+| `extras` | leave, deposit, sell | sell | Not from boxes: what a writ craft makes beyond what the writ needs (potions, poisons, food) |
+
+Settings only store a kind's action when it differs from the default, so changing a default
+changes the behaviour for everyone who never picked that kind; choices already stored stay.
 
 Retired kinds may still be in old files: `recipes` (split into the three recipe kinds) and
 `researchJewelry` (became `researchGear`). They're read as fallbacks (`FORMERLY` in Rewards.lua)
@@ -150,10 +155,10 @@ until the new kind gets its own entry.
 | Key | Default | Meaning |
 |---|---|---|
 | `craftNotice` | `true` | On-screen alerts and the red failure banner |
-| `soundStart` | `true` | Sound when writ crafting starts at a station |
-| `soundDone` | `true` | Sound when it's done |
+| `soundStart` | `false` | Sound when writ crafting starts at a station |
+| `soundDone` | `false` | Sound when it's done |
 | `soundProblem` | `true` | Sound when something couldn't be crafted |
-| `soundSlot` | `true` | Slotting sounds (solvent/reagents, runes, item placed) |
+| `soundSlot` | `false` | Slotting sounds (solvent/reagents, runes, item placed) |
 | `soundRunes` | `true` | Enchanting's spoken rune names |
 | `soundSuccess` | `true` | The station's success sound as each item is made |
 
@@ -163,7 +168,7 @@ until the new kind gets its own entry.
 |---|---|---|---|
 | `writStatus` | bool | `true` | The daily writ status strip |
 | `writStatusX`, `writStatusY` | `false` or screen pixels | `false` | The strip's left/top once you've dragged it; `false` = default spot above the attribute bars |
-| `stationMarkers` | `"off"`, `"all"`, `"queued"` | `"off"` | Markers over house stations for master writs: off, every writ in your bag, queued writs only |
+| `stationMarkers` | `"off"`, `"all"`, `"queued"` | `"queued"` | Markers over house stations for master writs: off, every writ in your bag, queued writs only |
 | `tooltip` | bool | `true` | WritCrafter's lines on master writ tooltips |
 | `tooltipMaterials` | bool | `true` | The materials list in those tooltips |
 | `iconCrafted` | bool | `true` | Inventory badge: writ crafted (green), partly crafted (amber) |
@@ -171,7 +176,7 @@ until the new kind gets its own entry.
 | `iconQueued` | bool | `true` | Inventory badge: writ queued (blue) |
 | `iconMissing` | bool | `true` | Inventory badge: not enough of some material (yellow) |
 | `iconReserved` | bool | `true` | Padlock on items set aside for a writ (gold) or made for a daily writ (blue) |
-| `iconOffsetX`, `iconOffsetY` | pixels | `0` | Moves the inventory badges |
+| `iconOffsetX`, `iconOffsetY` | pixels | `-25`, `0` | Moves the inventory badges |
 | `logLevel` | `1` errors, `2` normal, `3` debug | `2` | Chat detail (`Core/Log.lua`). Debug lines also go to LibDebugLogger |
 
 ## 4. Per character (`characters`)
