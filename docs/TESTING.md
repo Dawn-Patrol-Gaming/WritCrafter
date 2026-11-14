@@ -23,11 +23,45 @@ All passed 2026-11-13: HX1 (the setting), HX2 (with it on, an alchemy writ whose
 
 ## Settings scope: back to Account Wide (2026-11-12)
 
-Checked offline with the real settings code (account values never overwritten; the character's own come back when switched to again). In game:
+Checked offline with the real settings code (account values never overwritten; the character's own come back when switched to again). Passed in game 2026-11-14 (SC1).
+
+## Milestone 7, Potion Search and Accept Guard (2026-11-14)
+
+New files (UI/PotionSearch.xml/.lua, Writs/AcceptGuard.lua), so a **full relog**.
+
+**Potion Search** (`/wc potions`, or set a key in Controls): pick up to three effects in the
+dropdowns; every reagent combo that makes them is listed, most stock first. Only Reagents You
+Have, Only Allowed Reagents and Favorites filter the list; columns sort by clicking their heading.
+The star marks a favorite (kept per character). Effect names come from the game
+(`GetAlchemyEffectName`), which this build hasn't confirmed in game yet — if a dropdown or a
+result row shows "Effect 5" instead of a real name, that call isn't right and needs fixing.
 
 | # | Do | Expect |
 |---|---|---|
-| SC1 | On one character: Settings → This character only; change a few settings (e.g. a reward action, Show Daily Writ Status). Switch back to Account Wide | The panel shows the Account Wide values again, not this character's changes. Log on to another character on Account Wide: its settings are unchanged. Switch the first character to This character only again: its own changes are back |
+| PS1 | `/wc potions` | The window opens; each Effect dropdown lists real effect names, not "Effect N" |
+| PS2 | Pick one effect (e.g. Ravage Health) | Every reagent pair/triple that makes it is listed, with its full effect set, stock and price |
+| PS3 | Pick two or three effects | Only combos making all of them are listed |
+| PS4 | Tick Only Reagents You Have | Combos needing a reagent you own none of drop out |
+| PS5 | Tick Only Allowed Reagents (with something excluded) | Combos using it drop out; with it off, they show greyed |
+| PS6 | Click a row's star, then tick Favorites | That combo is the only one shown; unstarring it there removes it from the list |
+| PS7 | Click each column heading, then again | Sorts and reverses (Stock starts highest first) |
+| PS8 | `/reloadui`, open again, re-check a favorite | Still starred: favorites persist |
+
+**Accept Guard** (Settings → Master Writs → Ask Before Accepting Writs You Can't Craft, on by
+default): using a sealed master writ your settings would reject, or that you can't craft
+(unknown recipe, motif or trait), asks before the quest is added, the way the queue window asks
+before queueing a rejected writ. This is new, unverified ground (a game-wide hook on accepting
+any quest) and needs careful testing.
+
+| # | Do | Expect |
+|---|---|---|
+| AG1 | Use a sealed master writ your settings would reject (e.g. an excluded trait material, or Max Gold per Voucher set low) | A dialog: "<writ> can't be crafted right now: <reason>. Accept it anyway?" instead of the quest being added |
+| AG2 | Cancel that dialog | No quest added; the writ item is still in your backpack, usable again |
+| AG3 | Accept Anyway | The quest is added (watch for it in your journal); the writ item is gone |
+| AG4 | Use a sealed master writ you CAN craft | Accepted exactly as before, no dialog, no delay |
+| AG5 | Press Accept Crafted Writs (button or keybind) with crafted writs in your backpack | Accepted as before (OB4/RT11); no dialog appears for WritCrafter's own automation |
+| AG6 | Accept an ordinary NPC quest (not a writ) right after using a master writ | Accepted normally; the guard doesn't interfere |
+| AG7 | Settings → Master Writs → turn the setting off, use an uncraftable writ | Accepted straight away, exactly like the game itself (no dialog) |
 
 ## Milestone 7, batch A: speed (2026-11-11)
 
@@ -51,22 +85,20 @@ Passed 2026-11-11: OB5 (`/wc stations` found all 15 stations and marked the 4 fo
 
 Only a `/reloadui`. Master writ parsing (sealed writs and accepted quests now share one builder; checked offline against the old code on every craft, both sources, legacy alchemy effects included: identical), the alchemy pair lists, the engine's master writ jobs, the batch-count step of every crafter, and the daily "search again" rule each exist once now. Nothing should behave differently.
 
-Passed 2026-11-11: OC1 (queue window verdicts, vouchers, costs and descriptions for writs of every craft). OC3 passed 2026-11-13: daily writs at every station, same crafts and batch counts as before.
+Passed 2026-11-11: OC1 (queue window verdicts, vouchers, costs and descriptions for writs of every craft). OC3 passed 2026-11-13: daily writs at every station, same crafts and batch counts as before. OC2 passed 2026-11-13: seven queued master writs crafted across all seven stations, then two newly accepted writs (enchanting, alchemy) crafted right after at their own stations.
 
 | # | Do | Expect |
 |---|---|---|
-| OC2 | Craft a queued master writ of each kind you have; then accept one and craft it as an accepted writ | Same items and batch counts as before (alchemy and provisioning in several batches where they used to be) |
 | OC4 | Next day: a daily that needs something you don't have, fetch it, open the station again | Searched again and crafted, as before |
 
 ## Milestone 7, batch D: UI sharing and tidying (2026-11-11)
 
 New file (UI/Notices.lua), so a **full relog**. The queue and exclusion windows share their sorting, dropdowns and list refill; the corner message and problem banner moved out of the crafting engine into their own file; small tidy-ups. Nothing should look or behave differently.
 
-Passed 2026-11-11: OD1 (queue window sorting, filter, Sort by station), OD2 (exclusions window categories, filter, search, sorting). OD6 passed 2026-11-13: the `Opening writ rewards: X of N` corner counter during a daily run. OD3 passed 2026-11-13: the top-right `crafting started` and `done` messages. OD4 passed 2026-11-13: the red `WritCrafter couldn't craft everything` banner, naming the excluded reagents an alchemy daily needed; after allowing some and reopening the station, it crafted.
+Passed 2026-11-11: OD1 (queue window sorting, filter, Sort by station), OD2 (exclusions window categories, filter, search, sorting). OD6 passed 2026-11-13: the `Opening writ rewards: X of N` corner counter during a daily run. OD3 passed 2026-11-13: the top-right `crafting started` and `done` messages. OD5 passed 2026-11-13: after using four Grand Master stations (blacksmithing, clothing, jewelry, woodworking), their sets were known for queueing. OD4 passed 2026-11-13: the red `WritCrafter couldn't craft everything` banner, naming the excluded reagents an alchemy daily needed; after allowing some and reopening the station, it crafted.
 
 | # | Do | Expect |
 |---|---|---|
-| OD5 | Use a Grand Master station, then open the queue window | Station column still knows its sets |
 
 ## Daily writ status strip (2026-11-10)
 
@@ -98,13 +130,12 @@ All passed 2026-11-10 (SM1–SM12): houses only; every station found from the ho
 
 Milestone 5 is complete.
 
-## Milestone 5, step 3: Accept & Turn In at Rolis (2026-11-10)
+## Milestone 5, step 3: Accept & Turn In at Rolis (2026-11-10) RT11 passed 2026-11-14: with an unfinished enchanting master writ accepted, Accept crafted writs skipped all crafted enchanting writs and only accepted the other crafts'.
 
 All passed 2026-11-10: RT1–RT10 (settings and keybind; crafted writs accepted one after another, a second of the same kind skipped, writs with banked items left alone, nothing-to-accept message; handed in at Rolis without clicking, conversation closed or left open by the setting, next batch accepted afterwards; nothing picked for unfinished writs, at other NPCs, or with the setting off). QR1 (identical writs: the queued one claims the items) passed too.
 
 | # | Do | Expect |
 |---|---|---|
-| RT11 | With an accepted (unfinished) enchanting master writ and many crafted enchanting writs in the backpack, press Accept crafted writs | No enchanting writ is used at all (first try 2026-11-10: it went through the bag trying each one); the other crafts' writs are accepted, one per craft. With nothing else to accept: `No crafted master writs in your backpack to accept (or you already have their quests).` straight away |
 
 ## Milestone 5, step 2: queue window extras (2026-11-10)
 

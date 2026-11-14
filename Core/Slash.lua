@@ -77,6 +77,7 @@ local COMMANDS = {
     reagents = function() WC.AlchemyDaily.List() end,
     quests   = function() WC.Daily.ListQuests() end,
     queue    = function() WC.QueueWindow.Toggle() end,
+    potions  = function() WC.PotionSearch.Toggle() end,
     help     = function() WC.Log.Say(GetString(SI_WRITCRAFTER_HELP)) end,
 }
 

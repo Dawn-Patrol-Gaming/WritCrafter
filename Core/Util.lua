@@ -35,8 +35,19 @@ local function CallProtected(name, ...)
     end
 end
 
+-- true while a Util.UseItem call is in progress: lets other code (the master writ accept guard)
+-- tell WritCrafter's own item use apart from the player's, since both end up calling the same
+-- protected UseItem.
+local automatedUse = false
+
+function Util.IsAutomatedUse()
+    return automatedUse
+end
+
 function Util.UseItem(bagId, slotIndex)
+    automatedUse = true
     CallProtected("UseItem", bagId, slotIndex)
+    automatedUse = false
 end
 
 function Util.MoveItem(fromBag, fromSlot, toBag, toSlot, quantity)

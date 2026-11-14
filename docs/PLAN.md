@@ -451,9 +451,10 @@ Everything else stays on demand: rules, prices and the alchemy solver run only w
      - The corner message and problem banner (about 100 lines) live in the crafting engine but Rewards uses them too: move them to their own UI file.
      - Misplaced comments (above `Engine.SayCrafting` / `CraftSounds`, `Rewards.OpenWaiting`), smithing's registration loop over a one-item list, Rewards' `MayTouch` checking the lock twice (`Inventory.IsProtected` already does), the Grand Master listener registered at file load instead of in `Init`.
    - Also then: the writ board pauses (0.2 s before answering a page, 0.5 s check after each accept) can be shortened to get closer to Dolgubon's speed.
-8. **Potion search UI**.
-9. **Migration**: warn if any replaced addon is still enabled (they'd fight over auto-dialog and autocraft).
-10. **Help window** (last, decided 2026-11-06): `/wc help` opens a window where players can read about every feature (badges, tooltips, exclusions, queue, crafting notices and sounds, daily and master writ handling, bank withdrawal) and every command, instead of the chat list it prints now.
+8. **Potion search UI** (built 2026-11-14, in testing). A standalone window (`/wc potions`), not a tab inside the game's own alchemy station screen, to keep off UI objects that break on updates (§7, [[prefer-stable-apis]]). Pick up to three effects; every reagent combo making them is listed (reusing `AlchemySolver.AllCombos`), sorted by stock by default; filters for owned/allowed reagents and a per-character favorites list. Effect names come from `GetAlchemyEffectName`, used for the first time here and not yet confirmed in game.
+9. **Prevent accepting uncraftable master writs** (built 2026-11-14, in testing; asked 2026-11-13). Using a sealed master writ your settings would reject, or that this character can't craft (exclusions, unknown recipe/motif/trait, or the Update 51 bug), now asks first instead of adding the quest, the same check the queue window already runs. Implemented as a `ZO_PreHook` on the game's own `AcceptOfferedQuest`, since WritCrafter's own automation (Accept Crafted Writs) already calls that function directly and this needed to not interfere with it. New ground for this addon (a hook on a global quest-accept function, not a stable crafting API call), so it needs thorough testing, including that it never blocks an unrelated NPC quest.
+10. **Migration**: warn if any replaced addon is still enabled (they'd fight over auto-dialog and autocraft).
+11. **Help window** (last, decided 2026-11-06): `/wc help` opens a window where players can read about every feature (badges, tooltips, exclusions, queue, crafting notices and sounds, daily and master writ handling, bank withdrawal) and every command, instead of the chat list it prints now.
 
 Testing: pure logic (solver, rules, link parsing, price defaults) gets offline Lua unit tests with stubbed game APIs. Anything touching stations, quests or the bank is checked by you in game at each milestone.
 
@@ -473,7 +474,7 @@ Testing: pure logic (solver, rules, link parsing, price defaults) gets offline L
 - Nothing. All questions answered and the §9 defaults accepted (2026-11-03).
 
 ## 11. Later (after the base is working)
-- **Diagnostic commands stay in the release** (decided 2026-11-06) and are documented in the help window (milestone 10):
+- **Diagnostic commands stay in the release** (decided 2026-11-06) and are documented in the help window (milestone 11):
   - `/wc stock <item>`: backpack, bank, craft bag and usable counts.
   - `/wc price <item>`: the price WritCrafter uses and its source.
   - `/wc selftest`: every stack count against the game's own totals.

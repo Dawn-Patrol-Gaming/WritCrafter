@@ -85,6 +85,22 @@ local function ComboPrice(combo)
     return total
 end
 
+local function SortedEffects(set)
+    local list = {}
+    for effect in pairs(set) do
+        list[#list + 1] = effect
+    end
+    table.sort(list)
+    return list
+end
+
+-- Every base effect ID (odd; its counter is the next even number), for a UI that lets the
+-- player pick effects to search by.
+Solver.EFFECTS = {}
+for effect = 1, WC.Data.Alchemy.EFFECT_MAX, 2 do
+    Solver.EFFECTS[#Solver.EFFECTS + 1] = effect
+end
+
 -- Picks the combination for a set of effects.
 -- Returns:
 --   best:        allowed combo with the most stock (lowest stock of its three reagents is
@@ -143,6 +159,35 @@ function Solver.Choose(effects, stockOf)
         return best, nil, nil, true
     end
     return nil, blocked, blockedList, true
+end
+
+-- For the potion search window: every reagent combo that makes the given effects (1-3 of them),
+-- each with its full effect set, whether one of its reagents has a trait you haven't discovered
+-- yet (such a combo crafts one batch at a time until you do), the lowest usable stock of its
+-- three reagents, whether every reagent is allowed, and its price.
+function Solver.Search(effects)
+    local combos = AllCombos(effects)
+    local Policy, Inventory, Alchemy = WC.Policy, WC.Inventory, WC.Data.Alchemy
+    local rows = {}
+    for _, combo in ipairs(combos) do
+        local allowed, minStock, anyUnknown = true, math.huge, false
+        for _, itemId in ipairs(combo) do
+            if not Policy.IsReagentAllowed(itemId) then
+                allowed = false
+            end
+            minStock = zo_min(minStock, Inventory.GetStock(itemId).usable)
+            anyUnknown = anyUnknown or Alchemy.UndiscoveredTraits(itemId) > 0
+        end
+        rows[#rows + 1] = {
+            combo       = combo,
+            effects     = SortedEffects(Alchemy.Combine(combo[1], combo[2], combo[3])),
+            allowed     = allowed,
+            stock       = minStock,
+            price       = ComboPrice(combo),
+            anyUnknown  = anyUnknown,
+        }
+    end
+    return rows
 end
 
 -- For badges: whether any combination makes these effects, and whether any of those uses only

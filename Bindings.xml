@@ -7,6 +7,9 @@
             <Action name="WRITCRAFTER_ACCEPT_WRITS">
                 <Down>WritCrafter.Rolis.AcceptCrafted(true)</Down>
             </Action>
+            <Action name="WRITCRAFTER_TOGGLE_POTIONS">
+                <Down>WritCrafter.PotionSearch.Toggle()</Down>
+            </Action>
         </Category>
     </Layer>
 </Bindings>

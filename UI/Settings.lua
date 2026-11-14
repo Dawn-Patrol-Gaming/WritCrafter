@@ -193,6 +193,7 @@ local function MasterWritControls()
         Checkbox("rolisTurnIn", SI_WRITCRAFTER_ROLIS_TURN_IN, SI_WRITCRAFTER_ROLIS_TURN_IN_TOOLTIP),
         Checkbox("rolisClose", SI_WRITCRAFTER_ROLIS_CLOSE, SI_WRITCRAFTER_ROLIS_CLOSE_TOOLTIP),
         Checkbox("rolisAcceptNext", SI_WRITCRAFTER_ROLIS_ACCEPT_NEXT, SI_WRITCRAFTER_ROLIS_ACCEPT_NEXT_TOOLTIP),
+        Checkbox("acceptGuard", SI_WRITCRAFTER_ACCEPT_GUARD, SI_WRITCRAFTER_ACCEPT_GUARD_TOOLTIP),
         {
             -- Greyed out (and treated as Off) while Essential Housing Tools marks the stations.
             type          = "dropdown",

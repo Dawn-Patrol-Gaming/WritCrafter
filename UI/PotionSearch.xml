@@ -1,0 +1,112 @@
+<GuiXml>
+    <Controls>
+        <!-- One reagent combo. Rows are pooled by the scroll list, so only the visible ones exist. -->
+        <Control name="WritCrafterPotionRow" virtual="true" mouseEnabled="true">
+            <Dimensions x="860" y="32" />
+            <OnMouseEnter>WritCrafter.PotionSearch.OnRowEnter(self)</OnMouseEnter>
+            <OnMouseExit>WritCrafter.PotionSearch.OnRowExit(self)</OnMouseExit>
+            <Controls>
+                <Label name="$(parent)Star" font="ZoFontGameBold" horizontalAlignment="CENTER" verticalAlignment="CENTER" mouseEnabled="true">
+                    <Dimensions x="24" y="32" />
+                    <Anchor point="LEFT" offsetX="8" />
+                    <OnMouseUp>WritCrafter.PotionSearch.OnStarClicked(self, upInside)</OnMouseUp>
+                </Label>
+                <Label name="$(parent)Price" font="ZoFontGame" horizontalAlignment="RIGHT" verticalAlignment="CENTER">
+                    <Dimensions x="100" y="32" />
+                    <Anchor point="RIGHT" offsetX="-10" />
+                </Label>
+                <Label name="$(parent)Stock" font="ZoFontGame" horizontalAlignment="RIGHT" verticalAlignment="CENTER">
+                    <Dimensions x="70" y="32" />
+                    <Anchor point="RIGHT" relativeTo="$(parent)Price" relativePoint="LEFT" offsetX="-10" />
+                </Label>
+                <Label name="$(parent)Effects" font="ZoFontGame" wrapMode="ELLIPSIS" verticalAlignment="CENTER">
+                    <Dimensions x="270" y="32" />
+                    <Anchor point="RIGHT" relativeTo="$(parent)Stock" relativePoint="LEFT" offsetX="-10" />
+                </Label>
+                <Label name="$(parent)Reagents" font="ZoFontGame" wrapMode="ELLIPSIS" verticalAlignment="CENTER">
+                    <Dimensions y="32" />
+                    <Anchor point="LEFT" relativeTo="$(parent)Star" relativePoint="RIGHT" offsetX="10" />
+                    <Anchor point="RIGHT" relativeTo="$(parent)Effects" relativePoint="LEFT" offsetX="-10" />
+                </Label>
+            </Controls>
+        </Control>
+
+        <TopLevelControl name="WritCrafterPotionWindow" hidden="true" mouseEnabled="true" movable="true" clampedToScreen="true">
+            <Dimensions x="920" y="620" />
+            <Anchor point="CENTER" />
+            <Controls>
+                <Backdrop name="$(parent)BG" inherits="ZO_DefaultBackdrop" />
+
+                <Label name="$(parent)Title" font="ZoFontWinH2">
+                    <Anchor point="TOPLEFT" offsetX="20" offsetY="14" />
+                </Label>
+                <Button name="$(parent)Close" inherits="ZO_CloseButton">
+                    <Anchor point="TOPRIGHT" offsetX="-12" offsetY="12" />
+                    <OnClicked>WritCrafter.PotionSearch.Close()</OnClicked>
+                </Button>
+                <Label name="$(parent)Hint" font="ZoFontGame">
+                    <Dimensions x="880" />
+                    <Anchor point="TOPLEFT" offsetX="20" offsetY="50" />
+                </Label>
+
+                <!-- Up to three effects to search for; "(Any)" leaves a slot empty. -->
+                <Control name="$(parent)Effect1" inherits="ZO_ComboBox">
+                    <Dimensions x="270" y="28" />
+                    <Anchor point="TOPLEFT" offsetX="20" offsetY="82" />
+                </Control>
+                <Control name="$(parent)Effect2" inherits="ZO_ComboBox">
+                    <Dimensions x="270" y="28" />
+                    <Anchor point="LEFT" relativeTo="$(parent)Effect1" relativePoint="RIGHT" offsetX="14" />
+                </Control>
+                <Control name="$(parent)Effect3" inherits="ZO_ComboBox">
+                    <Dimensions x="270" y="28" />
+                    <Anchor point="LEFT" relativeTo="$(parent)Effect2" relativePoint="RIGHT" offsetX="14" />
+                </Control>
+
+                <Button name="$(parent)OwnedOnly" inherits="ZO_CheckButton">
+                    <Anchor point="TOPLEFT" offsetX="20" offsetY="126" />
+                </Button>
+                <Button name="$(parent)AllowedOnly" inherits="ZO_CheckButton">
+                    <Anchor point="TOPLEFT" offsetX="300" offsetY="126" />
+                </Button>
+                <Button name="$(parent)Favorites" inherits="ZO_CheckButton">
+                    <Anchor point="TOPLEFT" offsetX="580" offsetY="126" />
+                </Button>
+
+                <!-- Sortable column headings (the game's ZO_SortHeader: click to sort, click again to reverse). -->
+                <Control name="$(parent)Headers">
+                    <Dimensions y="24" />
+                    <Anchor point="TOPLEFT" offsetX="42" offsetY="166" />
+                    <Anchor point="TOPRIGHT" offsetX="-50" offsetY="166" />
+                    <Controls>
+                        <Control name="$(parent)Price" inherits="ZO_SortHeader">
+                            <Dimensions x="100" y="24" />
+                            <Anchor point="TOPRIGHT" />
+                        </Control>
+                        <Control name="$(parent)Stock" inherits="ZO_SortHeader">
+                            <Dimensions x="70" y="24" />
+                            <Anchor point="TOPRIGHT" relativeTo="$(parent)Price" relativePoint="TOPLEFT" offsetX="-10" />
+                        </Control>
+                        <Control name="$(parent)Effects" inherits="ZO_SortHeader">
+                            <Dimensions x="270" y="24" />
+                            <Anchor point="TOPRIGHT" relativeTo="$(parent)Stock" relativePoint="TOPLEFT" offsetX="-10" />
+                        </Control>
+                        <Control name="$(parent)Reagents" inherits="ZO_SortHeader">
+                            <Dimensions y="24" />
+                            <Anchor point="TOPLEFT" />
+                            <Anchor point="TOPRIGHT" relativeTo="$(parent)Effects" relativePoint="TOPLEFT" offsetX="-10" />
+                        </Control>
+                    </Controls>
+                </Control>
+
+                <Control name="$(parent)List" inherits="ZO_ScrollList">
+                    <Anchor point="TOPLEFT" offsetX="14" offsetY="196" />
+                    <Anchor point="BOTTOMRIGHT" offsetX="-14" offsetY="-16" />
+                </Control>
+                <Label name="$(parent)Empty" font="ZoFontGame" horizontalAlignment="CENTER" hidden="true">
+                    <Anchor point="TOP" relativeTo="$(parent)List" offsetY="40" />
+                </Label>
+            </Controls>
+        </TopLevelControl>
+    </Controls>
+</GuiXml>

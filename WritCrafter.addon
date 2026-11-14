@@ -34,6 +34,7 @@ Writs/Daily.lua
 Writs/DailyItems.lua
 Writs/Bank.lua
 Writs/Rolis.lua
+Writs/AcceptGuard.lua
 Writs/Dialogs.lua
 Rewards/Rewards.lua
 Solver/Alchemy.lua
@@ -45,6 +46,8 @@ UI/ExclusionsWindow.xml
 UI/ExclusionsWindow.lua
 UI/QueueWindow.xml
 UI/QueueWindow.lua
+UI/PotionSearch.xml
+UI/PotionSearch.lua
 UI/Settings.lua
 UI/Tooltip.lua
 UI/InventoryIcons.lua
