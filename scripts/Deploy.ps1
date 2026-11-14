@@ -40,7 +40,10 @@ if ($luajit) {
 
 # scripts\check_lua.py too, when Python is installed: it has checks check.lua lacks (a local
 # function called above its definition, 'a, b = x and f()', tonumber of a call).
-$python = (Get-Command python -ErrorAction SilentlyContinue).Source
+# Skips the Microsoft Store stub in WindowsApps, which only says "Python was not found".
+$python = Get-Command python -All -ErrorAction SilentlyContinue |
+    Where-Object { $_.Source -notlike '*\Microsoft\WindowsApps\*' } |
+    Select-Object -First 1 -ExpandProperty Source
 if ($python) {
     Push-Location $source
     try {
