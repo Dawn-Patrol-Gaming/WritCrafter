@@ -147,7 +147,7 @@ Only the parts writs need are rebuilt (written fresh, using LLC only as an API r
 | Material list window (have / buy / price for queued writs) | **Later** | Shopping list for everything queued. |
 | HomeStationMarker integration (marks house stations with queued work) | **Skip** | Not installed. |
 | Material list in chat | **Skip** | |
-| AGS cost-per-voucher | **Later** | |
+| AGS cost-per-voucher | **Keep** | Milestone 11 (asked 2026-11-15): a guild store filter on what a writ really costs per voucher, purchase price included. |
 | Force EN, station colours, duplicate CMW tooltips, profiler, discover/forget/port | **Skip** | |
 
 #### 2.6.1 Master writ queue window (from WritWorthy)
@@ -454,7 +454,15 @@ Everything else stays on demand: rules, prices and the alchemy solver run only w
 8. **Potion search UI** (built 2026-11-14, in testing). A standalone window (`/wc potions`), not a tab inside the game's own alchemy station screen, to keep off UI objects that break on updates (§7, [[prefer-stable-apis]]). Pick up to three effects; every reagent combo making them is listed (reusing `AlchemySolver.AllCombos`), sorted by stock by default; filters for owned/allowed reagents and a per-character favorites list. Effect names come from `GetAlchemyEffectName`, used for the first time here and not yet confirmed in game.
 9. **Prevent accepting uncraftable master writs** (built 2026-11-14, in testing; asked 2026-11-13). Using a sealed master writ your settings would reject, or that this character can't craft (exclusions, unknown recipe/motif/trait, or the Update 51 bug), now asks first instead of adding the quest, the same check the queue window already runs. Implemented as a `ZO_PreHook` on the game's own `AcceptOfferedQuest`, since WritCrafter's own automation (Accept Crafted Writs) already calls that function directly and this needed to not interfere with it. New ground for this addon (a hook on a global quest-accept function, not a stable crafting API call), so it needs thorough testing, including that it never blocks an unrelated NPC quest.
 10. **Migration**: warn if any replaced addon is still enabled (they'd fight over auto-dialog and autocraft).
-11. **Help window** (last, decided 2026-11-06): `/wc help` opens a window where players can read about every feature (badges, tooltips, exclusions, queue, crafting notices and sounds, daily and master writ handling, bank withdrawal) and every command, instead of the chat list it prints now.
+11. **Guild store: is a master writ worth buying?** (asked 2026-11-15; the WritWorthy feature marked Later in §2.6.) When browsing guild traders, show and filter sealed master writs by what they'd really cost per voucher: **(listing price + material cost) ÷ vouchers**. WritWorthy did this as an AwesomeGuildStore filter (`WritWorthy_AGS.lua`, read 2026-11-15); WritCrafter already works out each writ's material cost and per-voucher figure (`Rules.Evaluate`: `cost`, `costComplete`, `perVoucher`, the same numbers as the queue window and tooltip), so only the purchase price and the guild store hooks are new. Written fresh, not copied (WritWorthy's code is All Rights Reserved, §9).
+   - **Tooltip, with or without AGS:** the guild store tooltip hook already exists (`UI/Tooltip.lua`, `SetTradingHouseItem`) but shows materials only. Add the listing price (`GetTradingHouseSearchResultItemInfo`, 7th return) and a line such as `Bought here: 12,500 + 8,200 materials = 1,035 per voucher`. Works in the base game's guild store too.
+   - **AGS filter, "Cost per Voucher":** a gold range slider in AGS's master writ subcategory (`SUB_CATEGORY_ID.CONSUMABLE_WRIT`), filtering each page of results locally (`FilterLocalResult(itemData)`, using `itemData.itemLink` and `itemData.purchasePrice`). AGS's documented API: register with `AGS:RegisterFilter` and `AGS:RegisterFilterFragment` (a `ValueRangeFilterBase` subclass and a `PriceRangeFilterFragment`) inside `AGS.callback.AFTER_FILTER_SETUP`, and only when `AGS.GetAPIVersion() == 4`; any other version, do nothing, so an AGS update can't break WritCrafter ([[prefer-stable-apis]]). Keyboard only: AGS doesn't support external filters on console/gamepad. `AwesomeGuildStore` is already in `OptionalDependsOn` for this, so WritCrafter loads after it.
+   - **Unknown cost:** a writ whose materials can't all be priced is let through (as WritWorthy did) and its tooltip says the cost is partial, so missing price data never hides a listing.
+   - **Optional second filter, "Only Writs I Can Craft":** hides listings this character can't craft or your settings reject (unknown motif, recipe or trait, excluded materials, Exclude Gold Writs), using the same verdict as the red badge. Decide when building whether it's worth a second filter or a checkbox on the first.
+   - **Speed:** a search page holds up to 100 listings, each parsed and evaluated once (`WC.Master.Parse`, `Rules.Evaluate`, both already cached) and kept for the session; measure with `/wc perf` before and after.
+   - **Filter ID: reuse WritWorthy's 103** (decided 2026-11-15). AGS hands out IDs to external add-ons in its own `data/FilterIds.lua` (100–108 taken; **103 is `WRIT_WORTHY_WRIT_COST_FILTER`**), and `RegisterFilter` asserts if an ID is registered twice. WritCrafter replaces WritWorthy, so it takes over 103 (saved AGS searches using WritWorthy's filter keep working), but **only when WritWorthy isn't loaded**; with WritWorthy enabled, the filter isn't registered at all (the tooltip line still works). The user plans to replace AwesomeGuildStore itself at some point, so no ID of our own is being requested; if one is ever needed, it can move then.
+   - Material cost uses market prices for every material, including ones you own (what they'd sell for), the same as the queue window.
+12. **Help window** (last, decided 2026-11-06): `/wc help` opens a window where players can read about every feature (badges, tooltips, exclusions, queue, crafting notices and sounds, daily and master writ handling, bank withdrawal) and every command, instead of the chat list it prints now.
 
 Testing: pure logic (solver, rules, link parsing, price defaults) gets offline Lua unit tests with stubbed game APIs. Anything touching stations, quests or the bank is checked by you in game at each milestone.
 
@@ -474,7 +482,7 @@ Testing: pure logic (solver, rules, link parsing, price defaults) gets offline L
 - Nothing. All questions answered and the §9 defaults accepted (2026-11-03).
 
 ## 11. Later (after the base is working)
-- **Diagnostic commands stay in the release** (decided 2026-11-06) and are documented in the help window (milestone 11):
+- **Diagnostic commands stay in the release** (decided 2026-11-06) and are documented in the help window (milestone 12):
   - `/wc stock <item>`: backpack, bank, craft bag and usable counts.
   - `/wc price <item>`: the price WritCrafter uses and its source.
   - `/wc selftest`: every stack count against the game's own totals.
