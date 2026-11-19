@@ -231,12 +231,6 @@ The `(to deposit)`, `(to sell)` and `(to deconstruct)` tooltip notes come from `
 They're per character and per computer, like everything here: an item marked on one computer is
 an ordinary item on another until the file is copied.
 
-### 4.5 Potion search (`UI/PotionSearch.lua`)
-
-| Key | Format | Meaning |
-|---|---|---|
-| `potionFavorites` | `["id:id[:id]"] = { combo, effects }` | Starred reagent combos. The key is the reagent item IDs sorted and joined by `:`; `combo` is the reagent IDs, `effects` the game's alchemy effect IDs the combo makes. Kept until unstarred |
-
 ## 5. Account-wide data
 
 | Key | Owner | Format | Meaning |

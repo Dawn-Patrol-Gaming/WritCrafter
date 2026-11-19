@@ -46,8 +46,6 @@ UI/ExclusionsWindow.xml
 UI/ExclusionsWindow.lua
 UI/QueueWindow.xml
 UI/QueueWindow.lua
-UI/PotionSearch.xml
-UI/PotionSearch.lua
 UI/Settings.lua
 UI/Tooltip.lua
 UI/InventoryIcons.lua

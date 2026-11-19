@@ -19,7 +19,6 @@ other's way.
 - DailyAlchemy
 - DailyProvisioning
 - WritWorthy
-- PotionMaker
 - LibMarify, LibRecipe (no longer needed)
 
 ## Requirements
@@ -108,11 +107,6 @@ Locked items, FCO ItemSaver-marked items and items set aside for writs are never
   missing materials (yellow). A padlock marks items set aside for a writ.
 - Writ tooltips say why a writ is rejected and list the materials it will use.
 
-### Potion search
-
-`/wc potions` lists every reagent combination for up to three effects you pick, with your stock
-and the price. Filter to reagents you own or allow, and star favorites.
-
 ## Commands
 
 `/wc` and `/writcrafter` work the same. `/wc` alone shows this list in chat.
@@ -121,7 +115,6 @@ and the price. Filter to reagents you own or allow, and star favorites.
 |---|---|
 | `/wc settings` | Open the settings |
 | `/wc queue` | Show or hide the master writ queue window |
-| `/wc potions` | Show or hide potion search |
 | `/wc exclusions` | Choose which materials writs may not use |
 | `/wc stock <item link>` | How many of an item you have, and how many WritCrafter can use |
 | `/wc price <item link>` | The price WritCrafter uses for an item, and its source |
@@ -136,7 +129,7 @@ and the price. Filter to reagents you own or allow, and star favorites.
 Shift-click an item into chat to get its link for `stock` and `price`.
 
 **Keybinds** (Controls → Keybindings → WritCrafter, none set by default): show or hide the master
-writ queue, accept crafted master writs, show or hide potion search.
+writ queue, accept crafted master writs.
 
 ## Settings
 

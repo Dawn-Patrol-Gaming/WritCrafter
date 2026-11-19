@@ -25,27 +25,10 @@ All passed 2026-11-13: HX1 (the setting), HX2 (with it on, an alchemy writ whose
 
 Checked offline with the real settings code (account values never overwritten; the character's own come back when switched to again). Passed in game 2026-11-14 (SC1).
 
-## Milestone 7, Potion Search and Accept Guard (2026-11-14)
+## Milestone 9, Accept Guard (2026-11-14)
 
-New files (UI/PotionSearch.xml/.lua, Writs/AcceptGuard.lua), so a **full relog**.
-
-**Potion Search** (`/wc potions`, or set a key in Controls): pick up to three effects in the
-dropdowns; every reagent combo that makes them is listed, most stock first. Only Reagents You
-Have, Only Allowed Reagents and Favorites filter the list; columns sort by clicking their heading.
-The star marks a favorite (kept per character). Effect names come from the game
-(`GetAlchemyEffectName`), which this build hasn't confirmed in game yet — if a dropdown or a
-result row shows "Effect 5" instead of a real name, that call isn't right and needs fixing.
-
-| # | Do | Expect |
-|---|---|---|
-| PS1 | `/wc potions` | The window opens; each Effect dropdown lists real effect names, not "Effect N" |
-| PS2 | Pick one effect (e.g. Ravage Health) | Every reagent pair/triple that makes it is listed, with its full effect set, stock and price |
-| PS3 | Pick two or three effects | Only combos making all of them are listed |
-| PS4 | Tick Only Reagents You Have | Combos needing a reagent you own none of drop out |
-| PS5 | Tick Only Allowed Reagents (with something excluded) | Combos using it drop out; with it off, they show greyed |
-| PS6 | Click a row's star, then tick Favorites | That combo is the only one shown; unstarring it there removes it from the list |
-| PS7 | Click each column heading, then again | Sorts and reverses (Stock starts highest first) |
-| PS8 | `/reloadui`, open again, re-check a favorite | Still starred: favorites persist |
+New file (Writs/AcceptGuard.lua), so a **full relog**. (Potion search, tested alongside it,
+was dropped 2026-11-19: PotionMaker stays for that.)
 
 **Accept Guard** (Settings → Master Writs → Ask Before Accepting Writs You Can't Craft, on by
 default): using a sealed master writ your settings would reject, or that you can't craft

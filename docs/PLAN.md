@@ -4,8 +4,9 @@ One addon that crafts everything your journal's crafting writs need (daily and m
 refuses writs it shouldn't do, and always spends the materials you have the most of.
 
 Replaces: **DailyAlchemy, DailyProvisioning, DolgubonsLazyWritCreator, LibLazyCrafting,
-LibMarify, LibRecipe, PotionMaker, WritWorthy.** All eight are fully replaced; the crafting
-engine (LibLazyCrafting's job) is built into WritCrafter.
+LibMarify, LibRecipe, WritWorthy.** All seven are fully replaced; the crafting
+engine (LibLazyCrafting's job) is built into WritCrafter. PotionMaker is **not** replaced:
+its potion search is outside what a writ crafter is for (decided 2026-11-19, §2.5).
 
 Target: PC/Mac, NA server data, APIVersion `101051 101052` (Update 51, released 2026-09-28).
 
@@ -15,7 +16,7 @@ Target: PC/Mac, NA server data, APIVersion `101051 101052` (Update 51, released 
 | LibLazyCrafting | **Absorb** into WritCrafter (own crafting engine). |
 | Acceptable reagents | **Overland plants only**: the 18 classic plant/fungus nodes plus Nightshade and Crimson Nirnroot. |
 | "Expensive" | **List + price ceiling**, any item can be marked "too expensive" in settings, and the defaults come from your current price data (§5). |
-| Optional v1 features | **Writ reward handling**, the **potion search UI**, and **WritWorthy's master writ queue window** (§2.6.1). Not in v1: pre-craft multiplier. |
+| Optional v1 features | **Writ reward handling** and **WritWorthy's master writ queue window** (§2.6.1). Potion search dropped 2026-11-19 (§2.5). Not in v1: pre-craft multiplier. |
 
 ---
 
@@ -118,21 +119,13 @@ Only the parts writs need are rebuilt (written fresh, using LLC only as an API r
 | Disable if recipe unknown | **Merge** | Into the reject engine. |
 | Static FoodAndDrink recipe table | **Skip** | Uses the game API instead. |
 
-### 2.5 PotionMaker (5.11.0): potion search UI kept
+### 2.5 PotionMaker (5.11.0): not replaced
 
-| Feature | Verdict | Notes |
-|---|---|---|
-| Potion search tab at the alchemy station (LibAlchemyStation) | **Keep** | Pick 1–3 traits → list reagent combos you can make. |
-| Async search (LibAsync) | **Keep** | |
-| Results sorted by stock (R6), with your allowed / too-expensive flags shown | **Keep** | New; ties the UI to the same rules. |
-| Filters: use selected reagents only, include missing reagents, include unknown traits, quest-condition potions only, need solvent | **Keep** | |
-| Favorites (mark combo, list by reagents / potion / traits) | **Keep** | Cheap to keep. |
-| Auto-switch potion/poison tab | **Keep** | |
-| ItemSaver / FCOItemSaver protection | **Merge** | Shared lock check. |
-| Reagents sorted by quantity | **Merge** | Always on (R6). |
-| Main menu entry (LibMainMenu-2.0) | **Keep (optional)** | Only if LibMainMenu-2.0 is installed. |
-| Training mode (unknown traits only), fake 3rd slot | **Later** | |
-| Show alchemy XP messages, hide new-trait popup, same window coords | **Skip** | |
+Dropped 2026-11-19. A potion search UI was built (milestone 8) and removed again: it
+stretches WritCrafter past crafting writs, and PotionMaker already does it well and is
+up to date for Update 51 (APIVersion 101050 101051, the new effects included). Keep
+PotionMaker installed alongside WritCrafter for searching potions; the two don't overlap
+(PotionMaker never answers writ dialogs or crafts on its own).
 
 ### 2.6 WritWorthy (7.5.9)
 
@@ -244,10 +237,7 @@ Implementation: a post-hook on the inventory list row setup for each bag's list 
 | LibAddonMenu-2.0 | **Required** | Settings panel |
 | LibCustomMenu | **Required** | Right-click actions on sealed writs and items |
 | LibPrice | **Required** | MM / TTC / ATT live prices |
-| LibAlchemyStation | **Required** | Potion search tab |
-| LibAsync | **Required** | Potion search + alchemy solver off the main frame |
 | LibEsoHubPrices | **Optional** | Read directly; LibPrice has no ESO-Hub source, and it's the best-covered source in your data |
-| LibMainMenu-2.0 | **Optional** | Main-menu button for potion search |
 | LibSets | **Required** | Traits needed per crafted set (rejects writs you can't craft) |
 | LibCharacterKnowledge | **Required** | Motif knowledge from anywhere, not just at a station |
 | FCOItemSaver | **Optional** | Locked-item protection |
@@ -275,7 +265,7 @@ Source: UESP's copy of the Update 51 patch notes. News post 70379 is the Update 
 - **Potion naming changed.** Update 51 names a potion by a new trait priority, so a combo that *contains* the requested effect can produce a differently named potion. Daily writs therefore only use **two-reagent combos whose result has exactly the requested effect and nothing else**. All 34 effects still have 3–24 such combos.
 - **Check the result before crafting.** At the station, `GetAlchemyResultingItemLink` must match the writ (and `DoesItemLinkFulfillJournalQuestCondition` must pass). Any combo that would make the wrong item is skipped.
 - **Master writs** read their three effects straight from the sealed writ's item-link fields, which works in every client language.
-- **Known gap: no item IDs for the new potion types** (Essence of Force, Mending, Vexation, Damage Shield, Heal Absorption and their poisons). Outside a station, tooltips, the queue window and potion search show these by trait names and price them from their reagents. The real potion name only comes from the station's result link.
+- **Known gap: no item IDs for the new potion types** (Essence of Force, Mending, Vexation, Damage Shield, Heal Absorption and their poisons). Outside a station, tooltips and the queue window show these by trait names and price them from their reagents. The real potion name only comes from the station's result link.
 
 ---
 
@@ -373,8 +363,8 @@ Dragon Bone ~5,900 · Pristine Daedric Heart ~3,750 · Stendarr Stamp ~4,400 · 
 ```
 WritCrafter/
   WritCrafter.addon        APIVersion 101051 101052
-                           DependsOn: LibAddonMenu-2.0 LibCustomMenu LibPrice LibAlchemyStation LibAsync
-                           OptionalDependsOn: LibEsoHubPrices LibMainMenu-2.0 LibSets LibCharacterKnowledge FCOItemSaver
+                           DependsOn: LibAddonMenu-2.0 LibCustomMenu LibPrice LibSets LibCharacterKnowledge
+                           OptionalDependsOn: LibEsoHubPrices LibDebugLogger FCOItemSaver AwesomeGuildStore
   Strings/en.lua
   Data/Reagents.lua        U51 reagents: id, 4 traits, source category
   Data/PriceDefaults.lua   §5 ceilings + default too-expensive item ids (snapshot 2026-11-02)
@@ -385,7 +375,7 @@ WritCrafter/
   Writs/                   Daily (journal parsing, auto-abandon), Master (sealed-writ link parsing, auto-accept, queue)
   Solver/Alchemy.lua       valid combos → filter → max-min-stock → price tie-break
   Rewards/                 container looting, per-type actions, valuable alerts
-  UI/                      Tooltip, InventoryIcons, StationPanel, ContextMenu, QueueWindow, PotionSearch (LibAlchemyStation tab), Settings,
+  UI/                      Tooltip, InventoryIcons, StationPanel, ContextMenu, QueueWindow, Settings,
                            ExclusionsWindow (material exclusions: full per-category lists rebuilt on open, opened from the
                            settings' category buttons or /wc exclusions; the settings panel keeps only non-item options)
 ```
@@ -451,7 +441,7 @@ Everything else stays on demand: rules, prices and the alchemy solver run only w
      - The corner message and problem banner (about 100 lines) live in the crafting engine but Rewards uses them too: move them to their own UI file.
      - Misplaced comments (above `Engine.SayCrafting` / `CraftSounds`, `Rewards.OpenWaiting`), smithing's registration loop over a one-item list, Rewards' `MayTouch` checking the lock twice (`Inventory.IsProtected` already does), the Grand Master listener registered at file load instead of in `Init`.
    - Also then: the writ board pauses (0.2 s before answering a page, 0.5 s check after each accept) can be shortened to get closer to Dolgubon's speed.
-8. **Potion search UI** (built 2026-11-14, in testing). A standalone window (`/wc potions`), not a tab inside the game's own alchemy station screen, to keep off UI objects that break on updates (§7, [[prefer-stable-apis]]). Pick up to three effects; every reagent combo making them is listed (reusing `AlchemySolver.AllCombos`), sorted by stock by default; filters for owned/allowed reagents and a per-character favorites list. Effect names come from `GetAlchemyEffectName`, used for the first time here and not yet confirmed in game.
+8. **Potion search UI**: built 2026-11-14, **dropped 2026-11-19** before it passed testing. It's outside what a writ crafter is for, and PotionMaker already does it (§2.5). The writ alchemy solver (`AlchemySolver.Choose`) was never part of it and is unchanged.
 9. **Prevent accepting uncraftable master writs** (built 2026-11-14, in testing; asked 2026-11-13). Using a sealed master writ your settings would reject, or that this character can't craft (exclusions, unknown recipe/motif/trait, or the Update 51 bug), now asks first instead of adding the quest, the same check the queue window already runs. Implemented as a `ZO_PreHook` on the game's own `AcceptOfferedQuest`, since WritCrafter's own automation (Accept Crafted Writs) already calls that function directly and this needed to not interfere with it. New ground for this addon (a hook on a global quest-accept function, not a stable crafting API call), so it needs thorough testing, including that it never blocks an unrelated NPC quest.
 10. **Migration**: warn if any replaced addon is still enabled (they'd fight over auto-dialog and autocraft).
 11. **Guild store: is a master writ worth buying?** (asked 2026-11-15; the WritWorthy feature marked Later in §2.6.) When browsing guild traders, show and filter sealed master writs by what they'd really cost per voucher: **(listing price + material cost) ÷ vouchers**. WritWorthy did this as an AwesomeGuildStore filter (`WritWorthy_AGS.lua`, read 2026-11-15); WritCrafter already works out each writ's material cost and per-voucher figure (`Rules.Evaluate`: `cost`, `costComplete`, `perVoucher`, the same numbers as the queue window and tooltip), so only the purchase price and the guild store hooks are new. Written fresh, not copied (WritWorthy's code is All Rights Reserved, §9).
