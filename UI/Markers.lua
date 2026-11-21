@@ -7,7 +7,9 @@ local WC = WritCrafter
 --   the name, then what you've used there). A Grand Master station you've used is remembered too
 --   (house and owner, position), in case its furnishing is missing from the table.
 --   Which writs: Off (the default), every sealed master writ in your backpack not yet crafted
---   for, or only queued ones; accepted master writs still to craft count in both.
+--   for, or only queued ones. Accepted master writs still to craft get the game's own quest
+--   marker over their stations, so a station one of them fits is left to that marker, even when
+--   a sealed writ fits it too (crafting there makes both).
 --   Essential Housing Tools: while its master writ markers are on, WritCrafter draws none at all
 --   and its setting is greyed out (it's the newcomer).
 -- Drawn with the game's 3D render space: a texture at a world position, turned to face the
@@ -155,10 +157,15 @@ local function WritsToMark(mode)
             end
         end
     end
-    -- Accepted master writs still to craft, in either mode.
+    return list
+end
+
+-- Accepted master writs still to craft: the game marks their stations itself.
+local function AcceptedToCraft()
+    local list = {}
     for _, entry in ipairs(WC.Master.Accepted()) do
         if entry.condition then
-            Add(entry.writ)
+            list[#list + 1] = { craft = entry.writ.craft, setId = SMITHING[entry.writ.craft] and entry.writ.setId or nil }
         end
     end
     return list
@@ -380,6 +387,15 @@ end
 
 local markedStations = {}   -- [station record] = true while it has a marker (for /wc stations)
 
+local function AnyFits(station, writs)
+    for _, writ in ipairs(writs) do
+        if StationFits(station, writ) then
+            return true
+        end
+    end
+    return false
+end
+
 function Markers.Refresh()
     if not window then
         return
@@ -389,16 +405,13 @@ function Markers.Refresh()
     local mode = Markers.Mode()
     local stations = mode ~= Markers.OFF and StationsHere()
     if stations and #stations > 0 then
-        local writs = WritsToMark(mode)
+        local writs, accepted = WritsToMark(mode), AcceptedToCraft()
         for _, station in ipairs(stations) do
-            for _, writ in ipairs(writs) do
-                if StationFits(station, writ) then
-                    local marker = AcquireMarker()
-                    marker.wcX, marker.wcY, marker.wcZ = station.x, station.y + HEIGHT_CM, station.z
-                    shown[#shown + 1] = marker
-                    markedStations[station] = true
-                    break
-                end
+            if AnyFits(station, writs) and not AnyFits(station, accepted) then
+                local marker = AcquireMarker()
+                marker.wcX, marker.wcY, marker.wcZ = station.x, station.y + HEIGHT_CM, station.z
+                shown[#shown + 1] = marker
+                markedStations[station] = true
             end
         end
     end
@@ -463,6 +476,7 @@ function Markers.Diagnose()
         local gm = writ.setId and WC.GrandMaster.HasSet(writ.craft, writ.setId)
         Say(zo_strformat(WRITCRAFTER_STATIONS_WRIT_ROW, CraftName(writ.craft), set, GetString(gm and SI_YES or SI_NO)))
     end
+    Say(zo_strformat(WRITCRAFTER_STATIONS_ACCEPTED, #AcceptedToCraft()))
 
     local key = LocationKey()
     local stations = Known()[key] or {}

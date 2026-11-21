@@ -10,19 +10,20 @@ git history.
 
 ## To do
 
-**Before starting: log out fully and back in** (not just `/reloadui`). The manifest is now
-`WritCrafter.txt`, and the game only reads the file list at login. Turn Debug chat on (`/wc debug`).
+Turn Debug chat on (`/wc debug`) before starting.
 
-### Right after logging in
+### Any time
 
 | # | Do | Expect |
 |---|---|---|
-| GR1 | Add-ons list at the character screen | WritCrafter listed and enabled, with no "missing dependency" warning, and no "out of date" warning it didn't have before |
-| GR2 | Open the settings, the queue window (`/wc queue`) and the exclusions window, hover a sealed writ, and type `/wc` | Every label, tooltip and chat line shows text. None show as a bare number or blank, which would mean a string was missed in the `WRITCRAFTER_*` rename |
-| AG9 | Use three uncraftable sealed writs: one by double-click, one with the Use key while hovering, one by right-click → Use | The "can't craft" dialog each time. (The Use key already passed) |
 | AG5 | Press Accept Crafted Writs (button or keybind) with crafted writs in your backpack | Accepted as before, with no dialog: WritCrafter's own automation isn't stopped |
 | AG7 | Settings → Master Writs → turn off Ask Before Accepting Writs You Can't Craft, then use an uncraftable writ | Accepted straight away, as the game does it, with no dialog. Turn the setting back on afterwards |
 | GR7 | A fight in heavy armour, then open the queue window | No stutter or extra work during the fight, and the window is up to date |
+| SM1 | In your house, Station Markers on Only Queued, nothing queued, with the two writs you've accepted (woodworking done, Rubedite Pauldron still to craft) | No cyan markers, only the game's white one(s). `/wc stations` says `Accepted writs still to craft: 1` and `Markers shown here: 0` |
+| SM2 | Same as SM1: look where the game's marker sits for the Rubedite Pauldron (Tharriker's Strike) | Say whether it's over the Tharriker's Strike blacksmithing station, the Grand Master station, or both. If the game misses a station WritCrafter used to mark, that station now has no marker at all |
+| SM3 | Queue a sealed writ that the same station fits as an accepted one (e.g. a Tharriker's Strike blacksmithing writ) | Still no cyan marker on that station: the game's marker covers it |
+| SM4 | Queue a sealed writ for a station no accepted writ needs (e.g. a woodworking writ) | A cyan marker over that station within a second |
+| SM5 | With the SM3 writ queued, open the station that has only the game's marker | Both the accepted and the queued writ are crafted in that one visit; afterwards that station has no marker of either kind |
 
 ### On the next daily run
 
@@ -68,7 +69,11 @@ Passed tests and what was learned, newest first.
 
 ### Guidelines review fixes (2026-11-21)
 
-What changed: bank moves and merchant sales now go one at a time, each after the server has made the one before (instead of all in the same frame); bag-change handlers ignore gear wear and weapon charge; the quiet-loot hook sits on the loot window's class; every WritCrafter string was renamed (`SI_WRITCRAFTER_*` → `WRITCRAFTER_*`).
+What changed: bank moves and merchant sales now go one at a time, each after the server has made the one before (instead of all in the same frame); bag-change handlers ignore gear wear and weapon charge; the quiet-loot hook sits on the loot window's class; every WritCrafter string was renamed (`SI_WRITCRAFTER_*` → `WRITCRAFTER_*`); the manifest was renamed `WritCrafter.txt`.
+
+**GR1 and GR2 passed 2026-11-21**, after logging out fully: WritCrafter is listed and enabled
+with the `.txt` manifest, with no dependency or out-of-date warning, and the settings, queue
+window, exclusions window, writ tooltips and `/wc` all show their text after the string rename.
 
 ### Milestone 6, step 2: deconstruct writ rewards (2026-11-13)
 
@@ -122,6 +127,20 @@ day: Cancel leaves the writ in the backpack with no quest; Accept Anyway adds th
 up the writ; a writ you can craft is accepted as before, with no dialog. AG8 passed the same day:
 an NPC's quest accepted just after hovering an uncraftable writ went through, no dialog. AG6
 passed too: an ordinary NPC quest accepted right after using a master writ was not affected.
+
+AG9 failed 2026-11-21 for right-click → Use: the guard checked the wrong writ. Clicking Use closes
+the menu, and the writ under the mouse is then the row below; remembering the right-clicked writ
+didn't help either. Guessing from the mouse was dropped. Reworked 2026-11-21: however the
+inventory uses an item, it calls `IsItemUsable(bag, slot)` for that exact item, then
+`ClearCursor()`, then `UseItem`, so the guard takes the item from the last `IsItemUsable` call
+made in the same frame as a `ClearCursor()`. No mouse involved. The debug line now reads
+`Accept guard: <writ> used (by hand), ...`.
+
+**AG9 passed 2026-11-21** with that build: four Gold Jewelry Crafting writs, each
+right-clicked with a craftable writ just below, moving the mouse down onto it quickly after
+clicking Use. Each time the right-clicked writ was checked and its Accept turned away.
+Double-click and the Use key passed in the same session. AG10 passed too: Clothier, Blacksmithing
+and Woodworking writs you can craft were accepted with no dialog (`... used (by hand), craftable`).
 
 ### Milestone 7, batch A: speed (2026-11-11)
 

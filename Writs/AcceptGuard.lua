@@ -8,27 +8,27 @@ local WC = WritCrafter
 -- same check as the queue window, and if that check would reject or cannot-craft it, the offer is
 -- turned away before it's accepted, with a dialog asking whether to take it anyway.
 --
--- Which writ: UseItem is private (it can't be hooked, even after the call), and the game's own
--- inventory calls it directly, so a writ used by hand is recognised by the slot you last touched
--- (hovered, right-clicked, double-clicked or selected on gamepad): a sealed writ, still in that
--- slot, touched moments before a quest is offered outside any conversation with an NPC. Add-ons
--- that use writs go through CallSecureProtected, which is watched directly.
+-- Which writ: UseItem is private (it can't be hooked, even after the call), and the offer's text
+-- only names the craft. But however the game's inventory uses an item (double-click, the Use key,
+-- right-click -> Use, gamepad), it first asks IsItemUsable(bag, slot) about that exact item, then
+-- calls ClearCursor, then UseItem, all in one go. So the item IsItemUsable was last asked about,
+-- in the same frame as a ClearCursor, is the one being used. Add-ons that use writs go through
+-- CallSecureProtected, which is watched directly.
 local Guard = {}
 WC.AcceptGuard = Guard
 
-local ADDON_USE_MS    = 5000    -- longest between an add-on using a writ and its quest being offered
-local TOUCH_WINDOW_MS = 10000   -- a writ touched this recently may be the one just used
+local USE_MS          = 5000    -- longest between using a writ and its quest being offered
 local FORCE_ACCEPT_MS = 300     -- "Accept Anyway": as Writs/Rolis.lua waits for its own offers
 
 -- { writ, verdict }: the offer on screen is for this writ, which would be rejected. Kept until
 -- the next quest offer (every Accept follows an offer, so it can't reach another quest), however
 -- long you take to click.
 local pending
-local touched       -- { bagId, slotIndex, link, control, ms }: the sealed writ slot last touched
-local addonUse      -- { bagId, slotIndex, ms }: a writ an add-on just used
+local askedBag, askedSlot, askedMs   -- the item IsItemUsable was last asked about, and when
+local used         -- { bagId, slotIndex, link, ms, how }: a writ just used, by hand or by an add-on
 local inChatter     -- true while talking to an NPC: its quest offers are never a writ's
-local skipNext       -- true: the next AcceptOfferedQuest (from "Accept Anyway") is let through
-local forceAccept    -- true: accept the next quest offer ourselves, without the player clicking
+local skipNext      -- true: the next AcceptOfferedQuest (from "Accept Anyway") is let through
+local forceAccept   -- true: accept the next quest offer ourselves, without the player clicking
 
 local function Debug(fmt, ...)
     if WC.settings.logLevel >= WC.Log.LEVEL_DEBUG then
@@ -51,54 +51,46 @@ local function Check(bagId, slotIndex, how)
     end
 end
 
--- Inventory slot hooks (game UI functions, guarded: a change in a game update makes the guard
--- miss writs, never breaks the inventory).
-local function Touch(inventorySlot)
-    if not (WC.settings.acceptGuard and inventorySlot) then
-        return
-    end
-    local ok, bagId, slotIndex = pcall(ZO_Inventory_GetBagAndIndex, inventorySlot)
-    if ok and bagId and slotIndex and GetItemType(bagId, slotIndex) == ITEMTYPE_MASTER_WRIT then
-        touched = { bagId = bagId, slotIndex = slotIndex, link = GetItemLink(bagId, slotIndex),
-            control = inventorySlot, ms = GetFrameTimeMilliseconds() }
-    end
+-- Called often (the inventory asks it about many items): kept to three assignments.
+local function OnIsItemUsable(bagId, slotIndex)
+    askedBag, askedSlot, askedMs = bagId, slotIndex, GetFrameTimeMilliseconds()
 end
 
-local function OnMouseEnter(inventorySlot)
-    local ok, button = pcall(ZO_InventorySlot_GetInventorySlotComponents, inventorySlot)
-    Touch(ok and button or nil)
+-- Right before the game's inventory uses an item, just after IsItemUsable was asked about it.
+-- ClearCursor is called at other times too: if a writ happened to be asked about in the same
+-- frame, that leaves a `used` that no quest offer follows, and it expires.
+local function OnClearCursor()
+    if not (WC.settings.acceptGuard and askedBag and askedMs == GetFrameTimeMilliseconds()) then
+        return
+    end
+    local bagId, slotIndex = askedBag, askedSlot
+    askedBag, askedSlot, askedMs = nil, nil, nil
+    if GetItemType(bagId, slotIndex) == ITEMTYPE_MASTER_WRIT then
+        used = { bagId = bagId, slotIndex = slotIndex, ms = GetFrameTimeMilliseconds(), how = "by hand",
+            link = GetItemLink(bagId, slotIndex) }
+    end
 end
 
 -- Add-ons use items through CallSecureProtected. WritCrafter's own uses (Accept Crafted Writs,
--- "Accept Anyway") are never checked, and the offer they bring isn't the touched writ's.
+-- "Accept Anyway") are never checked, and the offer they bring isn't another writ's.
 local function OnSecureCall(funcName, bagId, slotIndex)
     if funcName ~= "UseItem" then
         return
     end
-    touched, addonUse = nil, nil
+    used = nil
     if not WC.Util.IsAutomatedUse() and GetItemType(bagId, slotIndex) == ITEMTYPE_MASTER_WRIT then
-        addonUse = { bagId = bagId, slotIndex = slotIndex, ms = GetFrameTimeMilliseconds() }
+        used = { bagId = bagId, slotIndex = slotIndex, ms = GetFrameTimeMilliseconds(), how = "add-on",
+            link = GetItemLink(bagId, slotIndex) }
     end
-end
-
--- Whether the touched writ is plausibly the one whose quest is being offered.
-local function TouchedWrit()
-    if not touched or inChatter then
-        return nil
-    end
-    local recent = GetFrameTimeMilliseconds() - touched.ms <= TOUCH_WINDOW_MS
-    local hovered = WINDOW_MANAGER:GetMouseOverControl() == touched.control
-    if not (recent or hovered) or GetItemLink(touched.bagId, touched.slotIndex) ~= touched.link then
-        return nil
-    end
-    return touched
 end
 
 -- A quest is offered. After "Accept Anyway" reuses the item, the offer is accepted the same way
 -- WritCrafter's own Accept Crafted Writs accepts its own offers: no need for you to click again.
--- Otherwise, if it follows a sealed writ you just touched, that writ is checked.
+-- Otherwise, if it follows a sealed writ just used, that writ is checked.
 local function OnQuestOffered()
     pending = nil
+    local writ = used
+    used = nil
     if forceAccept then
         forceAccept = false
         zo_callLater(function()
@@ -107,22 +99,16 @@ local function OnQuestOffered()
         end, FORCE_ACCEPT_MS)
         return
     end
-    local used = addonUse
-    addonUse = nil
-    if not WC.settings.acceptGuard then
+    if not WC.settings.acceptGuard or not writ then
         return
     end
-    if used and GetFrameTimeMilliseconds() - used.ms <= ADDON_USE_MS then
-        Check(used.bagId, used.slotIndex, "used by an add-on")
+    local age = GetFrameTimeMilliseconds() - writ.ms
+    if inChatter or age > USE_MS or GetItemLink(writ.bagId, writ.slotIndex) ~= writ.link then
+        Debug("Accept guard: quest offered, not checked (writ used %d ms ago, %s, talking to an NPC: %s)",
+            age, writ.how, tostring(inChatter == true))
         return
     end
-    local writ = TouchedWrit()
-    if writ then
-        Check(writ.bagId, writ.slotIndex, "used by hand")
-    elseif touched then
-        Debug("Accept guard: quest offered, not checked (last writ touched %d ms ago, talking to an NPC: %s)",
-            GetFrameTimeMilliseconds() - touched.ms, tostring(inChatter == true))
-    end
+    Check(writ.bagId, writ.slotIndex, "used (" .. writ.how .. ")")
 end
 
 -- Finds the same writ again by its link (turning the offer away leaves the item where it was)
@@ -149,14 +135,11 @@ local function CheckAccept()
         return false
     end
     if not pending then
-        if touched then
-            Debug("Accept guard: Accept clicked, nothing to turn away")
-        end
         return false
     end
     Debug("Accept guard: Accept clicked for %s: turned away", pending.writ.link)
     local writ, verdict = pending.writ, pending.verdict
-    pending, touched = nil, nil
+    pending = nil
     ResetChatter()
     ZO_Dialogs_ShowDialog(DIALOG_NAME, { link = writ.link },
         { mainTextParams = { WC.Util.ItemName(writ.link), verdict.reasons[1] or "" } })
@@ -165,8 +148,8 @@ end
 
 function Guard.Init()
     SecurePostHook("CallSecureProtected", OnSecureCall)
-    SecurePostHook("ZO_InventorySlot_OnMouseEnter", OnMouseEnter)
-    SecurePostHook("ZO_InventorySlot_DiscoverSlotActionsFromActionList", Touch)
+    SecurePostHook("IsItemUsable", OnIsItemUsable)
+    SecurePostHook("ClearCursor", OnClearCursor)
     ZO_PreHook("AcceptOfferedQuest", CheckAccept)
     local namespace = WC.name .. "AcceptGuard"
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_QUEST_OFFERED, OnQuestOffered)
