@@ -443,44 +443,44 @@ local CraftName = WC.Util.CraftName
 function Markers.Diagnose()
     local eht
     if not EHT then
-        eht = GetString(SI_WRITCRAFTER_STATIONS_EHT_NONE)
+        eht = GetString(WRITCRAFTER_STATIONS_EHT_NONE)
     else
-        eht = GetString(Markers.EhtMarking() and SI_WRITCRAFTER_STATIONS_EHT_ON or SI_WRITCRAFTER_STATIONS_EHT_OFF)
+        eht = GetString(Markers.EhtMarking() and WRITCRAFTER_STATIONS_EHT_ON or WRITCRAFTER_STATIONS_EHT_OFF)
     end
-    Say(zo_strformat(SI_WRITCRAFTER_STATIONS_MODE, Markers.Mode(), WC.settings.stationMarkers or Markers.OFF, eht, #shown))
+    Say(zo_strformat(WRITCRAFTER_STATIONS_MODE, Markers.Mode(), WC.settings.stationMarkers or Markers.OFF, eht, #shown))
 
     local showAll = WC.settings.logLevel >= WC.Log.LEVEL_DEBUG
     -- The writs markers are looked for, as the chosen mode would pick them (even if it's Off now).
     local mode = WC.settings.stationMarkers or Markers.OFF
     local writs = WritsToMark(mode == Markers.OFF and Markers.ALL or mode)
-    Say(zo_strformat(SI_WRITCRAFTER_STATIONS_WRITS, #writs))
+    Say(zo_strformat(WRITCRAFTER_STATIONS_WRITS, #writs))
     for index, writ in ipairs(writs) do
         if index > LIST_SHOWN and not showAll then
-            Say(zo_strformat(SI_WRITCRAFTER_SELFTEST_MORE, #writs - LIST_SHOWN))
+            Say(zo_strformat(WRITCRAFTER_SELFTEST_MORE, #writs - LIST_SHOWN))
             break
         end
         local set = writ.setId and zo_strformat("<<1>>", GetItemSetName(writ.setId)) or "-"
         local gm = writ.setId and WC.GrandMaster.HasSet(writ.craft, writ.setId)
-        Say(zo_strformat(SI_WRITCRAFTER_STATIONS_WRIT_ROW, CraftName(writ.craft), set, GetString(gm and SI_YES or SI_NO)))
+        Say(zo_strformat(WRITCRAFTER_STATIONS_WRIT_ROW, CraftName(writ.craft), set, GetString(gm and SI_YES or SI_NO)))
     end
 
     local key = LocationKey()
     local stations = Known()[key] or {}
-    Say(zo_strformat(SI_WRITCRAFTER_STATIONS_HERE, key, #stations))
+    Say(zo_strformat(WRITCRAFTER_STATIONS_HERE, key, #stations))
     for index, station in ipairs(stations) do
         if index > LIST_SHOWN and not showAll then
-            Say(zo_strformat(SI_WRITCRAFTER_SELFTEST_MORE, #stations - LIST_SHOWN))
+            Say(zo_strformat(WRITCRAFTER_SELFTEST_MORE, #stations - LIST_SHOWN))
             break
         end
         local what
         if station.gm then
-            what = GetString(SI_WRITCRAFTER_QUEUE_STATION_GM)
+            what = GetString(WRITCRAFTER_QUEUE_STATION_GM)
         elseif station.set and station.set ~= 0 then
             what = zo_strformat("<<1>>", GetItemSetName(station.set))
         else
             what = "-"
         end
-        Say(zo_strformat(SI_WRITCRAFTER_STATIONS_ROW, CraftName(station.craft), what,
+        Say(zo_strformat(WRITCRAFTER_STATIONS_ROW, CraftName(station.craft), what,
             string.format("%.1f", Distance(station.x, station.y, station.z)),
             GetString(markedStations[station] and SI_YES or SI_NO)))
     end
@@ -502,17 +502,17 @@ function Markers.Diagnose()
             marked[#marked + 1] = station
         end
     end
-    Say(zo_strformat(SI_WRITCRAFTER_STATIONS_FURNITURE, #stationsInHouse, recognised, #marked))
+    Say(zo_strformat(WRITCRAFTER_STATIONS_FURNITURE, #stationsInHouse, recognised, #marked))
     for index, station in ipairs(marked) do
         if index > LIST_SHOWN and not showAll then
-            Say(zo_strformat(SI_WRITCRAFTER_SELFTEST_MORE, #marked - LIST_SHOWN))
+            Say(zo_strformat(WRITCRAFTER_SELFTEST_MORE, #marked - LIST_SHOWN))
             break
         end
-        Say(zo_strformat(SI_WRITCRAFTER_STATIONS_FURNITURE_ROW, station.name,
+        Say(zo_strformat(WRITCRAFTER_STATIONS_FURNITURE_ROW, station.name,
             string.format("%.1f", Distance(station.x, station.y, station.z))))
     end
     if #unknown > 0 then
-        Say(zo_strformat(SI_WRITCRAFTER_STATIONS_UNKNOWN, table.concat(unknown, ", ")))
+        Say(zo_strformat(WRITCRAFTER_STATIONS_UNKNOWN, table.concat(unknown, ", ")))
     end
 end
 

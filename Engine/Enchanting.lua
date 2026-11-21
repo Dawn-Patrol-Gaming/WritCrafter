@@ -40,14 +40,14 @@ local function CraftEnchanting(writ, status)
     local glyph, level = writ.glyph, writ.level
     local aspect = WC.Data.Enchanting.ASPECTS[writ.quality]
     if not (glyph and level and aspect) then
-        return false, zo_strformat(SI_WRITCRAFTER_REASON_UNKNOWN_ITEM, writ.glyphId or 0)
+        return false, zo_strformat(WRITCRAFTER_REASON_UNKNOWN_ITEM, writ.glyphId or 0)
     end
     local potency = glyph.additive and level.additive or level.subtractive
     local slots = {}
     for _, itemId in ipairs({ potency, glyph.essence, aspect }) do
         local bagId, slotIndex = WC.Inventory.FindForStation(itemId)
         if not bagId then
-            return false, zo_strformat(SI_WRITCRAFTER_CRAFT_MISSING, ItemName(itemId))
+            return false, zo_strformat(WRITCRAFTER_CRAFT_MISSING, ItemName(itemId))
         end
         slots[#slots + 1] = bagId
         slots[#slots + 1] = slotIndex
@@ -56,7 +56,7 @@ local function CraftEnchanting(writ, status)
 
     local resultLink = GetEnchantingResultingItemLink(pBag, pSlot, eBag, eSlot, aBag, aSlot)
     if not resultLink or resultLink == "" or not WC.Reservations.Matches(resultLink, writ) then
-        return false, GetString(SI_WRITCRAFTER_CRAFT_WRONG_RESULT)
+        return false, GetString(WRITCRAFTER_CRAFT_WRONG_RESULT)
     end
 
     local maxIterations, result = GetMaxIterationsPossibleForEnchantingItem(pBag, pSlot, eBag, eSlot, aBag, aSlot)
@@ -144,9 +144,9 @@ local function MissingRune(condition, aspect)
         missing[#missing + 1] = ItemName(essence)
     end
     if #missing > 0 then
-        return { problem = zo_strformat(SI_WRITCRAFTER_DAILY_RUNE_MISSING, table.concat(missing, ", ")) }
+        return { problem = zo_strformat(WRITCRAFTER_DAILY_RUNE_MISSING, table.concat(missing, ", ")) }
     end
-    return { problem = GetString(SI_WRITCRAFTER_DAILY_RUNE_UNKNOWN) }
+    return { problem = GetString(WRITCRAFTER_DAILY_RUNE_UNKNOWN) }
 end
 
 local function ResolveDaily(condition)
@@ -180,13 +180,13 @@ local function CraftDaily(condition, plan)
     local Policy = WC.Policy
     for _, itemId in ipairs({ plan.potency, plan.essence }) do
         if Policy.IsExpensive(itemId) then
-            return false, zo_strformat(SI_WRITCRAFTER_REASON_EXPENSIVE, ItemName(itemId))
+            return false, zo_strformat(WRITCRAFTER_REASON_EXPENSIVE, ItemName(itemId))
         end
     end
     local where = Locations({ plan.potency, plan.essence, unpack(ASPECT_ORDER) })
     for _, itemId in ipairs({ plan.potency, plan.essence }) do
         if not where[itemId] then
-            return false, zo_strformat(SI_WRITCRAFTER_CRAFT_MISSING, ItemName(itemId))
+            return false, zo_strformat(WRITCRAFTER_CRAFT_MISSING, ItemName(itemId))
         end
     end
     -- Cheapest allowed aspect whose glyph the quest accepts.
@@ -205,9 +205,9 @@ local function CraftDaily(condition, plan)
     end
     if not aspect then
         if excludedAspect then
-            return false, zo_strformat(SI_WRITCRAFTER_REASON_EXPENSIVE, ItemName(excludedAspect))
+            return false, zo_strformat(WRITCRAFTER_REASON_EXPENSIVE, ItemName(excludedAspect))
         end
-        return false, GetString(SI_WRITCRAFTER_CRAFT_NO_RUNES)
+        return false, GetString(WRITCRAFTER_CRAFT_NO_RUNES)
     end
     local p, e, a = where[plan.potency], where[plan.essence], where[aspect]
     local maxIterations, result = GetMaxIterationsPossibleForEnchantingItem(p[1], p[2], e[1], e[2], a[1], a[2])

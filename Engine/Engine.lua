@@ -83,9 +83,9 @@ end
 local function ProblemBanner()
     local detail = firstProblem or ""
     if problems > 1 then
-        detail = detail .. zo_strformat(SI_WRITCRAFTER_BANNER_MORE, problems - 1)
+        detail = detail .. zo_strformat(WRITCRAFTER_BANNER_MORE, problems - 1)
     end
-    Banner(GetString(SI_WRITCRAFTER_BANNER_PROBLEM), detail)
+    Banner(GetString(WRITCRAFTER_BANNER_PROBLEM), detail)
 end
 
 local Say = WC.Util.Say
@@ -150,9 +150,9 @@ function Engine.SayCrafting(count, resultLink, materials, needed)
         parts[#parts + 1] = name
     end
     if #parts > 0 then
-        Say(SI_WRITCRAFTER_CRAFTING_WITH, count, GetItemLinkName(resultLink), table.concat(parts, ", "))
+        Say(WRITCRAFTER_CRAFTING_WITH, count, GetItemLinkName(resultLink), table.concat(parts, ", "))
     else
-        Say(SI_WRITCRAFTER_CRAFTING, count, GetItemLinkName(resultLink))
+        Say(WRITCRAFTER_CRAFTING, count, GetItemLinkName(resultLink))
     end
 end
 
@@ -177,13 +177,13 @@ local function Finish()
     ZO_ClearTable(dailyQuests)
     local crafted = finished > 0
     if crafted then
-        Say(SI_WRITCRAFTER_CRAFT_DONE, finished, CraftName(craftSkill))
+        Say(WRITCRAFTER_CRAFT_DONE, finished, CraftName(craftSkill))
     end
     if problems > 0 then
         Notice("soundProblem", SOUNDS.GENERAL_ALERT_ERROR)   -- the banner carries the message
         ProblemBanner()
     elseif crafted then
-        Notice("soundDone", SOUNDS.QUEST_OBJECTIVE_COMPLETE, SI_WRITCRAFTER_ALERT_DONE, finished, CraftName(craftSkill))
+        Notice("soundDone", SOUNDS.QUEST_OBJECTIVE_COMPLETE, WRITCRAFTER_ALERT_DONE, finished, CraftName(craftSkill))
         if WC.settings.leaveStation then
             local skill = craftSkill
             local tries = 0
@@ -221,9 +221,9 @@ local function WritKinds(jobs)
         end
     end
     if daily and master then
-        return GetString(SI_WRITCRAFTER_KIND_BOTH)
+        return GetString(WRITCRAFTER_KIND_BOTH)
     end
-    return GetString(master and SI_WRITCRAFTER_KIND_MASTER or SI_WRITCRAFTER_KIND_DAILY)
+    return GetString(master and WRITCRAFTER_KIND_MASTER or WRITCRAFTER_KIND_DAILY)
 end
 
 local function CollectJobs(skill)
@@ -293,8 +293,8 @@ function Step()
                 -- The last craft for this job made no progress: stop, don't repeat.
                 waiting = nil
                 skipped[id] = true
-                Say(SI_WRITCRAFTER_CRAFT_UNRECOGNIZED, job.label)
-                Problem(zo_strformat(SI_WRITCRAFTER_CRAFT_UNRECOGNIZED, job.label))
+                Say(WRITCRAFTER_CRAFT_UNRECOGNIZED, job.label)
+                Problem(zo_strformat(WRITCRAFTER_CRAFT_UNRECOGNIZED, job.label))
             elseif state == "done" then
                 if waiting and waiting.id == id then
                     waiting = nil
@@ -315,7 +315,7 @@ function Step()
                 end
                 if not ok then
                     skipped[id] = true
-                    Say(SI_WRITCRAFTER_CRAFT_SKIPPED, reason or "")
+                    Say(WRITCRAFTER_CRAFT_SKIPPED, reason or "")
                     Problem(reason or "")
                 else
                     local issued
@@ -327,14 +327,14 @@ function Step()
                             Later(WAIT_MS)
                             return
                         end
-                        issued, reason = false, GetString(SI_WRITCRAFTER_CRAFT_STATION_NOT_READY)
+                        issued, reason = false, GetString(WRITCRAFTER_CRAFT_STATION_NOT_READY)
                     end
                     if issued and not announced and job.source ~= "rewards" then
                         announced = true
                         -- The sound is normally already played by CraftSounds; not for a move.
                         local sound = not startPlayed and SOUNDS.QUEST_OBJECTIVE_STARTED or nil
                         startPlayed = true
-                        Notice("soundStart", sound, SI_WRITCRAFTER_ALERT_START,
+                        Notice("soundStart", sound, WRITCRAFTER_ALERT_START,
                             WritKinds(jobs), CraftName(craftSkill))
                     end
                     if issued and job.source == "daily" and job.quest then
@@ -365,7 +365,7 @@ function Step()
                     end
                     skipped[id] = true
                     if reason then
-                        Say(SI_WRITCRAFTER_CRAFT_CANT, reason)
+                        Say(WRITCRAFTER_CRAFT_CANT, reason)
                         Problem(reason)
                     end
                 end
@@ -384,7 +384,7 @@ end
 local function CraftWrit(writ, status, skill)
     local crafter = crafters[writ.kind]
     if not crafter then
-        return false, zo_strformat(SI_WRITCRAFTER_CRAFT_NOT_YET, CraftName(skill))
+        return false, zo_strformat(WRITCRAFTER_CRAFT_NOT_YET, CraftName(skill))
     end
     if not status then
         return false
@@ -441,7 +441,7 @@ local function MasterJobs(skill)
                         end
                     end
                     if not accepted then
-                        Say(SI_WRITCRAFTER_QUEUE_GONE, GetItemLinkName(writ.link))
+                        Say(WRITCRAFTER_QUEUE_GONE, GetItemLinkName(writ.link))
                     end
                     WC.Queue.Remove(uid)
                 end,
@@ -512,7 +512,7 @@ local function AcceptedJobs(skill)
                     end
                 end
                 if stored > 0 then
-                    return false, zo_strformat(SI_WRITCRAFTER_DAILY_IN_STORAGE, stored, name)
+                    return false, zo_strformat(WRITCRAFTER_DAILY_IN_STORAGE, stored, name)
                 end
                 return true
             end,
@@ -595,7 +595,7 @@ end
 
 local function OnCraftFailed(_, result)
     if running then
-        Say(SI_WRITCRAFTER_CRAFT_FAILED, GetString("SI_TRADESKILLRESULT", result))
+        Say(WRITCRAFTER_CRAFT_FAILED, GetString("SI_TRADESKILLRESULT", result))
         Problem(GetString("SI_TRADESKILLRESULT", result))
         Notice("soundProblem", SOUNDS.GENERAL_ALERT_ERROR)   -- the banner carries the message
         ProblemBanner()

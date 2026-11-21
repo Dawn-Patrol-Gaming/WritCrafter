@@ -65,17 +65,17 @@ end
 -- any station. Returns the text and its rank for sorting.
 local function StationOf(writ)
     if writ.kind ~= WC.Master.KIND_SMITHING then
-        return GetString(SI_WRITCRAFTER_QUEUE_STATION_ANY), STATION_ANY
+        return GetString(WRITCRAFTER_QUEUE_STATION_ANY), STATION_ANY
     end
     if WC.GrandMaster.HasSet(writ.craft, writ.setId) then
-        return GetString(SI_WRITCRAFTER_QUEUE_STATION_GM), STATION_GRAND_MASTER
+        return GetString(WRITCRAFTER_QUEUE_STATION_GM), STATION_GRAND_MASTER
     end
     local setName = zo_strformat("<<1>>", GetItemSetName(writ.setId))
     local zoneIds = LibSets.GetZoneIds and LibSets.GetZoneIds(writ.setId)
     local zoneId = type(zoneIds) == "table" and zoneIds[1]
     if zoneId then
         local zoneName = zo_strformat("<<1>>", GetZoneNameById(zoneId))
-        return zo_strformat(SI_WRITCRAFTER_QUEUE_STATION_SET_ZONE, setName, zoneName), STATION_SET
+        return zo_strformat(WRITCRAFTER_QUEUE_STATION_SET_ZONE, setName, zoneName), STATION_SET
     end
     return setName, STATION_SET
 end
@@ -111,22 +111,22 @@ local function BuildEntries()
                     -- description: its first line ("Consume to start quest:") is dropped, then
                     -- everything after the first ";" (quality is the row's colour; the tooltip
                     -- has the rest), then a leading "Craft a" when it matches this language's
-                    -- pattern (SI_WRITCRAFTER_QUEUE_CRAFT_PREFIX; kept as is otherwise).
+                    -- pattern (WRITCRAFTER_QUEUE_CRAFT_PREFIX; kept as is otherwise).
                     local full = GenerateMasterWritBaseText(link) or ""
                     local body = full:match("\n%s*(.-)%s*$") or full
                     body = body:gsub("%s*\n%s*", " ")
                     local item = body:match("^([^;]+)") or body
-                    item = item:gsub(GetString(SI_WRITCRAFTER_QUEUE_CRAFT_PREFIX), "", 1)
-                    item = item:gsub(GetString(SI_WRITCRAFTER_QUEUE_CRAFT_ARTICLE), "", 1)
+                    item = item:gsub(GetString(WRITCRAFTER_QUEUE_CRAFT_PREFIX), "", 1)
+                    item = item:gsub(GetString(WRITCRAFTER_QUEUE_CRAFT_ARTICLE), "", 1)
                     item = zo_strtrim(item)
                     if item == "" then
                         item = WC.Util.ItemName(link)
                     end
                     if writ.kind == WC.Master.KIND_SMITHING and writ.setId and writ.setId ~= 0 then
-                        item = zo_strformat(SI_WRITCRAFTER_QUEUE_WRIT_SET, item,
+                        item = zo_strformat(WRITCRAFTER_QUEUE_WRIT_SET, item,
                             zo_strformat("<<1>>", GetItemSetName(writ.setId)))
                     end
-                    local text = zo_strformat(SI_WRITCRAFTER_QUEUE_WRIT_TEXT,
+                    local text = zo_strformat(WRITCRAFTER_QUEUE_WRIT_TEXT,
                         WC.Util.CraftName(writ.craft), item)
                     local station, stationRank = StationOf(writ)
                     result[#result + 1] = {
@@ -204,7 +204,7 @@ local function UpdateSummary()
         end
     end
     local perVoucher = queuedVouchers > 0 and WC.Price.Format(queuedCost / queuedVouchers) or "-"
-    control:GetNamedChild("Summary"):SetText(zo_strformat(SI_WRITCRAFTER_QUEUE_SUMMARY,
+    control:GetNamedChild("Summary"):SetText(zo_strformat(WRITCRAFTER_QUEUE_SUMMARY,
         queued, queuedVouchers, WC.Price.Format(queuedCost), perVoucher, done, doneVouchers))
 end
 
@@ -272,8 +272,8 @@ local function SetupRow(row, entry)
         -- (a style material you've excluded).
         mimicBox:SetAlpha(mimic.chosen and 1 or 0.5)
     end
-    row:GetNamedChild("Where"):SetText(GetString(entry.inBank and SI_WRITCRAFTER_QUEUE_WHERE_BANK
-        or SI_WRITCRAFTER_QUEUE_WHERE_BAG))
+    row:GetNamedChild("Where"):SetText(GetString(entry.inBank and WRITCRAFTER_QUEUE_WHERE_BANK
+        or WRITCRAFTER_QUEUE_WHERE_BAG))
     row:GetNamedChild("Vouchers"):SetText(entry.writ.vouchers)
     local verdict = entry.verdict
     row:GetNamedChild("Cost"):SetText(verdict.cost > 0 and WC.Price.Format(verdict.cost) or "-")
@@ -403,7 +403,7 @@ function Window.OnRowMouseUp(row, button, upInside)
         ZO_Dialogs_ShowDialog("WRITCRAFTER_QUEUE_OVERRIDE", { uid = entry.uid, link = entry.link },
             { mainTextParams = { entry.text, entry.verdict.reasons[1] or "" } })
     elseif state == STATE_CANNOT then
-        WC.Log.Say(zo_strformat(SI_WRITCRAFTER_QUEUE_CANT, entry.text, entry.verdict.reasons[1] or ""))
+        WC.Log.Say(zo_strformat(WRITCRAFTER_QUEUE_CANT, entry.text, entry.verdict.reasons[1] or ""))
     end
 end
 
@@ -411,8 +411,8 @@ end
 local function MimicTooltipText(mimic)
     local itemId = mimic.use and WC.Policy.MIMIC_STONE_ID or mimic.styleItemId
     local item = WC.Util.ItemName(itemId)
-    local how = GetString(mimic.chosen and SI_WRITCRAFTER_QUEUE_MIMIC_TT_CHOSEN or SI_WRITCRAFTER_QUEUE_MIMIC_TT_SETTING)
-    return zo_strformat(SI_WRITCRAFTER_QUEUE_MIMIC_TT, item, how)
+    local how = GetString(mimic.chosen and WRITCRAFTER_QUEUE_MIMIC_TT_CHOSEN or WRITCRAFTER_QUEUE_MIMIC_TT_SETTING)
+    return zo_strformat(WRITCRAFTER_QUEUE_MIMIC_TT, item, how)
 end
 
 function Window.OnMimicEnter(box)
@@ -496,16 +496,16 @@ function Window.Init()
     control:SetDrawLayer(DL_OVERLAY)
     SCENE_MANAGER:RegisterTopLevel(control, false)
 
-    control:GetNamedChild("Title"):SetText(GetString(SI_WRITCRAFTER_QUEUE_TITLE))
-    control:GetNamedChild("Hint"):SetText(GetString(SI_WRITCRAFTER_QUEUE_HINT))
-    control:GetNamedChild("ShowLabel"):SetText(GetString(SI_WRITCRAFTER_EXCL_SHOW))
-    control:GetNamedChild("Empty"):SetText(GetString(SI_WRITCRAFTER_QUEUE_EMPTY))
-    control:GetNamedChild("ByStation"):SetText(GetString(SI_WRITCRAFTER_QUEUE_BY_STATION))
-    control:GetNamedChild("EnqueueAll"):SetText(GetString(SI_WRITCRAFTER_QUEUE_ENQUEUE_ALL))
-    control:GetNamedChild("DequeueAll"):SetText(GetString(SI_WRITCRAFTER_QUEUE_DEQUEUE_ALL))
-    control:GetNamedChild("Accept"):SetText(GetString(SI_WRITCRAFTER_QUEUE_ACCEPT))
-    control:GetNamedChild("MimicHeading"):SetText(GetString(SI_WRITCRAFTER_QUEUE_COL_MIMIC))
-    control:GetNamedChild("GpvLabel"):SetText(GetString(SI_WRITCRAFTER_QUEUE_GPV))
+    control:GetNamedChild("Title"):SetText(GetString(WRITCRAFTER_QUEUE_TITLE))
+    control:GetNamedChild("Hint"):SetText(GetString(WRITCRAFTER_QUEUE_HINT))
+    control:GetNamedChild("ShowLabel"):SetText(GetString(WRITCRAFTER_EXCL_SHOW))
+    control:GetNamedChild("Empty"):SetText(GetString(WRITCRAFTER_QUEUE_EMPTY))
+    control:GetNamedChild("ByStation"):SetText(GetString(WRITCRAFTER_QUEUE_BY_STATION))
+    control:GetNamedChild("EnqueueAll"):SetText(GetString(WRITCRAFTER_QUEUE_ENQUEUE_ALL))
+    control:GetNamedChild("DequeueAll"):SetText(GetString(WRITCRAFTER_QUEUE_DEQUEUE_ALL))
+    control:GetNamedChild("Accept"):SetText(GetString(WRITCRAFTER_QUEUE_ACCEPT))
+    control:GetNamedChild("MimicHeading"):SetText(GetString(WRITCRAFTER_QUEUE_COL_MIMIC))
+    control:GetNamedChild("GpvLabel"):SetText(GetString(WRITCRAFTER_QUEUE_GPV))
     gpvBox = control:GetNamedChild("Gpv"):GetNamedChild("Box")
     gpvBox:SetTextType(TEXT_TYPE_NUMERIC_UNSIGNED_INT)
     gpvBox:SetMaxInputChars(6)
@@ -513,17 +513,17 @@ function Window.Init()
     -- Click a heading to sort by it, click again to reverse. Text starts A to Z; numbers start
     -- highest first. "Sort by station" goes back to station order.
     local headers = control:GetNamedChild("Headers")
-    ZO_SortHeader_Initialize(headers:GetNamedChild("Name"), GetString(SI_WRITCRAFTER_QUEUE_COL_WRIT),
+    ZO_SortHeader_Initialize(headers:GetNamedChild("Name"), GetString(WRITCRAFTER_QUEUE_COL_WRIT),
         "name", ZO_SORT_ORDER_UP, TEXT_ALIGN_LEFT, "ZoFontGameBold")
-    ZO_SortHeader_Initialize(headers:GetNamedChild("Station"), GetString(SI_WRITCRAFTER_QUEUE_COL_STATION),
+    ZO_SortHeader_Initialize(headers:GetNamedChild("Station"), GetString(WRITCRAFTER_QUEUE_COL_STATION),
         "station", ZO_SORT_ORDER_UP, TEXT_ALIGN_LEFT, "ZoFontGameBold")
-    ZO_SortHeader_Initialize(headers:GetNamedChild("Where"), GetString(SI_WRITCRAFTER_QUEUE_COL_WHERE),
+    ZO_SortHeader_Initialize(headers:GetNamedChild("Where"), GetString(WRITCRAFTER_QUEUE_COL_WHERE),
         "where", ZO_SORT_ORDER_UP, TEXT_ALIGN_LEFT, "ZoFontGameBold")
-    ZO_SortHeader_Initialize(headers:GetNamedChild("Vouchers"), GetString(SI_WRITCRAFTER_QUEUE_COL_VOUCHERS),
+    ZO_SortHeader_Initialize(headers:GetNamedChild("Vouchers"), GetString(WRITCRAFTER_QUEUE_COL_VOUCHERS),
         "vouchers", ZO_SORT_ORDER_DOWN, TEXT_ALIGN_RIGHT, "ZoFontGameBold")
-    ZO_SortHeader_Initialize(headers:GetNamedChild("Cost"), GetString(SI_WRITCRAFTER_QUEUE_COL_COST),
+    ZO_SortHeader_Initialize(headers:GetNamedChild("Cost"), GetString(WRITCRAFTER_QUEUE_COL_COST),
         "cost", ZO_SORT_ORDER_DOWN, TEXT_ALIGN_RIGHT, "ZoFontGameBold")
-    ZO_SortHeader_Initialize(headers:GetNamedChild("PerVoucher"), GetString(SI_WRITCRAFTER_QUEUE_COL_PER_VOUCHER),
+    ZO_SortHeader_Initialize(headers:GetNamedChild("PerVoucher"), GetString(WRITCRAFTER_QUEUE_COL_PER_VOUCHER),
         "perVoucher", ZO_SORT_ORDER_DOWN, TEXT_ALIGN_RIGHT, "ZoFontGameBold")
     sortHeaders = ZO_SortHeaderGroup:New(headers, true)
     sortHeaders:AddHeadersFromContainer()
@@ -538,11 +538,11 @@ function Window.Init()
 
     showCombo = ZO_ComboBox_ObjectFromContainer(control:GetNamedChild("Show"))
     FillCombo(showCombo, {
-        { name = GetString(SI_WRITCRAFTER_QUEUE_SHOW_ALL),        value = FILTER_ALL },
-        { name = GetString(SI_WRITCRAFTER_QUEUE_SHOW_QUEUED),     value = FILTER_QUEUED },
-        { name = GetString(SI_WRITCRAFTER_QUEUE_SHOW_NOT_QUEUED), value = FILTER_NOT_QUEUED },
-        { name = GetString(SI_WRITCRAFTER_QUEUE_SHOW_DONE),       value = FILTER_DONE },
-        { name = GetString(SI_WRITCRAFTER_QUEUE_SHOW_CANNOT),     value = FILTER_CANNOT },
+        { name = GetString(WRITCRAFTER_QUEUE_SHOW_ALL),        value = FILTER_ALL },
+        { name = GetString(WRITCRAFTER_QUEUE_SHOW_QUEUED),     value = FILTER_QUEUED },
+        { name = GetString(WRITCRAFTER_QUEUE_SHOW_NOT_QUEUED), value = FILTER_NOT_QUEUED },
+        { name = GetString(WRITCRAFTER_QUEUE_SHOW_DONE),       value = FILTER_DONE },
+        { name = GetString(WRITCRAFTER_QUEUE_SHOW_CANNOT),     value = FILTER_CANNOT },
     }, function(value)
         filter = value
         FillList()
@@ -550,8 +550,8 @@ function Window.Init()
     showCombo:SelectItemByIndex(FILTER_ALL, true)
 
     ESO_Dialogs["WRITCRAFTER_QUEUE_OVERRIDE"] = {
-        title = { text = SI_WRITCRAFTER_QUEUE_OVERRIDE_TITLE },
-        mainText = { text = SI_WRITCRAFTER_QUEUE_OVERRIDE_TEXT },
+        title = { text = WRITCRAFTER_QUEUE_OVERRIDE_TITLE },
+        mainText = { text = WRITCRAFTER_QUEUE_OVERRIDE_TEXT },
         buttons = {
             {
                 text = SI_DIALOG_CONFIRM,

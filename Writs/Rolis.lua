@@ -47,12 +47,12 @@ end
 local function FinishAccepting()
     local _, banked = Candidates()
     if run.accepted > 0 then
-        Say(SI_WRITCRAFTER_ROLIS_ACCEPTED, run.accepted)
+        Say(WRITCRAFTER_ROLIS_ACCEPTED, run.accepted)
     elseif run.manual then
-        Say(SI_WRITCRAFTER_ROLIS_NONE)
+        Say(WRITCRAFTER_ROLIS_NONE)
     end
     if banked > 0 and (run.manual or run.accepted > 0) then
-        Say(SI_WRITCRAFTER_ROLIS_BANKED, banked)
+        Say(WRITCRAFTER_ROLIS_BANKED, banked)
     end
     run = nil
 end
@@ -62,12 +62,12 @@ local function AcceptNext()
         return
     end
     if IsUnitInCombat("player") then
-        Say(SI_WRITCRAFTER_ROLIS_COMBAT)
+        Say(WRITCRAFTER_ROLIS_COMBAT)
         run = nil
         return
     end
     if GetNumJournalQuests() >= MAX_JOURNAL_QUESTS then
-        Say(SI_WRITCRAFTER_ROLIS_JOURNAL_FULL)
+        Say(WRITCRAFTER_ROLIS_JOURNAL_FULL)
         FinishAccepting()
         return
     end
@@ -140,7 +140,7 @@ local CONVERSATION_GAP_MS = 15000   -- a turn-in this long ago belongs to an ear
 
 local function AtRolis()
     local name = zo_strformat("<<1>>", GetUnitName("interact"))
-    return name ~= "" and name == GetString(SI_WRITCRAFTER_ROLIS_NAME)
+    return name ~= "" and name == GetString(WRITCRAFTER_ROLIS_NAME)
 end
 
 -- Your accepted master writ quests, by quest name, and whether any is ready to hand in.
@@ -160,7 +160,7 @@ local TURN_IN_OPTIONS = {
 
 -- Nothing left to hand in this conversation.
 local function FinishTurnIn()
-    Say(SI_WRITCRAFTER_ROLIS_TURNED_IN, turnIn.count)
+    Say(WRITCRAFTER_ROLIS_TURNED_IN, turnIn.count)
     turnIn.count = 0
     turnIn.acceptAfter = WC.settings.rolisAcceptNext and #(Candidates()) > 0
     if WC.settings.rolisClose then

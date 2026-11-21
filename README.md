@@ -9,6 +9,10 @@ Rolis Hlaalu are handled for you, and the boxes you get back are opened and sort
 > **Status:** pre-release (0.1.0), in active development and tested on one account. Built for
 > Update 51 (API 101051 / 101052), PC/Mac, English client.
 
+> **Made with AI:** most of WritCrafter's code was written by Claude (Anthropic's AI) under the
+> author's direction. Every feature is tested in game by the author, but not every line has been
+> reviewed by hand.
+
 ## It replaces
 
 WritCrafter does the job of all of these. **Disable them** before using it: they answer the same
@@ -44,7 +48,7 @@ Optional, used when installed:
 
 1. Download this repository (Code → Download ZIP) or clone it.
 2. Put the folder in your AddOns folder and make sure it's named exactly **`WritCrafter`**:
-   `Documents\Elder Scrolls Online\live\AddOns\WritCrafter\WritCrafter.addon`
+   `Documents\Elder Scrolls Online\live\AddOns\WritCrafter\WritCrafter.txt`
    (If your Documents folder lives elsewhere, use that one.)
 3. Install the required libraries above.
 4. In game, enable WritCrafter under Add-ons, disable the add-ons it replaces, and log in.
@@ -215,7 +219,7 @@ luajit scripts\check.lua
 python -I scripts\check_lua.py
 ```
 
-New Lua files must be added to `WritCrafter.addon` in load order.
+New Lua files must be added to `WritCrafter.txt` in load order.
 
 ## Author
 

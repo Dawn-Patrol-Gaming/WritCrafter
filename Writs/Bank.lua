@@ -32,7 +32,7 @@ local Say = WC.Util.Say
 
 local ItemName = WC.Util.ItemName
 
--- Empty backpack slots, so each move gets its own destination (moves land asynchronously).
+-- Empty backpack slots, listed before any move, so each move gets its own destination.
 local function EmptySlots()
     local slots = {}
     for slotIndex = 0, GetBagSize(BAG_BACKPACK) - 1 do
@@ -43,8 +43,9 @@ local function EmptySlots()
     return slots
 end
 
+-- Queued: sent one at a time, each after the server has made the one before (Util.QueueMove).
 local function Move(bagId, slotIndex, destSlot, quantity)
-    WC.Util.MoveItem(bagId, slotIndex, BAG_BACKPACK, destSlot, quantity)
+    WC.Util.QueueMove(bagId, slotIndex, BAG_BACKPACK, destSlot, quantity)
 end
 
 -- A finished item WritCrafter may hand to a daily writ: gear only when plain (no trait, normal
@@ -155,7 +156,7 @@ local function OnOpenBank(_, bankBag)
                 if match(bagId, slotIndex) then
                     local destSlot = empties[nextEmpty]
                     if not destSlot then
-                        Say(SI_WRITCRAFTER_BANK_FULL)
+                        Say(WRITCRAFTER_BANK_FULL)
                         return nil
                     end
                     nextEmpty = nextEmpty + 1
@@ -171,7 +172,7 @@ local function OnOpenBank(_, bankBag)
             end
         end
         if moved > 0 then
-            Say(SI_WRITCRAFTER_BANK_TOOK, moved, name)
+            Say(WRITCRAFTER_BANK_TOOK, moved, name)
         end
         return need
     end
@@ -197,11 +198,11 @@ local function OnOpenBank(_, bankBag)
         for _, item in ipairs(items) do
             local destSlot = empties[nextEmpty]
             if not destSlot then
-                Say(SI_WRITCRAFTER_BANK_FULL)
+                Say(WRITCRAFTER_BANK_FULL)
                 return
             end
             nextEmpty = nextEmpty + 1
-            Say(SI_WRITCRAFTER_BANK_TOOK, item.quantity, zo_strformat("<<t:1>>", GetItemName(item.bagId, item.slotIndex)))
+            Say(WRITCRAFTER_BANK_TOOK, item.quantity, zo_strformat("<<t:1>>", GetItemName(item.bagId, item.slotIndex)))
             Move(item.bagId, item.slotIndex, destSlot, item.quantity)
         end
     end
@@ -217,7 +218,7 @@ local function OnOpenBank(_, bankBag)
             local left
             if itemId then
                 if WC.Policy.BlocksAcquire(itemId) then
-                    Say(SI_WRITCRAFTER_BANK_EXCLUDED, ItemName(itemId))
+                    Say(WRITCRAFTER_BANK_EXCLUDED, ItemName(itemId))
                     left = need
                 else
                     left = Take(function(bagId, slotIndex)

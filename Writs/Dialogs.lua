@@ -22,13 +22,13 @@ local CRAFTS = {
 Dialogs.CRAFTS = CRAFTS
 
 local WRIT_NAMES = {
-    [CRAFTING_TYPE_BLACKSMITHING]   = SI_WRITCRAFTER_WRIT_BLACKSMITHING,
-    [CRAFTING_TYPE_CLOTHIER]        = SI_WRITCRAFTER_WRIT_CLOTHIER,
-    [CRAFTING_TYPE_WOODWORKING]     = SI_WRITCRAFTER_WRIT_WOODWORKING,
-    [CRAFTING_TYPE_JEWELRYCRAFTING] = SI_WRITCRAFTER_WRIT_JEWELRY,
-    [CRAFTING_TYPE_ALCHEMY]         = SI_WRITCRAFTER_WRIT_ALCHEMY,
-    [CRAFTING_TYPE_ENCHANTING]      = SI_WRITCRAFTER_WRIT_ENCHANTING,
-    [CRAFTING_TYPE_PROVISIONING]    = SI_WRITCRAFTER_WRIT_PROVISIONING,
+    [CRAFTING_TYPE_BLACKSMITHING]   = WRITCRAFTER_WRIT_BLACKSMITHING,
+    [CRAFTING_TYPE_CLOTHIER]        = WRITCRAFTER_WRIT_CLOTHIER,
+    [CRAFTING_TYPE_WOODWORKING]     = WRITCRAFTER_WRIT_WOODWORKING,
+    [CRAFTING_TYPE_JEWELRYCRAFTING] = WRITCRAFTER_WRIT_JEWELRY,
+    [CRAFTING_TYPE_ALCHEMY]         = WRITCRAFTER_WRIT_ALCHEMY,
+    [CRAFTING_TYPE_ENCHANTING]      = WRITCRAFTER_WRIT_ENCHANTING,
+    [CRAFTING_TYPE_PROVISIONING]    = WRITCRAFTER_WRIT_PROVISIONING,
 }
 
 local OFFER_TIMEOUT_MS = 3000
@@ -69,7 +69,7 @@ function Dialogs.WritCraft(text)
             return craft
         end
     end
-    if not lower:find(GetString(SI_WRITCRAFTER_WRIT_WORD):lower(), 1, true) then
+    if not lower:find(GetString(WRITCRAFTER_WRIT_WORD):lower(), 1, true) then
         return nil
     end
     for _, craft in ipairs(CRAFTS) do
@@ -195,8 +195,8 @@ end
 -- goods" / "Sign the Manifest" stays as a fallback. Only daily writs are completed either way
 -- (OnQuestCompleteDialog).
 local function DeliverAtCrate(optionCount)
-    local place = GetString(SI_WRITCRAFTER_DELIVER_PLACE):lower()
-    local sign = GetString(SI_WRITCRAFTER_DELIVER_SIGN):lower()
+    local place = GetString(WRITCRAFTER_DELIVER_PLACE):lower()
+    local sign = GetString(WRITCRAFTER_DELIVER_SIGN):lower()
     local crate = TalkingToObject() and HaveDailyWrit()
     for optionIndex = 1, optionCount do
         local text, optionType, optionalArgument = GetChatterOption(optionIndex)
@@ -253,14 +253,14 @@ local function OnQuestCompleteDialog(_, journalIndex)
             tostring(itemId and WC.Data.Alchemy.REAGENTS[itemId] ~= nil)))
     end
     if itemId and WC.Policy.BlocksAcquire(itemId) then
-        Say(SI_WRITCRAFTER_DELIVER_EXCLUDED, quest,
+        Say(WRITCRAFTER_DELIVER_EXCLUDED, quest,
             WC.Util.ItemName(itemId))
         return
     end
     -- The reward box needs a free slot: with none, the game doesn't finish the writ (it stays at
     -- "Sign the Manifest"), so say so instead of leaving the crate waiting silently.
     if GetNumBagFreeSlots(BAG_BACKPACK) == 0 then
-        Say(SI_WRITCRAFTER_DELIVER_FULL, quest)
+        Say(WRITCRAFTER_DELIVER_FULL, quest)
         return
     end
     CompleteQuest()

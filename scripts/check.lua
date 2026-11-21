@@ -30,7 +30,7 @@ end
 
 -- Manifest entries, in load order.
 local manifest, listed = {}, {}
-for line in io.lines("WritCrafter.addon") do
+for line in io.lines("WritCrafter.txt") do
     line = line:gsub("%s+$", "")
     if line ~= "" and not line:match("^##") and not line:match("^;") then
         local path = line:gsub("\\", "/")

@@ -54,6 +54,115 @@ function Util.MoveItem(fromBag, fromSlot, toBag, toSlot, quantity)
     CallProtected("RequestMoveItem", fromBag, fromSlot, toBag, toSlot, quantity)
 end
 
+-- Server requests, one at a time -----------------------------------------------------------------
+-- Bank moves and merchant sales are queued and sent one by one: each waits until the server has
+-- changed the item it asked about (or REQUEST_TIMEOUT_MS passes) before the next goes out. Sending
+-- dozens in one frame risks being kicked for flooding the server, and a timer guessed from your
+-- ping (Dolgubon's way) misfires whenever the server is slower than usual. Closing the bank or
+-- merchant drops the requests still waiting for it.
+-- Added 2026-11-21. If it turns out slow or unreliable, set REQUEST_ONE_AT_A_TIME to false: every
+-- request is then sent at once, as before.
+local REQUEST_ONE_AT_A_TIME = true
+local REQUEST_MIN_GAP_MS    = 50     -- never faster than this, even when the server answers sooner
+local REQUEST_TIMEOUT_MS    = 1500   -- no change by then: carry on with the next one
+
+local requests = {}   -- waiting to be sent: { bagId, slotIndex, interaction, send, onDone }
+local current         -- sent, waiting for the server: { request, uid, count, sentMs }
+local REQUEST_NAME = "WritCrafterRequest"
+
+local function SlotState(bagId, slotIndex)
+    return Util.UniqueId(bagId, slotIndex), GetSlotStackSize(bagId, slotIndex)
+end
+
+local Requests = {}   -- Requests.Pump, so Finish can call it before it is defined
+
+local function Finish(ok)
+    EVENT_MANAGER:UnregisterForEvent(REQUEST_NAME, EVENT_INVENTORY_SINGLE_SLOT_UPDATE)
+    EVENT_MANAGER:UnregisterForUpdate(REQUEST_NAME .. "Timeout")
+    local request, sentMs = current.request, current.sentMs
+    current = nil
+    if request.onDone then
+        request.onDone(ok)
+    end
+    local wait = REQUEST_MIN_GAP_MS - (GetFrameTimeMilliseconds() - sentMs)
+    if wait > 0 then
+        Util.Later("RequestNext", wait, Requests.Pump)
+    else
+        Requests.Pump()
+    end
+end
+
+local function OnRequestSlotUpdate(_, bagId, slotIndex)
+    if current and bagId == current.request.bagId and slotIndex == current.request.slotIndex then
+        local uid, count = SlotState(bagId, slotIndex)
+        if uid ~= current.uid or count ~= current.count then
+            Finish(true)
+        end
+    end
+end
+
+function Requests.Pump()
+    while not current and #requests > 0 do
+        local request = table.remove(requests, 1)
+        local uid, count = SlotState(request.bagId, request.slotIndex)
+        if count == 0 then
+            if request.onDone then request.onDone(false) end   -- already gone
+        elseif not REQUEST_ONE_AT_A_TIME then
+            request.send()
+            if request.onDone then request.onDone(true) end
+        else
+            current = { request = request, uid = uid, count = count, sentMs = GetFrameTimeMilliseconds() }
+            EVENT_MANAGER:RegisterForEvent(REQUEST_NAME, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, OnRequestSlotUpdate)
+            EVENT_MANAGER:RegisterForUpdate(REQUEST_NAME .. "Timeout", REQUEST_TIMEOUT_MS, function()
+                if current then
+                    Finish(false)
+                end
+            end)
+            request.send()
+        end
+    end
+end
+
+-- Drops the requests still waiting for an interaction that has just closed.
+local function Cancel(interaction)
+    for i = #requests, 1, -1 do
+        local request = requests[i]
+        if request.interaction == interaction then
+            table.remove(requests, i)
+            if request.onDone then request.onDone(false) end
+        end
+    end
+end
+
+local requestEventsRegistered = false
+
+local function Queue(request)
+    if not requestEventsRegistered then
+        requestEventsRegistered = true
+        EVENT_MANAGER:RegisterForEvent(REQUEST_NAME .. "Bank", EVENT_CLOSE_BANK, function() Cancel("bank") end)
+        EVENT_MANAGER:RegisterForEvent(REQUEST_NAME .. "Store", EVENT_CLOSE_STORE, function() Cancel("store") end)
+    end
+    requests[#requests + 1] = request
+    Requests.Pump()
+end
+
+-- Moves an item to or from the open bank or storage chest, after the requests already queued.
+-- onDone(ok), optional: ok is false when it was dropped or the server didn't answer in time.
+function Util.QueueMove(fromBag, fromSlot, toBag, toSlot, quantity, onDone)
+    Queue({
+        bagId = fromBag, slotIndex = fromSlot, interaction = "bank", onDone = onDone,
+        send = function() Util.MoveItem(fromBag, fromSlot, toBag, toSlot, quantity) end,
+    })
+end
+
+-- Sells part or all of a backpack stack at the open merchant, after the requests already queued.
+function Util.QueueSell(slotIndex, quantity, onDone)
+    Queue({
+        bagId = BAG_BACKPACK, slotIndex = slotIndex, interaction = "store", onDone = onDone,
+        send = function() SellInventoryItem(BAG_BACKPACK, slotIndex, quantity) end,
+    })
+end
+
 -- House storage chests, as bags (their contents can only be read inside your own house).
 Util.HOUSE_BAGS = {}
 if BAG_HOUSE_BANK_ONE and BAG_HOUSE_BANK_TEN then

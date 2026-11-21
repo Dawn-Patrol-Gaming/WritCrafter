@@ -6,10 +6,10 @@ WC.Price = Price
 Price.SOURCES = { "auto", "esohub", "mm", "ttc", "att" }
 
 local SOURCE_NAMES = {
-    esohub = SI_WRITCRAFTER_SOURCE_ESOHUB,
-    mm     = SI_WRITCRAFTER_SOURCE_MM,
-    ttc    = SI_WRITCRAFTER_SOURCE_TTC,
-    att    = SI_WRITCRAFTER_SOURCE_ATT,
+    esohub = WRITCRAFTER_SOURCE_ESOHUB,
+    mm     = WRITCRAFTER_SOURCE_MM,
+    ttc    = WRITCRAFTER_SOURCE_TTC,
+    att    = WRITCRAFTER_SOURCE_ATT,
 }
 
 -- [link] = { gold or false, sourceKey }. Prices barely move within a session.

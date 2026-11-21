@@ -6,7 +6,7 @@ local WC = WritCrafter
 local function CraftRecipe(listIndex, recipeIndex, remaining)
     local known = GetRecipeInfo(listIndex, recipeIndex)
     if not known then
-        return false, GetString(SI_WRITCRAFTER_REASON_RECIPE_UNKNOWN)
+        return false, GetString(WRITCRAFTER_REASON_RECIPE_UNKNOWN)
     end
     local perCraft = zo_max(GetRecipeResultQuantity(listIndex, recipeIndex, 1) or 1, 1)
     local maxIterations, result = GetMaxIterationsPossibleForRecipe(listIndex, recipeIndex)
@@ -31,10 +31,10 @@ end
 local function CraftMaster(writ, status)
     local _, listIndex, recipeIndex = GetRecipeInfoFromItemId(writ.resultId)
     if not (listIndex and recipeIndex) then
-        return false, zo_strformat(SI_WRITCRAFTER_REASON_UNKNOWN_ITEM, writ.resultId)
+        return false, zo_strformat(WRITCRAFTER_REASON_UNKNOWN_ITEM, writ.resultId)
     end
     if not WC.Reservations.Matches(GetRecipeResultItemLink(listIndex, recipeIndex), writ) then
-        return false, GetString(SI_WRITCRAFTER_CRAFT_WRONG_RESULT)
+        return false, GetString(WRITCRAFTER_CRAFT_WRONG_RESULT)
     end
     return CraftRecipe(listIndex, recipeIndex, status.required - status.have)
 end

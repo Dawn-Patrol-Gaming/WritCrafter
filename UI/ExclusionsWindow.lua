@@ -40,10 +40,10 @@ local CATEGORIES_BY_ITEMTYPE = {
 }
 
 local ORIGIN_TEXT = {
-    plant   = SI_WRITCRAFTER_ORIGIN_PLANT,
-    critter = SI_WRITCRAFTER_ORIGIN_CRITTER,
-    zone    = SI_WRITCRAFTER_ORIGIN_ZONE,
-    special = SI_WRITCRAFTER_ORIGIN_SPECIAL,
+    plant   = WRITCRAFTER_ORIGIN_PLANT,
+    critter = WRITCRAFTER_ORIGIN_CRITTER,
+    zone    = WRITCRAFTER_ORIGIN_ZONE,
+    special = WRITCRAFTER_ORIGIN_SPECIAL,
 }
 local ORIGIN_ORDER = { plant = 1, critter = 2, zone = 3, special = 4 }
 
@@ -52,7 +52,7 @@ local FILTER_ALL, FILTER_EXCLUDED, FILTER_NOT_EXCLUDED, FILTER_OWNED = 1, 2, 3, 
 
 function Window.CategoryName(category)
     if category == Window.STYLE then
-        return GetString(SI_WRITCRAFTER_EXPENSIVE_STYLE)
+        return GetString(WRITCRAFTER_EXPENSIVE_STYLE)
     end
     return WC.Util.CraftName(category)
 end
@@ -198,7 +198,7 @@ local function UpdateSummary()
             excluded = excluded + 1
         end
     end
-    control:GetNamedChild("Summary"):SetText(zo_strformat(SI_WRITCRAFTER_EXCL_SUMMARY, excluded, total))
+    control:GetNamedChild("Summary"):SetText(zo_strformat(WRITCRAFTER_EXCL_SUMMARY, excluded, total))
 end
 
 -- Value of a sortable column for one entry. Unpriced items sort as nil and always go last.
@@ -252,7 +252,7 @@ local function SetupRow(row, entry)
     local name = GetItemQualityColor(GetItemLinkDisplayQuality(link)):Colorize(entry.name)
     local unknown = WC.Data.Alchemy.UndiscoveredTraits(entry.itemId)
     if unknown > 0 then
-        name = name .. "|cFF9933" .. zo_strformat(SI_WRITCRAFTER_TT_UNDISCOVERED, unknown) .. "|r"
+        name = name .. "|cFF9933" .. zo_strformat(WRITCRAFTER_TT_UNDISCOVERED, unknown) .. "|r"
     end
     row:GetNamedChild("Name"):SetText(name)
     row:GetNamedChild("Count"):SetText(ZO_CommaDelimitNumber(WC.Inventory.GetStock(entry.itemId).total))
@@ -364,23 +364,23 @@ function Window.Init()
     control:SetDrawLayer(DL_OVERLAY)
     SCENE_MANAGER:RegisterTopLevel(control, false)
 
-    control:GetNamedChild("Title"):SetText(GetString(SI_WRITCRAFTER_EXPENSIVE_SUBMENU))
-    control:GetNamedChild("Hint"):SetText(GetString(SI_WRITCRAFTER_EXCL_HINT))
-    control:GetNamedChild("CategoryLabel"):SetText(GetString(SI_WRITCRAFTER_EXCL_CATEGORY))
-    control:GetNamedChild("ShowLabel"):SetText(GetString(SI_WRITCRAFTER_EXCL_SHOW))
-    control:GetNamedChild("SearchLabel"):SetText(GetString(SI_WRITCRAFTER_EXCL_SEARCH))
-    control:GetNamedChild("Reset"):SetText(GetString(SI_WRITCRAFTER_EXCL_RESET))
-    control:GetNamedChild("MarkAll"):SetText(GetString(SI_WRITCRAFTER_EXCL_MARK_ALL))
-    control:GetNamedChild("ClearMarks"):SetText(GetString(SI_WRITCRAFTER_EXCL_CLEAR_MARKS))
+    control:GetNamedChild("Title"):SetText(GetString(WRITCRAFTER_EXPENSIVE_SUBMENU))
+    control:GetNamedChild("Hint"):SetText(GetString(WRITCRAFTER_EXCL_HINT))
+    control:GetNamedChild("CategoryLabel"):SetText(GetString(WRITCRAFTER_EXCL_CATEGORY))
+    control:GetNamedChild("ShowLabel"):SetText(GetString(WRITCRAFTER_EXCL_SHOW))
+    control:GetNamedChild("SearchLabel"):SetText(GetString(WRITCRAFTER_EXCL_SEARCH))
+    control:GetNamedChild("Reset"):SetText(GetString(WRITCRAFTER_EXCL_RESET))
+    control:GetNamedChild("MarkAll"):SetText(GetString(WRITCRAFTER_EXCL_MARK_ALL))
+    control:GetNamedChild("ClearMarks"):SetText(GetString(WRITCRAFTER_EXCL_CLEAR_MARKS))
 
     -- Click a heading to sort by it, click again to reverse. Names start A to Z; counts and
     -- prices start highest first.
     local headers = control:GetNamedChild("Headers")
-    ZO_SortHeader_Initialize(headers:GetNamedChild("Name"), GetString(SI_WRITCRAFTER_EXCL_COL_NAME),
+    ZO_SortHeader_Initialize(headers:GetNamedChild("Name"), GetString(WRITCRAFTER_EXCL_COL_NAME),
         "name", ZO_SORT_ORDER_UP, TEXT_ALIGN_LEFT, "ZoFontGameBold")
-    ZO_SortHeader_Initialize(headers:GetNamedChild("Count"), GetString(SI_WRITCRAFTER_EXCL_COL_HAVE),
+    ZO_SortHeader_Initialize(headers:GetNamedChild("Count"), GetString(WRITCRAFTER_EXCL_COL_HAVE),
         "count", ZO_SORT_ORDER_DOWN, TEXT_ALIGN_RIGHT, "ZoFontGameBold")
-    ZO_SortHeader_Initialize(headers:GetNamedChild("Price"), GetString(SI_WRITCRAFTER_EXCL_COL_PRICE),
+    ZO_SortHeader_Initialize(headers:GetNamedChild("Price"), GetString(WRITCRAFTER_EXCL_COL_PRICE),
         "price", ZO_SORT_ORDER_DOWN, TEXT_ALIGN_RIGHT, "ZoFontGameBold")
     sortHeaders = ZO_SortHeaderGroup:New(headers, true)
     sortHeaders:AddHeadersFromContainer()
@@ -406,10 +406,10 @@ function Window.Init()
 
     showCombo = ZO_ComboBox_ObjectFromContainer(control:GetNamedChild("Show"))
     FillCombo(showCombo, {
-        { name = GetString(SI_WRITCRAFTER_EXCL_SHOW_ALL),      value = FILTER_ALL },
-        { name = GetString(SI_WRITCRAFTER_EXCL_SHOW_EXCLUDED), value = FILTER_EXCLUDED },
-        { name = GetString(SI_WRITCRAFTER_EXCL_SHOW_NOT_EXCLUDED), value = FILTER_NOT_EXCLUDED },
-        { name = GetString(SI_WRITCRAFTER_EXCL_SHOW_OWNED),    value = FILTER_OWNED },
+        { name = GetString(WRITCRAFTER_EXCL_SHOW_ALL),      value = FILTER_ALL },
+        { name = GetString(WRITCRAFTER_EXCL_SHOW_EXCLUDED), value = FILTER_EXCLUDED },
+        { name = GetString(WRITCRAFTER_EXCL_SHOW_NOT_EXCLUDED), value = FILTER_NOT_EXCLUDED },
+        { name = GetString(WRITCRAFTER_EXCL_SHOW_OWNED),    value = FILTER_OWNED },
     }, function(value)
         filter = value
         FillList()

@@ -289,7 +289,7 @@ local function DailyJobs(skill)
                         stored, name = WC.Bank.Stored(now)
                     end
                     if stored > 0 then
-                        return false, zo_strformat(SI_WRITCRAFTER_DAILY_IN_STORAGE, stored, name)
+                        return false, zo_strformat(WRITCRAFTER_DAILY_IN_STORAGE, stored, name)
                     end
                     return true
                 end,

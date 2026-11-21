@@ -267,8 +267,8 @@ local function TakeExtra(slotIndex, stackCountChange)
                 todo[uid] = { action = action, quantity = quantity, link = extra.link, extra = true }
             end
             if WC.settings.rewardSummary then
-                local stringId = action == Rewards.DEPOSIT and SI_WRITCRAFTER_REWARD_DID_DEPOSIT or SI_WRITCRAFTER_REWARD_DID_SELL
-                Say(SI_WRITCRAFTER_REWARD_EXTRA, quantity, extra.link, GetString(stringId))
+                local stringId = action == Rewards.DEPOSIT and WRITCRAFTER_REWARD_DID_DEPOSIT or WRITCRAFTER_REWARD_DID_SELL
+                Say(WRITCRAFTER_REWARD_EXTRA, quantity, extra.link, GetString(stringId))
             end
             return true
         end
@@ -282,12 +282,12 @@ local opening          -- { uid, until, gave = { lines } } while a box is being 
 local completedAt = 0  -- when a crafting quest last completed
 
 local ACTION_STRING = {
-    [Rewards.DEPOSIT] = SI_WRITCRAFTER_REWARD_DID_DEPOSIT,
-    [Rewards.JUNK]    = SI_WRITCRAFTER_REWARD_DID_JUNK,
-    [Rewards.SELL]    = SI_WRITCRAFTER_REWARD_DID_SELL,
-    [Rewards.OPEN]    = SI_WRITCRAFTER_REWARD_DID_OPEN,
-    [Rewards.KEEP_STACK] = SI_WRITCRAFTER_REWARD_DID_KEEP_STACK,
-    [Rewards.DECONSTRUCT] = SI_WRITCRAFTER_REWARD_DID_DECONSTRUCT,
+    [Rewards.DEPOSIT] = WRITCRAFTER_REWARD_DID_DEPOSIT,
+    [Rewards.JUNK]    = WRITCRAFTER_REWARD_DID_JUNK,
+    [Rewards.SELL]    = WRITCRAFTER_REWARD_DID_SELL,
+    [Rewards.OPEN]    = WRITCRAFTER_REWARD_DID_OPEN,
+    [Rewards.KEEP_STACK] = WRITCRAFTER_REWARD_DID_KEEP_STACK,
+    [Rewards.DECONSTRUCT] = WRITCRAFTER_REWARD_DID_DECONSTRUCT,
 }
 
 -- Backpack slots by unique ID: [uid] = slotIndex, read in one pass, so looking up every waiting
@@ -325,7 +325,7 @@ local function FinishOpening()
             State().rewardBoxes[uid] = nil   -- a stack stays listed until it's used up
         end
         if WC.settings.rewardSummary and #opening.gave > 0 then
-            Say(SI_WRITCRAFTER_REWARD_GAVE, table.concat(opening.gave, ", "))
+            Say(WRITCRAFTER_REWARD_GAVE, table.concat(opening.gave, ", "))
         end
     else
         runOpened = zo_max(runOpened - 1, 0)
@@ -367,7 +367,7 @@ function Rewards.OpenWaiting()
     local uid = next(boxes)
     if not uid then
         if runOpened > 0 then
-            Progress(zo_strformat(SI_WRITCRAFTER_REWARD_PROGRESS_DONE, runOpened))
+            Progress(zo_strformat(WRITCRAFTER_REWARD_PROGRESS_DONE, runOpened))
             runOpened = 0
         end
         return
@@ -387,7 +387,7 @@ function Rewards.OpenWaiting()
     end
     local waiting = WaitingCount(slots)   -- this box included
     runOpened = runOpened + 1
-    Progress(zo_strformat(SI_WRITCRAFTER_REWARD_PROGRESS, runOpened, runOpened - 1 + waiting))
+    Progress(zo_strformat(WRITCRAFTER_REWARD_PROGRESS, runOpened, runOpened - 1 + waiting))
     opening = { uid = uid, gave = {}, stack = GetSlotStackSize(BAG_BACKPACK, slotIndex) }
     opening.untilMs = GetFrameTimeMilliseconds() + LOOT_WINDOW_MS
     WC.Util.UseItem(BAG_BACKPACK, slotIndex)
@@ -419,7 +419,24 @@ local function HookLootWindow()
     if not (lootSystem and lootSystem.UpdateLootWindow) then
         return
     end
-    ZO_PreHook(lootSystem, "UpdateLootWindow", function()
+    -- Hooked on the class that defines it rather than on the object, so other add-ons' hooks on
+    -- that class still run (a hook on the object would hide later class hooks). Game classes are
+    -- each other's metatables, so the chain is walked up to the definition; the object itself
+    -- only if none is found.
+    local target = lootSystem
+    if rawget(lootSystem, "UpdateLootWindow") == nil then
+        local class, depth = getmetatable(lootSystem), 0
+        while type(class) == "table" and rawget(class, "UpdateLootWindow") == nil and depth < 10 do
+            class, depth = getmetatable(class), depth + 1
+        end
+        if type(class) == "table" and rawget(class, "UpdateLootWindow") == nil then
+            class = nil
+        end
+        if type(class) == "table" then
+            target = class
+        end
+    end
+    ZO_PreHook(target, "UpdateLootWindow", function()
         if opening then
             LootAll()
             EndLooting()
@@ -527,14 +544,20 @@ local function OnOpenBank(_, bankBag)
                 empties = empties or EmptyBankSlots()
                 local dest = empties[nextEmpty]
                 if not dest then
-                    Say(SI_WRITCRAFTER_REWARD_BANK_FULL)
+                    Say(WRITCRAFTER_REWARD_BANK_FULL)
                     break
                 end
                 nextEmpty = nextEmpty + 1
                 local destBag, destSlot = dest[1], dest[2]
                 local quantity = Takeable(slotIndex, entry)
-                WC.Util.MoveItem(BAG_BACKPACK, slotIndex, destBag, destSlot, quantity)
-                todo[uid] = nil
+                -- Sent one at a time (Util.QueueMove); kept on the list until the server has
+                -- moved it, so a move cut short by closing the bank is tried at the next visit.
+                local doneUid = uid
+                WC.Util.QueueMove(BAG_BACKPACK, slotIndex, destBag, destSlot, quantity, function(ok)
+                    if ok then
+                        todo[doneUid] = nil
+                    end
+                end)
                 moved = moved + 1
             else
                 todo[uid] = nil   -- locked or set aside since: leave it
@@ -542,7 +565,7 @@ local function OnOpenBank(_, bankBag)
         end
     end
     if moved > 0 then
-        Say(SI_WRITCRAFTER_REWARD_DEPOSITED, moved)
+        Say(WRITCRAFTER_REWARD_DEPOSITED, moved)
     end
 end
 
@@ -556,14 +579,22 @@ local function OnOpenStore()
             local slotIndex = slots[uid]
             local quantity = slotIndex and Takeable(slotIndex, entry) or 0
             if quantity > 0 then
-                SellInventoryItem(BAG_BACKPACK, slotIndex, quantity)
+                -- Sent one at a time (Util.QueueSell); kept on the list until it's sold, so a
+                -- sale cut short by leaving the merchant is tried at the next one.
+                local doneUid = uid
+                WC.Util.QueueSell(slotIndex, quantity, function(ok)
+                    if ok then
+                        todo[doneUid] = nil
+                    end
+                end)
                 sold = sold + 1
+            else
+                todo[uid] = nil
             end
-            todo[uid] = nil
         end
     end
     if sold > 0 then
-        Say(SI_WRITCRAFTER_REWARD_SOLD, sold)
+        Say(WRITCRAFTER_REWARD_SOLD, sold)
     end
     Rewards.SellBeyondStack()
 end
@@ -604,11 +635,11 @@ function Rewards.SellBeyondStack()
                     break
                 end
                 local quantity = zo_min(slot.count, excess)
-                SellInventoryItem(BAG_BACKPACK, slot.slotIndex, quantity)
+                WC.Util.QueueSell(slot.slotIndex, quantity)
                 excess = excess - quantity
                 soldCount = soldCount + quantity
             end
-            Say(SI_WRITCRAFTER_REWARD_SOLD_EXTRA, soldCount, entry.link, entry.maxStack)
+            Say(WRITCRAFTER_REWARD_SOLD_EXTRA, soldCount, entry.link, entry.maxStack)
         end
     end
     ZO_ClearTable(fromRewards)
@@ -669,7 +700,7 @@ local function DeconstructJobs(skill)
     return { {
         id       = "rewards:deconstruct",
         source   = "rewards",
-        label    = GetString(SI_WRITCRAFTER_REWARD_DECONSTRUCT_LABEL),
+        label    = GetString(WRITCRAFTER_REWARD_DECONSTRUCT_LABEL),
         State    = function() return #DeconstructItems(skill) > 0 and "active" or "done" end,
         Progress = function() return -#DeconstructItems(skill) end,
         Craft    = function()
@@ -690,10 +721,10 @@ local function DeconstructJobs(skill)
                 end
             end
             if added == 0 then
-                return false, GetString(SI_WRITCRAFTER_REWARD_DECONSTRUCT_NONE)
+                return false, GetString(WRITCRAFTER_REWARD_DECONSTRUCT_NONE)
             end
             SendDeconstructMessage()
-            Say(SI_WRITCRAFTER_REWARD_DECONSTRUCTING, added)
+            Say(WRITCRAFTER_REWARD_DECONSTRUCTING, added)
             return true
         end,
     } }
@@ -703,7 +734,15 @@ function Rewards.Init()
     WC.Engine.AddJobSource(DeconstructJobs)
     local namespace = WC.name .. "Rewards"
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_QUEST_COMPLETE, OnQuestComplete)
-    EVENT_MANAGER:RegisterForEvent(namespace, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, OnSlotUpdate)
+    -- Bag changes in the backpack and craft bag only, ordinary changes only (not gear wearing
+    -- down). One filter value per registration, so one registration per bag.
+    for _, bagId in ipairs({ BAG_BACKPACK, BAG_VIRTUAL }) do
+        local slotNamespace = namespace .. "Slot" .. bagId
+        EVENT_MANAGER:RegisterForEvent(slotNamespace, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, OnSlotUpdate)
+        EVENT_MANAGER:AddFilterForEvent(slotNamespace, EVENT_INVENTORY_SINGLE_SLOT_UPDATE,
+            REGISTER_FILTER_BAG_ID, bagId,
+            REGISTER_FILTER_INVENTORY_UPDATE_REASON, INVENTORY_UPDATE_REASON_DEFAULT)
+    end
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_LOOT_UPDATED, OnLootUpdated)
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_LOOT_CLOSED, OnLootClosed)
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_OPEN_BANK, OnOpenBank)

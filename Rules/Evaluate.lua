@@ -41,20 +41,20 @@ end
 
 local function CheckExpensive(verdict, itemId)
     if WC.Policy.IsExpensive(itemId) then
-        Fail(verdict, Rules.REJECTED, SI_WRITCRAFTER_REASON_EXPENSIVE, ItemName(itemId))
+        Fail(verdict, Rules.REJECTED, WRITCRAFTER_REASON_EXPENSIVE, ItemName(itemId))
     end
 end
 
 local function CheckGold(verdict, writ)
     if writ.quality == ITEM_FUNCTIONAL_QUALITY_LEGENDARY and WC.Policy.IsGoldExcluded(writ.craft) then
-        Fail(verdict, Rules.REJECTED, SI_WRITCRAFTER_REASON_GOLD, GetCraftingSkillName(writ.craft))
+        Fail(verdict, Rules.REJECTED, WRITCRAFTER_REASON_GOLD, GetCraftingSkillName(writ.craft))
     end
 end
 
 local function EvaluateSmithing(verdict, writ, statusOnly)
     local t = writ.template
     if not t then
-        Fail(verdict, Rules.CANNOT, SI_WRITCRAFTER_REASON_UNKNOWN_ITEM, writ.templateId)
+        Fail(verdict, Rules.CANNOT, WRITCRAFTER_REASON_UNKNOWN_ITEM, writ.templateId)
         return
     end
     CheckGold(verdict, writ)
@@ -75,7 +75,7 @@ local function EvaluateSmithing(verdict, writ, statusOnly)
     end
     if writ.trait ~= ITEM_TRAIT_TYPE_NONE then
         if not traitKnown then
-            Fail(verdict, Rules.CANNOT, SI_WRITCRAFTER_REASON_TRAIT_UNKNOWN,
+            Fail(verdict, Rules.CANNOT, WRITCRAFTER_REASON_TRAIT_UNKNOWN,
                 GetString("SI_ITEMTRAITTYPE", writ.trait), lineName)
         end
         CheckExpensive(verdict, traitItemId)
@@ -85,7 +85,7 @@ local function EvaluateSmithing(verdict, writ, statusOnly)
     local setName = zo_strformat("<<1>>", GetItemSetName(writ.setId))
     local needed = LibSets.GetTraitsNeeded(writ.setId)
     if needed and knownCount < needed then
-        Fail(verdict, Rules.CANNOT, SI_WRITCRAFTER_REASON_SET_TRAITS, needed, setName, knownCount)
+        Fail(verdict, Rules.CANNOT, WRITCRAFTER_REASON_SET_TRAITS, needed, setName, knownCount)
     end
 
     -- Motif: must be known. A mimic stone only replaces the style material of a known style.
@@ -97,12 +97,12 @@ local function EvaluateSmithing(verdict, writ, statusOnly)
         styleItemId = GetItemLinkItemId(GetItemStyleMaterialLink(writ.style))
         local styleName = zo_strformat("<<1>>", GetItemStyleName(writ.style))
         if not motifKnown then
-            Fail(verdict, Rules.CANNOT, SI_WRITCRAFTER_REASON_MOTIF_UNKNOWN, styleName)
+            Fail(verdict, Rules.CANNOT, WRITCRAFTER_REASON_MOTIF_UNKNOWN, styleName)
         else
             useMimic = WC.Policy.UseMimicFor(writ.link, styleItemId, statusOnly)
         end
         if useMimic then
-            Note(verdict, SI_WRITCRAFTER_NOTE_MIMIC, ItemName(styleItemId))
+            Note(verdict, WRITCRAFTER_NOTE_MIMIC, ItemName(styleItemId))
         else
             CheckExpensive(verdict, styleItemId)
         end
@@ -127,7 +127,7 @@ end
 
 local function EvaluateEnchanting(verdict, writ)
     if not (writ.glyph and writ.level and WC.Data.Enchanting.ASPECTS[writ.quality]) then
-        Fail(verdict, Rules.CANNOT, SI_WRITCRAFTER_REASON_UNKNOWN_ITEM, writ.glyphId)
+        Fail(verdict, Rules.CANNOT, WRITCRAFTER_REASON_UNKNOWN_ITEM, writ.glyphId)
         return
     end
     CheckGold(verdict, writ)
@@ -142,7 +142,7 @@ end
 local function EvaluateAlchemy(verdict, writ, statusOnly)
     local Alchemy = WC.Data.Alchemy
     if not writ.solvent then
-        Fail(verdict, Rules.CANNOT, SI_WRITCRAFTER_REASON_UNKNOWN_ITEM, 0)
+        Fail(verdict, Rules.CANNOT, WRITCRAFTER_REASON_UNKNOWN_ITEM, 0)
         return
     end
     local impossible = true
@@ -152,22 +152,22 @@ local function EvaluateAlchemy(verdict, writ, statusOnly)
         end
     end
     if impossible then
-        Fail(verdict, Rules.CANNOT, SI_WRITCRAFTER_REASON_GAME_BUG)
+        Fail(verdict, Rules.CANNOT, WRITCRAFTER_REASON_GAME_BUG)
         return
     end
     if statusOnly then
         -- Badges only need to know whether an allowed combination exists.
         local anyPossible, anyAllowed = WC.AlchemySolver.AnyAllowed(writ.effects)
         if not anyPossible then
-            Fail(verdict, Rules.CANNOT, SI_WRITCRAFTER_REASON_NO_COMBO)
+            Fail(verdict, Rules.CANNOT, WRITCRAFTER_REASON_NO_COMBO)
         elseif not anyAllowed then
-            Fail(verdict, Rules.REJECTED, SI_WRITCRAFTER_REASON_REAGENTS, "")
+            Fail(verdict, Rules.REJECTED, WRITCRAFTER_REASON_REAGENTS, "")
         end
         return
     end
     local best, blocked, disallowed, anyPossible = WC.AlchemySolver.Choose(writ.effects)
     if not anyPossible then
-        Fail(verdict, Rules.CANNOT, SI_WRITCRAFTER_REASON_NO_COMBO)
+        Fail(verdict, Rules.CANNOT, WRITCRAFTER_REASON_NO_COMBO)
         return
     end
     -- Batches from this character's real yield (skill passives) when the solvent is on hand;
@@ -182,7 +182,7 @@ local function EvaluateAlchemy(verdict, writ, statusOnly)
     end
     local combo = best or blocked
     if not best then
-        Fail(verdict, Rules.REJECTED, SI_WRITCRAFTER_REASON_REAGENTS, NameList(disallowed))
+        Fail(verdict, Rules.REJECTED, WRITCRAFTER_REASON_REAGENTS, NameList(disallowed))
     end
     AddMaterial(verdict, writ.solvent.itemId, crafts)
     for _, itemId in ipairs(combo) do
@@ -194,12 +194,12 @@ end
 local function EvaluateProvisioning(verdict, writ)
     local _, listIndex, recipeIndex = GetRecipeInfoFromItemId(writ.resultId)
     if not (listIndex and recipeIndex) then
-        Fail(verdict, Rules.CANNOT, SI_WRITCRAFTER_REASON_UNKNOWN_ITEM, writ.resultId)
+        Fail(verdict, Rules.CANNOT, WRITCRAFTER_REASON_UNKNOWN_ITEM, writ.resultId)
         return
     end
     local known, _, numIngredients = GetRecipeInfo(listIndex, recipeIndex)
     if not known then
-        Fail(verdict, Rules.CANNOT, SI_WRITCRAFTER_REASON_RECIPE_UNKNOWN)
+        Fail(verdict, Rules.CANNOT, WRITCRAFTER_REASON_RECIPE_UNKNOWN)
     end
     local perCraft = zo_max(GetRecipeResultQuantity(listIndex, recipeIndex) or 1, 1)
     local crafts = zo_ceil(writ.required / perCraft)
@@ -307,7 +307,7 @@ function Rules.Evaluate(writ, statusOnly)
     if writ.vouchers > 0 then
         verdict.perVoucher = cost / writ.vouchers
         if ceiling > 0 and verdict.perVoucher > ceiling then
-            Fail(verdict, Rules.REJECTED, SI_WRITCRAFTER_REASON_PER_VOUCHER, WC.Price.Format(ceiling))
+            Fail(verdict, Rules.REJECTED, WRITCRAFTER_REASON_PER_VOUCHER, WC.Price.Format(ceiling))
         end
     end
     return verdict

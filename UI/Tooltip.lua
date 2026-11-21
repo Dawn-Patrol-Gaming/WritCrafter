@@ -26,21 +26,21 @@ local function AddWritLines(control, link, uid)
     local status
     local crafted = uid and WC.Reservations.GetWritStatus(uid)
     if crafted and crafted.crafted then
-        status = Color(GREEN, GetString(SI_WRITCRAFTER_TT_CRAFTED))
+        status = Color(GREEN, GetString(WRITCRAFTER_TT_CRAFTED))
     elseif verdict.status == Rules.OK then
-        status = Color(GREEN, GetString(SI_WRITCRAFTER_TT_OK))
+        status = Color(GREEN, GetString(WRITCRAFTER_TT_OK))
     elseif verdict.status == Rules.REJECTED then
-        status = Color(ORANGE, GetString(SI_WRITCRAFTER_TT_REJECTED))
+        status = Color(ORANGE, GetString(WRITCRAFTER_TT_REJECTED))
     else
-        status = Color(RED, GetString(SI_WRITCRAFTER_TT_CANNOT))
+        status = Color(RED, GetString(WRITCRAFTER_TT_CANNOT))
     end
     -- Writs that need several items (alchemy, provisioning) always say how many.
     if not (crafted and crafted.crafted) and writ.required > 1 then
         local have = crafted and crafted.have or 0
         if have > 0 then
-            status = status .. Color(GREY, zo_strformat(SI_WRITCRAFTER_TT_PARTIAL, have, writ.required))
+            status = status .. Color(GREY, zo_strformat(WRITCRAFTER_TT_PARTIAL, have, writ.required))
         else
-            status = status .. Color(GREY, zo_strformat(SI_WRITCRAFTER_TT_NEEDED, writ.required))
+            status = status .. Color(GREY, zo_strformat(WRITCRAFTER_TT_NEEDED, writ.required))
         end
     end
 
@@ -50,15 +50,15 @@ local function AddWritLines(control, link, uid)
     if crafted and crafted.have > 0 then
         local places = {}
         if crafted.inBackpack > 0 then
-            places[#places + 1] = zo_strformat(SI_WRITCRAFTER_TT_IN_BACKPACK, crafted.inBackpack)
+            places[#places + 1] = zo_strformat(WRITCRAFTER_TT_IN_BACKPACK, crafted.inBackpack)
         end
         if crafted.inBank > 0 then
-            places[#places + 1] = zo_strformat(SI_WRITCRAFTER_TT_IN_BANK, crafted.inBank)
+            places[#places + 1] = zo_strformat(WRITCRAFTER_TT_IN_BANK, crafted.inBank)
         end
-        control:AddLine(Color(GREY, zo_strformat(SI_WRITCRAFTER_TT_SET_ASIDE, table.concat(places, ", "))))
+        control:AddLine(Color(GREY, zo_strformat(WRITCRAFTER_TT_SET_ASIDE, table.concat(places, ", "))))
     end
     if uid and WC.Queue.Has(uid) then
-        control:AddLine(Color(GOLD, zo_strformat(SI_WRITCRAFTER_TT_QUEUED,
+        control:AddLine(Color(GOLD, zo_strformat(WRITCRAFTER_TT_QUEUED,
             WC.Util.CraftName(writ.craft))))
     end
     local reasonColor = verdict.status == Rules.CANNOT and RED or ORANGE
@@ -68,10 +68,10 @@ local function AddWritLines(control, link, uid)
     if verdict.status == Rules.OK and not (crafted and crafted.have > 0) then
         local short = {}
         for _, mat in ipairs(Rules.Shortages(writ)) do
-            short[#short + 1] = zo_strformat(SI_WRITCRAFTER_TT_SHORT_ITEM, ItemName(mat.itemId), mat.have, mat.need)
+            short[#short + 1] = zo_strformat(WRITCRAFTER_TT_SHORT_ITEM, ItemName(mat.itemId), mat.have, mat.need)
         end
         if #short > 0 then
-            control:AddLine(Color(ORANGE, zo_strformat(SI_WRITCRAFTER_TT_SHORT, table.concat(short, ", "))))
+            control:AddLine(Color(ORANGE, zo_strformat(WRITCRAFTER_TT_SHORT, table.concat(short, ", "))))
         end
     end
     for _, note in ipairs(verdict.notes) do
@@ -83,10 +83,10 @@ local function AddWritLines(control, link, uid)
         for _, mat in ipairs(verdict.materials) do
             local have = WC.Inventory.GetStock(mat.itemId).usable
             local color = have >= mat.count and GREY or ORANGE
-            local line = Color(color, zo_strformat(SI_WRITCRAFTER_TT_MATERIAL, mat.count, ItemName(mat.itemId), have))
+            local line = Color(color, zo_strformat(WRITCRAFTER_TT_MATERIAL, mat.count, ItemName(mat.itemId), have))
             local unknown = WC.Data.Alchemy.UndiscoveredTraits(mat.itemId)
             if unknown > 0 then
-                line = line .. Color(ORANGE, zo_strformat(SI_WRITCRAFTER_TT_UNDISCOVERED, unknown))
+                line = line .. Color(ORANGE, zo_strformat(WRITCRAFTER_TT_UNDISCOVERED, unknown))
             end
             lines[#lines + 1] = line
         end
@@ -94,10 +94,10 @@ local function AddWritLines(control, link, uid)
     end
 
     if verdict.cost > 0 then
-        local stringId = verdict.costComplete and SI_WRITCRAFTER_TT_COST or SI_WRITCRAFTER_TT_COST_PARTIAL
+        local stringId = verdict.costComplete and WRITCRAFTER_TT_COST or WRITCRAFTER_TT_COST_PARTIAL
         local line = zo_strformat(stringId, WC.Price.Format(verdict.cost), writ.vouchers)
         if verdict.perVoucher then
-            line = line .. zo_strformat(SI_WRITCRAFTER_TT_PER_VOUCHER, WC.Price.Format(verdict.perVoucher))
+            line = line .. zo_strformat(WRITCRAFTER_TT_PER_VOUCHER, WC.Price.Format(verdict.perVoucher))
         end
         control:AddLine(Color(GREY, line))
     end
@@ -118,12 +118,12 @@ function Tooltip.Init()
         end
         local quest = WC.DailyItems.QuestFor(bagId, slotIndex)
         if quest then
-            control:AddLine(Color(GOLD, WC.displayName) .. ": " .. zo_strformat(SI_WRITCRAFTER_TT_DAILY_ITEM, quest))
+            control:AddLine(Color(GOLD, WC.displayName) .. ": " .. zo_strformat(WRITCRAFTER_TT_DAILY_ITEM, quest))
             return
         end
         quest = WC.Reservations.AcceptedQuestFor(bagId, slotIndex)
         if quest then
-            control:AddLine(Color(GOLD, WC.displayName) .. ": " .. zo_strformat(SI_WRITCRAFTER_TT_ACCEPTED_ITEM, quest))
+            control:AddLine(Color(GOLD, WC.displayName) .. ": " .. zo_strformat(WRITCRAFTER_TT_ACCEPTED_ITEM, quest))
         end
     end)
     ZO_PostHook(ItemTooltip, "SetLootItem", function(control, lootId)

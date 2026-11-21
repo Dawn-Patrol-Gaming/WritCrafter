@@ -136,6 +136,10 @@ end
 function Inventory.Init()
     local namespace = WC.name .. "Inventory"
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, OnSlotChanged)
+    -- Ordinary changes only: gear wearing down in combat and weapon charge fire this constantly
+    -- and never change what's in a bag.
+    EVENT_MANAGER:AddFilterForEvent(namespace, EVENT_INVENTORY_SINGLE_SLOT_UPDATE,
+        REGISTER_FILTER_INVENTORY_UPDATE_REASON, INVENTORY_UPDATE_REASON_DEFAULT)
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_INVENTORY_FULL_UPDATE, OnFullUpdate)
 end
 

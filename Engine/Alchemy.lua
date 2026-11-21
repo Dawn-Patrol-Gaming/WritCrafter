@@ -13,21 +13,21 @@ end
 -- (which teaches them) and the engine comes back for the rest.
 local function CraftAlchemy(writ, status)
     if not writ.solvent then
-        return false, zo_strformat(SI_WRITCRAFTER_REASON_UNKNOWN_ITEM, 0)
+        return false, zo_strformat(WRITCRAFTER_REASON_UNKNOWN_ITEM, 0)
     end
     local solventBag, solventSlot = WC.Inventory.FindForStation(writ.solvent.itemId)
     if not solventBag then
-        return false, zo_strformat(SI_WRITCRAFTER_CRAFT_MISSING, ItemName(writ.solvent.itemId))
+        return false, zo_strformat(WRITCRAFTER_CRAFT_MISSING, ItemName(writ.solvent.itemId))
     end
     local combo = WC.AlchemySolver.Choose(writ.effects, StationStock)
     if not combo then
-        return false, GetString(SI_WRITCRAFTER_REASON_NO_COMBO)
+        return false, GetString(WRITCRAFTER_REASON_NO_COMBO)
     end
     local slots = {}
     for _, itemId in ipairs(combo) do
         local bagId, slotIndex = WC.Inventory.FindForStation(itemId)
         if not bagId then
-            return false, zo_strformat(SI_WRITCRAFTER_CRAFT_MISSING, ItemName(itemId))
+            return false, zo_strformat(WRITCRAFTER_CRAFT_MISSING, ItemName(itemId))
         end
         slots[#slots + 1] = bagId
         slots[#slots + 1] = slotIndex
@@ -37,7 +37,7 @@ local function CraftAlchemy(writ, status)
     local resultLink, prospective = GetAlchemyResultingItemLink(solventBag, solventSlot,
         r1Bag, r1Slot, r2Bag, r2Slot, r3Bag, r3Slot)
     if not resultLink or resultLink == "" or not WC.Reservations.Matches(resultLink, writ) then
-        return false, GetString(SI_WRITCRAFTER_CRAFT_WRONG_RESULT)
+        return false, GetString(WRITCRAFTER_CRAFT_WRONG_RESULT)
     end
 
     local perCraft = zo_max(GetAlchemyResultQuantity(solventBag, solventSlot, 1) or 1, 1)
@@ -209,9 +209,9 @@ local function ResolveDaily(condition)
     -- crafts' conditions are none of this station's business.
     if WC.Daily.IsAlchemyQuest(condition) then
         if #solvents == 0 then
-            return { problem = GetString(SI_WRITCRAFTER_DAILY_NO_SOLVENT) }
+            return { problem = GetString(WRITCRAFTER_DAILY_NO_SOLVENT) }
         end
-        return { problem = GetString(SI_WRITCRAFTER_DAILY_NO_POTION) }
+        return { problem = GetString(WRITCRAFTER_DAILY_NO_POTION) }
     end
 end
 
@@ -222,11 +222,11 @@ local function MoveToBackpack(itemId, quantity)
     end
     local emptySlot = FindFirstEmptySlotInBag(BAG_BACKPACK)
     if not emptySlot then
-        return false, GetString(SI_WRITCRAFTER_CRAFT_BACKPACK_FULL)
+        return false, GetString(WRITCRAFTER_CRAFT_BACKPACK_FULL)
     end
     quantity = zo_min(quantity, count)
     WC.Util.MoveItem(BAG_VIRTUAL, itemId, BAG_BACKPACK, emptySlot, quantity)
-    WC.Log.Say(zo_strformat(SI_WRITCRAFTER_MOVING, quantity, ItemName(itemId)))
+    WC.Log.Say(zo_strformat(WRITCRAFTER_MOVING, quantity, ItemName(itemId)))
     return true
 end
 
@@ -235,13 +235,13 @@ local function CraftDaily(condition, plan)
     if plan.acquire then
         local itemId = plan.acquire
         if WC.Policy.BlocksAcquire(itemId) then
-            return false, zo_strformat(SI_WRITCRAFTER_CRAFT_EXCLUDED_REAGENT, ItemName(itemId))
+            return false, zo_strformat(WRITCRAFTER_CRAFT_EXCLUDED_REAGENT, ItemName(itemId))
         end
         local moved, reason = MoveToBackpack(itemId, remaining)
         if moved then
             return "moved"
         end
-        return false, reason or zo_strformat(SI_WRITCRAFTER_CRAFT_WITHDRAW, ItemName(itemId))
+        return false, reason or zo_strformat(WRITCRAFTER_CRAFT_WITHDRAW, ItemName(itemId))
     end
 
     -- Allowed pairs that make the effect, most stock first; the first whose result the game
@@ -255,7 +255,7 @@ local function CraftDaily(condition, plan)
     end
     local where = Locations({ plan.solvent, unpack(owned) })
     if not where[plan.solvent] then
-        return false, zo_strformat(SI_WRITCRAFTER_CRAFT_MISSING, ItemName(plan.solvent))
+        return false, zo_strformat(WRITCRAFTER_CRAFT_MISSING, ItemName(plan.solvent))
     end
     -- What a pair would make, and whether the game accepts it for this condition. With chat
     -- messages on Debug, every pair tried is printed, to show why a reagent isn't used.
@@ -325,13 +325,13 @@ local function CraftDaily(condition, plan)
         local reason
         if #names > 0 then
             table.sort(names)
-            reason = zo_strformat(SI_WRITCRAFTER_REASON_REAGENTS, table.concat(names, ", "))
+            reason = zo_strformat(WRITCRAFTER_REASON_REAGENTS, table.concat(names, ", "))
         else
-            reason = GetString(SI_WRITCRAFTER_CRAFT_NO_REAGENTS)
+            reason = GetString(WRITCRAFTER_CRAFT_NO_REAGENTS)
         end
         if #missing > 0 then
             table.sort(missing)
-            reason = reason .. zo_strformat(SI_WRITCRAFTER_REASON_MISSING, table.concat(missing, ", "))
+            reason = reason .. zo_strformat(WRITCRAFTER_REASON_MISSING, table.concat(missing, ", "))
         end
         return false, reason
     end
@@ -364,7 +364,7 @@ local AlchemyDaily = {}
 WC.AlchemyDaily = AlchemyDaily
 
 local function StockText(itemId)
-    local stringId = WC.Policy.IsExcluded(itemId) and SI_WRITCRAFTER_REAGENTS_ITEM_EXCLUDED or SI_WRITCRAFTER_REAGENTS_ITEM
+    local stringId = WC.Policy.IsExcluded(itemId) and WRITCRAFTER_REAGENTS_ITEM_EXCLUDED or WRITCRAFTER_REAGENTS_ITEM
     return zo_strformat(stringId, ItemName(itemId), StationStock(itemId))
 end
 
@@ -377,7 +377,7 @@ function AlchemyDaily.List()
         end
     end
     if #conditions == 0 then
-        WC.Log.Say(GetString(SI_WRITCRAFTER_REAGENTS_NONE))
+        WC.Log.Say(GetString(WRITCRAFTER_REAGENTS_NONE))
         return
     end
     WC.Inventory.Invalidate()   -- counts right after moving things to house storage
@@ -391,7 +391,7 @@ function AlchemyDaily.List()
     end)
 
     for _, condition in ipairs(conditions) do
-        WC.Log.Say(zo_strformat(SI_WRITCRAFTER_REAGENTS_HEADER, condition.text))
+        WC.Log.Say(zo_strformat(WRITCRAFTER_REAGENTS_HEADER, condition.text))
         local fitSolvents, fitPairs, pairSeen, reagents = {}, {}, {}, {}
         for _, solventId in ipairs(solvents) do
             for _, pair in ipairs(candidates) do
@@ -409,7 +409,7 @@ function AlchemyDaily.List()
             end
         end
         if #fitPairs == 0 then
-            WC.Log.Say(GetString(SI_WRITCRAFTER_REAGENTS_NOTHING))
+            WC.Log.Say(GetString(WRITCRAFTER_REAGENTS_NOTHING))
         else
             local function Listed(set)
                 local list = {}
@@ -422,9 +422,9 @@ function AlchemyDaily.List()
                 end
                 return table.concat(list, ", ")
             end
-            WC.Log.Say(zo_strformat(SI_WRITCRAFTER_REAGENTS_SOLVENT, Listed(fitSolvents)))
-            WC.Log.Say(zo_strformat(SI_WRITCRAFTER_REAGENTS_USED, Listed(reagents)))
-            WC.Log.Say(zo_strformat(SI_WRITCRAFTER_REAGENTS_PAIRS, #fitPairs, table.concat(fitPairs, ", ")))
+            WC.Log.Say(zo_strformat(WRITCRAFTER_REAGENTS_SOLVENT, Listed(fitSolvents)))
+            WC.Log.Say(zo_strformat(WRITCRAFTER_REAGENTS_USED, Listed(reagents)))
+            WC.Log.Say(zo_strformat(WRITCRAFTER_REAGENTS_PAIRS, #fitPairs, table.concat(fitPairs, ", ")))
         end
     end
 end

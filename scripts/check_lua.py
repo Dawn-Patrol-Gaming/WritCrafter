@@ -17,7 +17,7 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-MANIFEST = ROOT / "WritCrafter.addon"
+MANIFEST = ROOT / "WritCrafter.txt"
 ALLOWED_GLOBALS = {"WritCrafter"}
 SKIP_DIRS = {".git", "docs", "scripts", "tests", ".claude"}
 

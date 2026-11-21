@@ -35,14 +35,14 @@ end
 
 local function Report(area, checked, skipped, problems)
     if #problems == 0 then
-        WC.Log.Say(zo_strformat(SI_WRITCRAFTER_CHECK_OK, area, checked, skipped))
+        WC.Log.Say(zo_strformat(WRITCRAFTER_CHECK_OK, area, checked, skipped))
         return
     end
-    WC.Log.Say(zo_strformat(SI_WRITCRAFTER_CHECK_FAIL, area, #problems, checked))
+    WC.Log.Say(zo_strformat(WRITCRAFTER_CHECK_FAIL, area, #problems, checked))
     local showAll = WC.settings.logLevel >= WC.Log.LEVEL_DEBUG
     for i, text in ipairs(problems) do
         if i > SHOWN and not showAll then
-            WC.Log.Say(zo_strformat(SI_WRITCRAFTER_SELFTEST_MORE, #problems - SHOWN))
+            WC.Log.Say(zo_strformat(WRITCRAFTER_SELFTEST_MORE, #problems - SHOWN))
             break
         end
         WC.Log.Say("  " .. text)
@@ -52,14 +52,14 @@ end
 -- Alchemy: every pair of reagents you own, mixed with a solvent you own. The game predicts the
 -- potion; its effects must be the ones the reagent table gives.
 local function CheckAlchemy()
-    local area = GetString(SI_WRITCRAFTER_CHECK_ALCHEMY)
+    local area = GetString(WRITCRAFTER_CHECK_ALCHEMY)
     local solvents = WC.Inventory.OwnedItemIds({ [ITEMTYPE_POTION_BASE] = true, [ITEMTYPE_POISON_BASE] = true })
     local solventBag, solventSlot
     if solvents[1] then
         solventBag, solventSlot = WC.Inventory.FindForStation(solvents[1])
     end
     if not (solventBag and solventSlot) then
-        WC.Log.Say(zo_strformat(SI_WRITCRAFTER_CHECK_NO_SOLVENT, area))
+        WC.Log.Say(zo_strformat(WRITCRAFTER_CHECK_NO_SOLVENT, area))
         return
     end
     local REAGENTS = WC.Data.Alchemy.REAGENTS
@@ -91,7 +91,7 @@ local function CheckAlchemy()
         end
     end
     if not answered then
-        WC.Log.Say(zo_strformat(SI_WRITCRAFTER_CHECK_AT_STATION, area))
+        WC.Log.Say(zo_strformat(WRITCRAFTER_CHECK_AT_STATION, area))
         return
     end
     -- Only pairs where something is made (by the table or the game) count as checks; pairs that
@@ -122,7 +122,7 @@ local function CheckAlchemy()
                     confirmed[r.b][effect] = true
                 end
             else
-                problems[#problems + 1] = zo_strformat(SI_WRITCRAFTER_CHECK_PAIR, Name(r.a), Name(r.b),
+                problems[#problems + 1] = zo_strformat(WRITCRAFTER_CHECK_PAIR, Name(r.a), Name(r.b),
                     table.concat(r.expected, ", "), #r.actual > 0 and table.concat(r.actual, ", ") or "-")
                 blame[r.a] = (blame[r.a] or 0) + 1
                 blame[r.b] = (blame[r.b] or 0) + 1
@@ -140,7 +140,7 @@ local function CheckAlchemy()
         for k = 1, zo_min(3, #worst) do
             names[#names + 1] = zo_strformat("<<1>> (<<2>>)", Name(worst[k].itemId), worst[k].count)
         end
-        table.insert(problems, 1, zo_strformat(SI_WRITCRAFTER_CHECK_SUSPECTS, table.concat(names, ", ")))
+        table.insert(problems, 1, zo_strformat(WRITCRAFTER_CHECK_SUSPECTS, table.concat(names, ", ")))
     end
     Report(area, checked, missing + hidden, problems)
     if hidden > 0 then
@@ -149,7 +149,7 @@ local function CheckAlchemy()
             names[#names + 1] = zo_strformat("<<1>> (<<2>>)", Name(itemId), count)
         end
         table.sort(names)
-        WC.Log.Say(zo_strformat(SI_WRITCRAFTER_CHECK_UNDISCOVERED, hidden, table.concat(names, ", ")))
+        WC.Log.Say(zo_strformat(WRITCRAFTER_CHECK_UNDISCOVERED, hidden, table.concat(names, ", ")))
     end
     -- Coverage: how many of the table's reagent effects the game itself has confirmed. The rest
     -- are taken on trust: reagents you don't have, undiscovered traits, or effects no other
@@ -174,9 +174,9 @@ local function CheckAlchemy()
             unsure[#unsure + 1] = zo_strformat("<<1>> (<<2>>)", Name(itemId), open)
         end
     end
-    WC.Log.Say(zo_strformat(SI_WRITCRAFTER_CHECK_COVERAGE, sure, total))
+    WC.Log.Say(zo_strformat(WRITCRAFTER_CHECK_COVERAGE, sure, total))
     if #unsure > 0 then
-        WC.Log.Say(zo_strformat(SI_WRITCRAFTER_CHECK_UNCONFIRMED, table.concat(unsure, ", ")))
+        WC.Log.Say(zo_strformat(WRITCRAFTER_CHECK_UNCONFIRMED, table.concat(unsure, ", ")))
     end
 end
 
@@ -188,10 +188,10 @@ local function CheckSolvents()
     local problems = {}
     for _, itemId in ipairs(ids) do
         if not SOLVENT_TYPES[GetItemLinkItemType(WC.Inventory.GetLink(itemId))] then
-            problems[#problems + 1] = zo_strformat(SI_WRITCRAFTER_CHECK_NOT_SOLVENT, itemId, Name(itemId))
+            problems[#problems + 1] = zo_strformat(WRITCRAFTER_CHECK_NOT_SOLVENT, itemId, Name(itemId))
         end
     end
-    Report(GetString(SI_WRITCRAFTER_CHECK_SOLVENTS), #ids, 0, problems)
+    Report(GetString(WRITCRAFTER_CHECK_SOLVENTS), #ids, 0, problems)
 end
 
 local RUNE_CLASS = {
@@ -204,13 +204,13 @@ local GLYPH_TYPES = {
 -- Enchanting: every rune is still a rune of the right kind, every glyph a glyph, and where you
 -- own the runes, the game makes exactly that glyph from them.
 local function CheckEnchanting()
-    local area = GetString(SI_WRITCRAFTER_CHECK_ENCHANTING)
+    local area = GetString(WRITCRAFTER_CHECK_ENCHANTING)
     local E = WC.Data.Enchanting
     local problems, checked, skipped, made, unanswered = {}, 0, 0, 0, 0
     local function Rune(itemId, kind)
         checked = checked + 1
         if GetItemLinkEnchantingRuneClassification(WC.Inventory.GetLink(itemId)) ~= RUNE_CLASS[kind] then
-            problems[#problems + 1] = zo_strformat(SI_WRITCRAFTER_CHECK_NOT_RUNE, itemId, Name(itemId), kind)
+            problems[#problems + 1] = zo_strformat(WRITCRAFTER_CHECK_NOT_RUNE, itemId, Name(itemId), kind)
         end
     end
     for _, level in pairs(E.LEVELS) do
@@ -226,7 +226,7 @@ local function CheckEnchanting()
         Rune(glyph.essence, "essence")
         checked = checked + 1
         if not GLYPH_TYPES[GetItemLinkItemType(WC.Inventory.GetLink(glyphId))] then
-            problems[#problems + 1] = zo_strformat(SI_WRITCRAFTER_CHECK_NOT_GLYPH, glyphId, Name(glyphId))
+            problems[#problems + 1] = zo_strformat(WRITCRAFTER_CHECK_NOT_GLYPH, glyphId, Name(glyphId))
         else
             local potency = glyph.additive and level.additive or level.subtractive
             local p = { WC.Inventory.FindForStation(potency) }
@@ -241,7 +241,7 @@ local function CheckEnchanting()
                     made = made + 1
                     checked = checked + 1
                     if resultId ~= glyphId then
-                        problems[#problems + 1] = zo_strformat(SI_WRITCRAFTER_CHECK_GLYPH_RESULT, Name(potency),
+                        problems[#problems + 1] = zo_strformat(WRITCRAFTER_CHECK_GLYPH_RESULT, Name(potency),
                             Name(glyph.essence), Name(glyphId), Name(resultId))
                     end
                 end
@@ -252,7 +252,7 @@ local function CheckEnchanting()
     end
     Report(area, checked, skipped + unanswered, problems)
     if unanswered > 0 and made == 0 then
-        WC.Log.Say(zo_strformat(SI_WRITCRAFTER_CHECK_GLYPH_STATION, unanswered))
+        WC.Log.Say(zo_strformat(WRITCRAFTER_CHECK_GLYPH_STATION, unanswered))
     end
 end
 
@@ -272,7 +272,7 @@ local BOOSTER_TYPE = {
 -- Smithing: each master writ item's sample is made by the right craft, its base material is
 -- that craft's material, and the improvement materials are that craft's, in order.
 local function CheckSmithing()
-    local area = GetString(SI_WRITCRAFTER_CHECK_SMITHING)
+    local area = GetString(WRITCRAFTER_CHECK_SMITHING)
     local S = WC.Data.Smithing
     local problems, checked = {}, 0
     for templateId, t in pairs(S.TEMPLATES) do
@@ -281,9 +281,9 @@ local function CheckSmithing()
         local mat = WC.Inventory.GetLink(t.mat)
         local craftName = WC.Util.CraftName(t.craft)
         if GetItemLinkCraftingSkillType(sample) ~= t.craft then
-            problems[#problems + 1] = zo_strformat(SI_WRITCRAFTER_CHECK_TEMPLATE, templateId, Name(t.sample), craftName)
+            problems[#problems + 1] = zo_strformat(WRITCRAFTER_CHECK_TEMPLATE, templateId, Name(t.sample), craftName)
         elseif GetItemLinkItemType(mat) ~= MATERIAL_TYPE[t.craft] then
-            problems[#problems + 1] = zo_strformat(SI_WRITCRAFTER_CHECK_TEMPLATE_MAT, templateId, Name(t.mat), craftName)
+            problems[#problems + 1] = zo_strformat(WRITCRAFTER_CHECK_TEMPLATE_MAT, templateId, Name(t.mat), craftName)
         end
     end
     for craft, ids in pairs(S.IMPROVE_MATS) do
@@ -292,7 +292,7 @@ local function CheckSmithing()
             local link = WC.Inventory.GetLink(itemId)
             if GetItemLinkItemType(link) ~= BOOSTER_TYPE[craft]
                 or GetItemLinkFunctionalQuality(link) ~= tier + 1 then
-                problems[#problems + 1] = zo_strformat(SI_WRITCRAFTER_CHECK_BOOSTER, itemId, Name(itemId),
+                problems[#problems + 1] = zo_strformat(WRITCRAFTER_CHECK_BOOSTER, itemId, Name(itemId),
                     WC.Util.CraftName(craft), tier)
             end
         end
@@ -301,7 +301,7 @@ local function CheckSmithing()
 end
 
 function CheckData.Run()
-    WC.Log.Say(GetString(SI_WRITCRAFTER_CHECK_HEADER))
+    WC.Log.Say(GetString(WRITCRAFTER_CHECK_HEADER))
     CheckAlchemy()
     CheckSolvents()
     CheckEnchanting()

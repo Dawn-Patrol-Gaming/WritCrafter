@@ -9,7 +9,7 @@ the file that owns that table.
 | | |
 |---|---|
 | Location | `<ESO folder>\live\SavedVariables\WritCrafter.lua` (`pts` instead of `live` on the test server) |
-| Global variable | `WritCrafterVars` (from `## SavedVariables:` in `WritCrafter.addon`) |
+| Global variable | `WritCrafterVars` (from `## SavedVariables:` in `WritCrafter.txt`) |
 | Written | Only on `/reloadui`, logout or quitting. A crash loses everything since the last of those |
 | Editing by hand | Only with the game closed: the game rewrites the whole file from memory on the next reload or logout, wiping out any edit made while it runs |
 | Version | `SV_VERSION = 2` in `Core/SavedVars.lua`. Changing it makes `ZO_SavedVars` throw the old data away and start fresh: every setting, queue and mark is lost |

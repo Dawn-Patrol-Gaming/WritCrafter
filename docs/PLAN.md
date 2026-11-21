@@ -362,7 +362,7 @@ Dragon Bone ~5,900 · Pristine Daedric Heart ~3,750 · Stendarr Stamp ~4,400 · 
 
 ```
 WritCrafter/
-  WritCrafter.addon        APIVersion 101051 101052
+  WritCrafter.txt        APIVersion 101051 101052
                            DependsOn: LibAddonMenu-2.0 LibCustomMenu LibPrice LibSets LibCharacterKnowledge
                            OptionalDependsOn: LibEsoHubPrices LibDebugLogger FCOItemSaver AwesomeGuildStore
   Strings/en.lua
@@ -484,3 +484,19 @@ Testing: pure logic (solver, rules, link parsing, price defaults) gets offline L
   - **Style materials:** one floor for all style materials. When a writ's style material is below it, a mimic stone is used instead (Mimic stones "When needed"), or the writ waits (Mimic stones "Never").
   - **Improvement materials, one floor per tier:** green, blue, purple and gold (Honing Stone / Dwarven Oil / Grain Solvent / Tempering Alloy and the clothing, woodworking and jewelry equivalents). Improving stops at the tier whose material would drop below its floor, with the same "low on" message, and never improves below 100%.
   - Goal: no stock management by hand; floors are set once and WritCrafter stays out of the reserves.
+
+## 12. Release checklist (ESOUI)
+From the ESOUI upload rules and the guidelines review (2026-11-21; notes in BookStack, "ESO Addon Development"):
+- **AI disclosure at the very top of the ESOUI description:** most of the code was written by Claude (Anthropic) under the author's direction and tested in game. Required by ESOUI since the author can't personally verify every line. The README already says so.
+- **Required libraries listed at the top of the description**, each with its minimum version (the `DependsOn` list in `WritCrafter.txt`).
+- **Credit sources:** Dolgubon's Lazy Writ Crafter, LibLazyCrafting, WritWorthy, DailyAlchemy, DailyProvisioning and UESP were read as API references; no code copied.
+- **Zip:** one `WritCrafter` folder, made by Deploy.ps1's exclusions (no `.git`, `docs`, `scripts`, Markdown or notes files), no zips inside, no executables. Plus at least one screenshot.
+- **Changelog** in ESOUI's Changelog tab, newest first, not in the description.
+- **Version bump:** `## Version:` and `WC.version` together, `## AddOnVersion:` up by one; `## APIVersion:` set to live (and PTS when there is one), at most two values.
+- **Before each release, bump the `DependsOn` minimums** to the library versions actually tested.
+
+Decided in the review (2026-11-21):
+- **Manifest is `WritCrafter.txt`, not `.addon`.** WritCrafter is PC-only (keyboard UI, LibCustomMenu, keybinds), and `.txt` keeps it out of console simulation (ForceConsoleFlow). Minion also only tracks `Folder\Folder.txt`. Never ship both.
+- **String IDs are `WRITCRAFTER_*`** (SI_* is the game's own). Keybinding names stay `SI_BINDING_NAME_*`, which the game requires.
+- **Bank moves and merchant sales go one at a time**, each after the server has made the one before (`Util.QueueMove` / `Util.QueueSell`). Reconsider if it proves slow or buggy: `REQUEST_ONE_AT_A_TIME = false` in Core/Util.lua sends them all at once again.
+- **When a translation is added:** load `Strings/en.lua` as the baseline and `Strings/$(language).lua` for overrides (rename `en.lua` to `default.lua` first, or English clients load it twice), and add `SafeAddVersion` to the baseline strings.

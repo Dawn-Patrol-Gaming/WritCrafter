@@ -5,7 +5,7 @@ local Alchemy = {}
 WC.Data.Alchemy = Alchemy
 
 -- Effect IDs, as used in master writ links (fields 11-13) and crafted potion links.
--- Odd = an effect, the next even number = its counter. Names live in Strings (SI_WRITCRAFTER_EFFECT_<id>).
+-- Odd = an effect, the next even number = its counter. Names live in Strings (WRITCRAFTER_EFFECT_<id>).
 Alchemy.EFFECT_MAX = 38
 
 -- Pre-Update 51 IDs that older writs and potions still carry.

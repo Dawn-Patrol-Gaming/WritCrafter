@@ -63,18 +63,18 @@ local function Improve(writ, bagId, slotIndex, quality)
         chance = GetSmithingImprovementChance(bagId, slotIndex, boosters, craft)
     until chance >= 100 or boosters >= 100
     if chance < 100 then
-        return false, GetString(SI_WRITCRAFTER_CRAFT_CANT_IMPROVE)
+        return false, GetString(WRITCRAFTER_CRAFT_CANT_IMPROVE)
     end
     local boosterName, _, have = GetSmithingImprovementItemInfo(craft, quality)
     local boosterId = GetItemLinkItemId(GetSmithingImprovementItemLink(craft, quality))
     if boosterId ~= 0 and WC.Policy.IsExcluded(boosterId) then
-        return false, zo_strformat(SI_WRITCRAFTER_REASON_EXPENSIVE, zo_strformat("<<t:1>>", boosterName or ""))
+        return false, zo_strformat(WRITCRAFTER_REASON_EXPENSIVE, zo_strformat("<<t:1>>", boosterName or ""))
     end
     if (have or 0) < boosters then
-        return false, zo_strformat(SI_WRITCRAFTER_CRAFT_BOOSTERS, boosters, boosterName or "", have or 0)
+        return false, zo_strformat(WRITCRAFTER_CRAFT_BOOSTERS, boosters, boosterName or "", have or 0)
     end
     local link = GetItemLink(bagId, slotIndex)
-    WC.Log.Say(zo_strformat(SI_WRITCRAFTER_IMPROVING, ItemName(link),
+    WC.Log.Say(zo_strformat(WRITCRAFTER_IMPROVING, ItemName(link),
         GetString("SI_ITEMDISPLAYQUALITY", quality + 1),
         (boosters > 1 and (boosters .. " x ") or "") .. zo_strformat("<<t:1>>", boosterName or "")))
     WC.Engine.CraftSounds({ SOUNDS.SMITHING_ITEM_TO_IMPROVE_PLACED }, IMPROVE_GLOW[craft])
@@ -95,13 +95,13 @@ local function SelectSet(writ)
     for setIndex = 1, GetNumConsolidatedSmithingSets() do
         if GetConsolidatedSmithingItemSetIdByIndex(setIndex) == writ.setId then
             if not IsConsolidatedSmithingSetIndexUnlocked(setIndex) then
-                return false, zo_strformat(SI_WRITCRAFTER_CRAFT_SET_LOCKED, setName)
+                return false, zo_strformat(WRITCRAFTER_CRAFT_SET_LOCKED, setName)
             end
             SetActiveConsolidatedSmithingSetByIndex(setIndex)
             return "wait"
         end
     end
-    return false, zo_strformat(SI_WRITCRAFTER_CRAFT_SET_LOCKED, setName)
+    return false, zo_strformat(WRITCRAFTER_CRAFT_SET_LOCKED, setName)
 end
 
 -- The pattern and CP150 material whose predicted result is the writ's piece (any quality).
@@ -142,7 +142,7 @@ end
 
 local function CraftSmithing(writ, status)
     if not writ.template then
-        return false, zo_strformat(SI_WRITCRAFTER_REASON_UNKNOWN_ITEM, writ.templateId or 0)
+        return false, zo_strformat(WRITCRAFTER_REASON_UNKNOWN_ITEM, writ.templateId or 0)
     end
 
     -- 1. A piece already made but not yet at the writ's quality: improve it.
@@ -161,7 +161,7 @@ local function CraftSmithing(writ, status)
     local traitIndex = writ.trait + 1
     local patternIndex, materialIndex, quantity, resultLink = FindPattern(writ, styleId, traitIndex)
     if not patternIndex then
-        return false, zo_strformat(SI_WRITCRAFTER_CRAFT_WRONG_STATION,
+        return false, zo_strformat(WRITCRAFTER_CRAFT_WRONG_STATION,
             zo_strformat("<<1>>", GetItemSetName(writ.setId)))
     end
     local useMimic = UseMimic(writ, styleId)
@@ -268,10 +268,10 @@ local function CraftDaily(condition)
     -- Searched again: the cached answer may be from another station (e.g. a Grand Master one).
     local plan = FindDaily(condition)
     if not plan then
-        return false, GetString(SI_WRITCRAFTER_CRAFT_WRONG_RESULT)
+        return false, GetString(WRITCRAFTER_CRAFT_WRONG_RESULT)
     end
     if plan.style == false then
-        return false, zo_strformat(SI_WRITCRAFTER_CRAFT_NO_STYLE, ItemName(plan.link))
+        return false, zo_strformat(WRITCRAFTER_CRAFT_NO_STYLE, ItemName(plan.link))
     end
     local maxIterations, result = GetMaxIterationsPossibleForSmithingItem(plan.pattern, plan.material,
         plan.quantity, plan.style, NO_TRAIT, false)

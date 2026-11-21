@@ -28,10 +28,10 @@ local COLORS = {
     [TURNED_IN] = { 0.35, 0.9, 0.35, 1 },       -- green
 }
 local STATUS_TEXT = {
-    [NONE]      = SI_WRITCRAFTER_STATUS_NONE,
-    [TO_CRAFT]  = SI_WRITCRAFTER_STATUS_TO_CRAFT,
-    [READY]     = SI_WRITCRAFTER_STATUS_READY,
-    [TURNED_IN] = SI_WRITCRAFTER_STATUS_TURNED_IN,
+    [NONE]      = WRITCRAFTER_STATUS_NONE,
+    [TO_CRAFT]  = WRITCRAFTER_STATUS_TO_CRAFT,
+    [READY]     = WRITCRAFTER_STATUS_READY,
+    [TURNED_IN] = WRITCRAFTER_STATUS_TURNED_IN,
 }
 
 local window   -- placed and moved by you; shown out in the world (the HUD)
@@ -143,7 +143,7 @@ end
 local function OnIconEnter(icon)
     local status = statuses[icon.wcCraft] or NONE
     InitializeTooltip(InformationTooltip, icon, BOTTOM, 0, -4)
-    SetTooltipText(InformationTooltip, zo_strformat(SI_WRITCRAFTER_STATUS_TOOLTIP,
+    SetTooltipText(InformationTooltip, zo_strformat(WRITCRAFTER_STATUS_TOOLTIP,
         WC.Util.CraftName(icon.wcCraft), GetString(STATUS_TEXT[status])))
 end
 
