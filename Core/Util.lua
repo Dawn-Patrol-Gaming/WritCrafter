@@ -57,8 +57,8 @@ end
 -- Server requests, one at a time -----------------------------------------------------------------
 -- Bank moves and merchant sales are queued and sent one by one: each waits until the server has
 -- changed the item it asked about (or REQUEST_TIMEOUT_MS passes) before the next goes out. Sending
--- dozens in one frame risks being kicked for flooding the server, and a timer guessed from your
--- ping (Dolgubon's way) misfires whenever the server is slower than usual. Closing the bank or
+-- dozens in one frame risks being kicked for flooding the server, and a fixed timer can fire
+-- before the server has answered when it's slower than usual. Closing the bank or
 -- merchant drops the requests still waiting for it.
 -- Added 2026-11-21. If it turns out slow or unreliable, set REQUEST_ONE_AT_A_TIME to false: every
 -- request is then sent at once, as before.
