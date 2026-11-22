@@ -33,6 +33,16 @@ function Queue.Remove(uid)
     Changed()
 end
 
+-- Empties the queue; returns how many writs were in it.
+function Queue.Clear()
+    local count = NonContiguousCount(entries)
+    if count > 0 then
+        ZO_ClearTable(entries)
+        Changed()
+    end
+    return count
+end
+
 function Queue.Has(uid)
     return entries ~= nil and entries[uid] ~= nil
 end

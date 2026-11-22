@@ -261,7 +261,7 @@ end
 local function ExclusionSection()
     return {
         { type = "header", name = GetString(WRITCRAFTER_EXPENSIVE_SUBMENU) },
-        { type = "description", text = GetString(WRITCRAFTER_EXPENSIVE_TEXT) },
+        { type = "description", text = zo_strformat(WRITCRAFTER_EXPENSIVE_TEXT, WC.Slash.Primary()) },
         {
             type = "button",
             name = GetString(WRITCRAFTER_EXCL_OPEN),
@@ -400,7 +400,7 @@ function Settings.Init()
         end
     end
     options[#options + 1] = { type = "header", name = GetString(WRITCRAFTER_HEADER_DIAGNOSTICS) }
-    options[#options + 1] = { type = "description", text = GetString(WRITCRAFTER_DIAGNOSTICS_TEXT) }
+    options[#options + 1] = { type = "description", text = zo_strformat(WRITCRAFTER_DIAGNOSTICS_TEXT, WC.Slash.Primary()) }
     LAM:RegisterOptionControls(WC.name .. "Panel", options)
 end
 

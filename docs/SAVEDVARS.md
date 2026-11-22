@@ -255,3 +255,27 @@ an ordinary item on another until the file is copied.
   in the same folder holds the full chat log at debug level.
 - **Moving to another computer:** close the game on both, back up the target's file, copy the
   whole file. Whichever copy you take replaces everything on the other machine.
+
+## 7. `/wc reset`
+
+`Core/Slash.lua` asks first (dialog `WRITCRAFTER_RESET`), then sets
+`WritCrafterVars[GetWorldName()][GetDisplayName()]` to `nil` and calls `ReloadUI("ingame")`. That
+drops this account's whole `$AccountWide` table on this megaserver: section 3 for the shared
+settings, all of section 4 for every character, and all of section 5. On the reload,
+`SavedVars.Init` builds a fresh table from `WC.DEFAULTS`. Other megaservers' tables, and other
+accounts' (if several use this computer), are untouched.
+
+What players lose, and what comes back by itself, is explained in README.md, "Resetting
+WritCrafter". In short:
+
+| Data | After a reset |
+|---|---|
+| `settings`, characters' `settings`, `scope` | Defaults; every character back to Account Wide |
+| `queue`, `mimic` | Empty: queued writs must be queued again |
+| `rewardBoxes`, `rewardTodo`, `rewardStack` | Empty: pending deposits, sales and box openings are not done |
+| `dailyItems`, `dailyAcquire`, `writReady`, `writTurnedIn` | Empty: today's daily items lose their padlock, the status strip may be wrong until the next reset |
+| `acceptedWrits` | Rebuilt from the journal; a quest past its craft step may not be found until turned in |
+| `grandMaster` | Relearned as each Grand Master station is used |
+| `stations`, `stationKinds` | Relearned as stations are used; stations the furniture list or name identifies need nothing |
+| `writQuests` | Relearned at the next station visit; English matching works meanwhile |
+| `linkCache` | Refilled as items are seen in bags; some prices missing until then |

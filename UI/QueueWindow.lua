@@ -453,6 +453,19 @@ function Window.EnqueueAll()
     end
 end
 
+-- /wc queue all: every sealed writ in the backpack and bank that could be queued, whatever the
+-- window's Show menu says. Returns how many were added.
+function Window.EnqueueAllWrits()
+    local count = 0
+    for _, entry in ipairs(BuildEntries()) do
+        if StateOf(entry) == STATE_OPEN then
+            WC.Queue.Add(entry.uid, entry.link)
+            count = count + 1
+        end
+    end
+    return count
+end
+
 function Window.DequeueAll()
     for _, entry in ipairs(shown) do
         if WC.Queue.Has(entry.uid) then

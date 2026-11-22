@@ -9,7 +9,7 @@
 ## Version: 0.1.0
 ## AddOnVersion: 100
 ## APIVersion: 101051 101052
-## DependsOn: LibAddonMenu-2.0>=43 LibCustomMenu>=730 LibPrice>=70530 LibSets>=9040 LibCharacterKnowledge>=301020
+## DependsOn: LibAddonMenu-2.0>=43 LibCustomMenu>=730 LibPrice>=70550 LibSets>=9040 LibCharacterKnowledge>=301040
 ## OptionalDependsOn: LibEsoHubPrices LibDebugLogger FCOItemSaver AwesomeGuildStore
 ## SavedVariables: WritCrafterVars
 

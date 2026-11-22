@@ -16,30 +16,13 @@ Turn Debug chat on (`/wc debug`) before starting.
 
 | # | Do | Expect |
 |---|---|---|
-| AG5 | Press Accept Crafted Writs (button or keybind) with crafted writs in your backpack | Accepted as before, with no dialog: WritCrafter's own automation isn't stopped |
-| AG7 | Settings → Master Writs → turn off Ask Before Accepting Writs You Can't Craft, then use an uncraftable writ | Accepted straight away, as the game does it, with no dialog. Turn the setting back on afterwards |
-| GR7 | A fight in heavy armour, then open the queue window | No stutter or extra work during the fight, and the window is up to date |
-| SM1 | In your house, Station Markers on Only Queued, nothing queued, with the two writs you've accepted (woodworking done, Rubedite Pauldron still to craft) | No cyan markers, only the game's white one(s). `/wc stations` says `Accepted writs still to craft: 1` and `Markers shown here: 0` |
-| SM2 | Same as SM1: look where the game's marker sits for the Rubedite Pauldron (Tharriker's Strike) | Say whether it's over the Tharriker's Strike blacksmithing station, the Grand Master station, or both. If the game misses a station WritCrafter used to mark, that station now has no marker at all |
-| SM3 | Queue a sealed writ that the same station fits as an accepted one (e.g. a Tharriker's Strike blacksmithing writ) | Still no cyan marker on that station: the game's marker covers it |
-| SM4 | Queue a sealed writ for a station no accepted writ needs (e.g. a woodworking writ) | A cyan marker over that station within a second |
-| SM5 | With the SM3 writ queued, open the station that has only the game's marker | Both the accepted and the queued writ are crafted in that one visit; afterwards that station has no marker of either kind |
+| RG2 | A bank visit with reward items to deposit, then a merchant with items to sell (or GR3/GR4 again) | Still one at a time and as quick as before: the request queue now only listens to the bag it's working on |
 
 ### On the next daily run
 
-The day before: set Settings → Writ Rewards → **Ornate Gear**, **Intricate Gear** and
-**Glyphs** to **Deconstruct**, and keep one marked piece (e.g. a staff marked
-`(to deconstruct)`) overnight without visiting an assistant or its station.
-
 | # | Do | Expect |
 |---|---|---|
-| GR6 | Turn in dailies so reward boxes open | Boxes open quietly as before, with no loot window flashing up |
-| DC3 | With the marked piece kept overnight, pick up the dailies and open the woodworking station | The writ items are crafted first, then `Deconstructing 1 writ reward item(s).` and the staff is taken apart, then the station closes as usual. Checks that leaving the station after writ crafting doesn't cut the deconstruction off |
-| DC4 | Open the enchanting station with glyphs marked to deconstruct | The marked glyphs are extracted together |
 | OC4 | A daily that needs something you don't have: open its station, fetch the item, open the station again | Searched again and crafted, as before |
-| GR3 | At the bank, with several reward items marked Deposit, or a daily whose finished item is in the bank | Each item goes over in quick succession rather than all at once, with the same chat lines as before. Say whether it feels slower |
-| GR4 | At a merchant, with several reward items marked Sell, or a Keep a Stack kind over one stack | Everything sold, one after another, with the same chat lines as before |
-| GR5 | Open the bank with items to deposit and close it straight away | No error. Whatever didn't go over is deposited at the next bank visit |
 
 ### Whenever it happens
 
@@ -67,6 +50,51 @@ Deferred until the free Epic accounts have characters that can craft. Every craf
 
 Passed tests and what was learned, newest first.
 
+### ESOUI rules review (2026-11-22)
+
+What changed: README reworked as the ESOUI description and player guide (AI disclosure first,
+then required libraries, credits, every command, resetting); `DependsOn` raised to LibPrice 70550
+and LibCharacterKnowledge 301040; the request queue's bag event filtered to the bag it's working
+on; `/wc` isn't taken from another add-on that already has it; Deploy.ps1 leaves only uploadable
+files in the AddOns folder.
+
+**RG1 and RG3 passed 2026-11-22:** after logging out fully WritCrafter loaded with no dependency
+warning, and `/writcrafter` and `/wc` both showed the command list. RG3 led to a change: replies
+now repeat the command you typed (RG4).
+
+**RG4 passed 2026-11-22:** `/writcrafter` lists every command as `/writcrafter ...` with `Commands (/wc works the same):`, its unknown-command and usage replies say `/writcrafter`, `/wc` does the same the other way round, and the settings texts say `/wc`.
+
+### Slash commands (2026-11-22)
+
+What changed: new `/wc accept`, `/wc queue all`, `/wc queue none` (or `clear`), `/wc markers off|all|queued`,
+`/wc guard on|off` and `/wc reset` (asks first, then clears this account's WritCrafter data on
+this server and reloads).
+
+**SC1 passed 2026-11-22:** `/wc accept` accepted crafted writs like the button, and `/wc` lists the new commands.
+
+**SC2 passed 2026-11-22:** `/wc queue clear` emptied the queue and `/wc queue all` queued every writ you can craft, with the counts in chat and the window keeping up. Afterwards `/wc queue none` was added as another word for `clear` (SC6).
+
+**SC6 passed 2026-11-22:** `/wc queue none` empties the queue like `clear`, the usage line suggests `none`, and `/wc` lists `queue none (or clear)`.
+
+**SC3 passed 2026-11-22:** `/wc markers all`, `none`, `off`, `queued` and `queue` change the markers straight away and name the setting in chat (`none` = `off`, `queue` = `queued`); with no word it says the current one, a wrong word gives the usage line, and the settings panel matches.
+
+**SC4 passed 2026-11-22:** `/wc guard on|off` changes the setting and says so, with no word it says the current one, a wrong word gives the usage line, and the settings checkbox matches.
+
+**SC5 passed 2026-11-22:** `/wc reset` wiped the saved data and settings and reloaded.
+
+### Station markers defer to the game's (2026-11-22)
+
+What changed: a station that fits an accepted master writ still to craft already has the game's
+own quest marker, so WritCrafter no longer adds its cyan one there (see PLAN.md, milestone 5,
+step 4).
+
+**SM1–SM5 passed 2026-11-22** with Station Markers on Only Queued: with only accepted writs
+there were no cyan markers and `/wc stations` counted the accepted writ still to craft; the
+game's marker covered the Rubedite Pauldron's station, so no station was left unmarked; a
+queued writ for that same station got no cyan marker, while one for another station did; and
+opening the station crafted both the accepted and the queued writ in one visit, leaving no
+marker of either kind.
+
 ### Guidelines review fixes (2026-11-21)
 
 What changed: bank moves and merchant sales now go one at a time, each after the server has made the one before (instead of all in the same frame); bag-change handlers ignore gear wear and weapon charge; the quiet-loot hook sits on the loot window's class; every WritCrafter string was renamed (`SI_WRITCRAFTER_*` → `WRITCRAFTER_*`); the manifest was renamed `WritCrafter.txt`.
@@ -75,11 +103,18 @@ What changed: bank moves and merchant sales now go one at a time, each after the
 with the `.txt` manifest, with no dependency or out-of-date warning, and the settings, queue
 window, exclusions window, writ tooltips and `/wc` all show their text after the string rename.
 
+**GR6 and GR4 passed 2026-11-22** on the daily run: reward boxes opened quietly with the loot
+window hook on its class, and reward items marked Sell were all sold one at a time. GR3 passed
+the same day: bank deposits go over one at a time, and the speed is fine (no need to switch
+`REQUEST_ONE_AT_A_TIME` off). GR4 passed again too. GR5 passed: closing the bank straight away
+gave no error. GR7 passed: no stutter during a fight in heavy armour, and the queue window was up
+to date afterwards.
+
 ### Milestone 6, step 2: deconstruct writ rewards (2026-11-13)
 
 Only a `/reloadui`. Set Settings → Writ Rewards → **Ornate Gear**, **Intricate Gear** and **Glyphs** to the new **Deconstruct** (only items from writ boxes opened after this change count; ones already in your bag aren't marked). Debug chat on.
 
-Passed 2026-11-13: DC1 (the Deconstruct choice), DC2 (pieces marked `(to deconstruct)` and kept), DC6 (enchanting station with nothing marked: nothing happened). Also seen: a Platinum Necklace, a Ruby Ash Inferno Staff, a Rubedite Girdle and Rubedo Leather Boots were each taken apart at their own station (`Deconstructing 1 writ reward item(s).`). The glyph that day was left alone because Glyphs was still on Leave in Bag when its box opened. DC5 passed 2026-11-13: Giladil the Ragpicker took 5 marked pieces of four kinds (a necklace, a bow, a jerkin, a cuirass and a glyph) apart in one batch (`Deconstructing 5 writ reward item(s).`), so glyphs come apart too. A marked piece locked afterwards was left alone (2026-11-13). Still to see: writ crafting and deconstruction in the same station visit (DC3), glyphs at the enchanting station (DC4). Debug chat now names the station: `Clothing station (2) opened: ...`, `Deconstruction assistant or station (0) opened: ...`.
+Passed 2026-11-13: DC1 (the Deconstruct choice), DC2 (pieces marked `(to deconstruct)` and kept), DC6 (enchanting station with nothing marked: nothing happened). Also seen: a Platinum Necklace, a Ruby Ash Inferno Staff, a Rubedite Girdle and Rubedo Leather Boots were each taken apart at their own station (`Deconstructing 1 writ reward item(s).`). The glyph that day was left alone because Glyphs was still on Leave in Bag when its box opened. DC5 passed 2026-11-13: Giladil the Ragpicker took 5 marked pieces of four kinds (a necklace, a bow, a jerkin, a cuirass and a glyph) apart in one batch (`Deconstructing 5 writ reward item(s).`), so glyphs come apart too. A marked piece locked afterwards was left alone (2026-11-13). DC3 and DC4 passed 2026-11-22: writ crafting and then deconstruction in the same station visit, with the station still closing afterwards (DC3), and marked glyphs extracted together at the enchanting station (DC4). Debug chat now names the station: `Clothing station (2) opened: ...`, `Deconstruction assistant or station (0) opened: ...`.
 
 ### Hand Over Excluded Reagents (2026-11-12)
 
@@ -141,6 +176,11 @@ right-clicked with a craftable writ just below, moving the mouse down onto it qu
 clicking Use. Each time the right-clicked writ was checked and its Accept turned away.
 Double-click and the Use key passed in the same session. AG10 passed too: Clothier, Blacksmithing
 and Woodworking writs you can craft were accepted with no dialog (`... used (by hand), craftable`).
+
+**AG5 passed 2026-11-22:** Accept Crafted Writs still accepted the crafted writs with no
+dialog, so the guard doesn't stop WritCrafter's own automation.
+
+**AG7 passed 2026-11-22:** with Ask Before Accepting Writs You Can't Craft off, an uncraftable writ was accepted straight away with no dialog.
 
 ### Milestone 7, batch A: speed (2026-11-11)
 

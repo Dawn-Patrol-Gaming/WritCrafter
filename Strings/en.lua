@@ -35,7 +35,7 @@ ZO_CreateStringId("WRITCRAFTER_ORIGIN_ZONE",                "Zone-specific creat
 ZO_CreateStringId("WRITCRAFTER_ORIGIN_SPECIAL",             "Update 51 source (solo dungeons, Imperial City sewers, treasure maps, icy zones)")
 ZO_CreateStringId("WRITCRAFTER_EXPENSIVE_SUBMENU",          "Material Exclusions")
 ZO_CreateStringId("WRITCRAFTER_EXCL_OPEN",                 "Open Material Exclusions")
-ZO_CreateStringId("WRITCRAFTER_EXPENSIVE_TEXT",             "An excluded material is never used: writs that need it are rejected, except style materials, which get a mimic stone instead (unless Mimic Stones is set to Never).\n\nThe defaults are materials that are expensive or hard to find, every alchemy reagent that isn't an overland plant, and every style material NPC Stylemasters don't sell. Open the exclusions window to see each category's full list and change it. You can also right-click any material in your bags, or type /wc exclusions.")
+ZO_CreateStringId("WRITCRAFTER_EXPENSIVE_TEXT",             "An excluded material is never used: writs that need it are rejected, except style materials, which get a mimic stone instead (unless Mimic Stones is set to Never).\n\nThe defaults are materials that are expensive or hard to find, every alchemy reagent that isn't an overland plant, and every style material NPC Stylemasters don't sell. Open the exclusions window to see each category's full list and change it. You can also right-click any material in your bags, or type <<1>> exclusions.")
 ZO_CreateStringId("WRITCRAFTER_EXPENSIVE_STYLE",            "Style materials")
 
 -- Material exclusions window
@@ -308,7 +308,7 @@ ZO_CreateStringId("WRITCRAFTER_CRAFT_UNRECOGNIZED",        "Crafted for <<1>>, b
 
 -- Settings: diagnostics
 ZO_CreateStringId("WRITCRAFTER_HEADER_DIAGNOSTICS",         "Diagnostics")
-ZO_CreateStringId("WRITCRAFTER_DIAGNOSTICS_TEXT",           "Type /wc stock or /wc price followed by an item link (shift-click an item into chat) to see what WritCrafter counts and prices.")
+ZO_CreateStringId("WRITCRAFTER_DIAGNOSTICS_TEXT",           "Type <<1>> stock or <<1>> price followed by an item link (shift-click an item into chat) to see what WritCrafter counts and prices.")
 
 -- Choices
 ZO_CreateStringId("WRITCRAFTER_SOURCE_AUTO",                "Automatic")
@@ -367,7 +367,9 @@ ZO_CreateStringId("WRITCRAFTER_PERF_STORED",               "  Storage check for 
 ZO_CreateStringId("WRITCRAFTER_PERF_BADGES",              "  Badges for all <<2>> bag and bank slots: <<1>> ms")
 
 -- Slash command
-ZO_CreateStringId("WRITCRAFTER_HELP",                       "Commands:\n/wc settings - open the settings\n/wc exclusions - choose which materials writs may not use\n/wc stock <item> - how many you have and can use\n/wc price <item> - the price WritCrafter uses\n/wc selftest - check every stack count against the game's own totals\n/wc debug - toggle debug chat messages\n/wc perf - time the work behind bag and bank windows\n/wc checkdata - compare WritCrafter\'s built-in data with the game (run after game updates)\n/wc reagents - the solvents and reagents that make your alchemy daily\n/wc quests - your crafting quests\' tasks, and what WritCrafter reads from master writs\n/wc queue - open the master writ queue (or set a key for it in Controls)\n/wc stations - what the station markers are working from here")
+ZO_CreateStringId("WRITCRAFTER_HELP",                       "<<1>> settings - open the settings\n<<1>> exclusions - choose which materials writs may not use\n<<1>> stock <item> - how many you have and can use\n<<1>> price <item> - the price WritCrafter uses\n<<1>> selftest - check every stack count against the game's own totals\n<<1>> debug - toggle debug chat messages\n<<1>> perf - time the work behind bag and bank windows\n<<1>> checkdata - compare WritCrafter\'s built-in data with the game (run after game updates)\n<<1>> reagents - the solvents and reagents that make your alchemy daily\n<<1>> quests - your crafting quests\' tasks, and what WritCrafter reads from master writs\n<<1>> queue - open the master writ queue (or set a key for it in Controls)\n<<1>> queue all - queue every writ you can craft (backpack and bank)\n<<1>> queue none (or clear) - empty the queue\n<<1>> accept - accept the crafted master writs in your backpack (same as the queue window button or its key)\n<<1>> markers none|all|queued - station markers setting (off and queue work too)\n<<1>> guard on|off - Ask Before Accepting Writs You Can't Craft\n<<1>> reset - clear all WritCrafter saved data and settings on this server (asks first, then reloads)\n<<1>> stations - what the station markers are working from here")
+ZO_CreateStringId("WRITCRAFTER_HELP_HEADER",                "Commands:")
+ZO_CreateStringId("WRITCRAFTER_HELP_HEADER_BOTH",           "Commands (<<1>> works the same):")
 ZO_CreateStringId("WRITCRAFTER_SELFTEST_OK",                "Self-test passed: <<1>> stackable items checked, all counts match the game's own totals (<<2>> skipped: gear or mixed versions).")
 ZO_CreateStringId("WRITCRAFTER_SELFTEST_FAIL",              "Self-test found <<1>> mismatch(es) out of <<2>> items checked:")
 ZO_CreateStringId("WRITCRAFTER_SELFTEST_ROW",               "<<1>> (ID <<2>>): WritCrafter <<3>>/<<4>>/<<5>>, game <<6>>/<<7>>/<<8>> (backpack/bank/craft bag)")
@@ -402,7 +404,7 @@ ZO_CreateStringId("WRITCRAFTER_REAGENTS_ITEM",              "<<1>> (<<2>>)")
 ZO_CreateStringId("WRITCRAFTER_REAGENTS_ITEM_EXCLUDED",     "<<1>> (<<2>>, excluded)")
 ZO_CreateStringId("WRITCRAFTER_CHECK_BOOSTER",              "ID <<1>> (<<2>>) is not the <<3>> improvement material for tier <<4>>")
 ZO_CreateStringId("WRITCRAFTER_SELFTEST_MORE",              "...and <<1>> more. Turn on Debug chat messages and run it again to see all of them.")
-ZO_CreateStringId("WRITCRAFTER_UNKNOWN_COMMAND",            "Unknown command \"<<1>>\". Type /wc help.")
+ZO_CreateStringId("WRITCRAFTER_UNKNOWN_COMMAND",            "Unknown command \"<<1>>\". Type <<2>> help.")
 ZO_CreateStringId("WRITCRAFTER_NEED_ITEM",                  "Add an item link (shift-click an item into chat) or an item ID.")
 ZO_CreateStringId("WRITCRAFTER_STOCK",                      "<<1>>: <<2>> backpack, <<3>> bank, <<4>> craft bag. Usable: <<5>>")
 ZO_CreateStringId("WRITCRAFTER_STOCK_LOCKED",               "<<1>>: <<2>> backpack, <<3>> bank, <<4>> craft bag. Usable: <<5>> (<<6>> locked)")
@@ -410,3 +412,15 @@ ZO_CreateStringId("WRITCRAFTER_PRICE",                      "<<1>>: <<2>>g each 
 ZO_CreateStringId("WRITCRAFTER_PRICE_NONE",                 "<<1>>: no price data")
 ZO_CreateStringId("WRITCRAFTER_DEBUG_ON",                   "Debug messages on.")
 ZO_CreateStringId("WRITCRAFTER_DEBUG_OFF",                  "Debug messages off.")
+ZO_CreateStringId("WRITCRAFTER_SLASH_QUEUE_USAGE",          "Use <<1>> queue (open the window), <<1>> queue all or <<1>> queue none.")
+ZO_CreateStringId("WRITCRAFTER_SLASH_QUEUED_ALL",           "Queued <<1>> writ(s). Writs your settings reject, or this character can't craft, were left out.")
+ZO_CreateStringId("WRITCRAFTER_SLASH_QUEUE_CLEARED",        "Queue cleared: <<1>> writ(s) removed.")
+ZO_CreateStringId("WRITCRAFTER_SLASH_MARKERS",              "Station markers: <<1>>.")
+ZO_CreateStringId("WRITCRAFTER_SLASH_MARKERS_EHT",          "(Essential Housing Tools is marking stations, so WritCrafter draws none while it does.)")
+ZO_CreateStringId("WRITCRAFTER_SLASH_MARKERS_USAGE",        "Use <<1>> markers none, <<1>> markers all or <<1>> markers queued.")
+ZO_CreateStringId("WRITCRAFTER_SLASH_GUARD_ON",             "Ask Before Accepting Writs You Can't Craft: on.")
+ZO_CreateStringId("WRITCRAFTER_SLASH_GUARD_OFF",            "Ask Before Accepting Writs You Can't Craft: off.")
+ZO_CreateStringId("WRITCRAFTER_SLASH_GUARD_USAGE",          "Use <<1>> guard on or <<1>> guard off.")
+ZO_CreateStringId("WRITCRAFTER_RESET_TITLE",                "Reset WritCrafter")
+ZO_CreateStringId("WRITCRAFTER_RESET_TEXT",                 "Clear everything WritCrafter has saved for this account on this server, then reload the UI?\n\nEvery setting goes back to its default (the shared ones and each character's own), every character's queue is emptied, and what WritCrafter has learned (station spots, writ quest names) is forgotten. Other megaservers are not touched. This can't be undone.")
+ZO_CreateStringId("WRITCRAFTER_RESET_CONFIRM",              "Reset and Reload")

@@ -3,9 +3,9 @@
     Copies the addon into the ESO AddOns folder as AddOns\WritCrafter.
 
 .DESCRIPTION
-    Mirrors the repo into the destination, leaving out repo-only folders (docs, scripts, tests, .git).
-    The destination folder is WritCrafter's own, so files deleted from the repo are deleted there too.
-    Saved variables live in ..\SavedVariables and are never touched.
+    Copies exactly what may be uploaded to ESOUI (the manifest, every file it loads, and
+    README.md) and removes everything else from the destination, so the installed folder can be
+    zipped for an upload as it is. Saved variables live in ..\SavedVariables and are never touched.
 #>
 param(
     [string]$Destination = (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'Elder Scrolls Online\live\AddOns\WritCrafter')
@@ -58,10 +58,50 @@ if ($python) {
     Write-Host "Python not found; skipping scripts\check_lua.py"
 }
 
-robocopy $source $Destination /MIR /XD .git .claude docs scripts tests /XF .gitignore *.md notes_*.txt /NFL /NDL /NJH /NJS /NP | Out-Null
-if ($LASTEXITCODE -ge 8) {
-    throw "robocopy failed with exit code $LASTEXITCODE"
+# Exactly what may be uploaded to ESOUI: the manifest, every file it loads, and README.md (the
+# player guide). The installed folder is what gets zipped for an upload, so nothing else may be
+# in it: ESOUI's addon check flags any other file (images, docs, scripts, hidden files).
+$manifest = Get-Content -LiteralPath (Join-Path $source 'WritCrafter.txt') -Encoding UTF8
+$loaded = $manifest | ForEach-Object { $_.Trim() } |
+    Where-Object { $_ -ne '' -and -not $_.StartsWith('#') -and -not $_.StartsWith(';') }
+if ($loaded | Where-Object { $_ -match '\$\(' }) {
+    throw "The manifest uses a path variable such as `$(language); teach Deploy.ps1 about it first"
 }
-Write-Host "Deployed to $Destination"
-# robocopy uses 1-7 for success ("files copied" etc.); don't leak that as a failure.
-exit 0
+$files = @('WritCrafter.txt', 'README.md') + @($loaded | ForEach-Object { $_ -replace '/', '\' })
+
+$allowed = '.txt', '.lua', '.xml', '.dds', '.md', '.ttf', '.otf'
+foreach ($file in $files) {
+    if (-not (Test-Path -LiteralPath (Join-Path $source $file) -PathType Leaf)) {
+        throw "Listed but missing: $file; not deployed"
+    }
+    if ($allowed -notcontains [IO.Path]::GetExtension($file).ToLowerInvariant()) {
+        throw "File type ESOUI doesn't allow: $file; not deployed"
+    }
+}
+
+$ErrorActionPreference = 'Stop'   # a file that fails to copy stops the deploy
+New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+$keep = @{}
+foreach ($file in $files) {
+    $target = Join-Path $Destination $file
+    $keep[$target.ToLowerInvariant()] = $true
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
+    Copy-Item -LiteralPath (Join-Path $source $file) -Destination $target -Force
+}
+
+# Anything else in the folder goes: files removed from the add-on, and anything else that got
+# in (hidden files included). Then empty folders.
+$removed = 0
+Get-ChildItem -LiteralPath $Destination -Recurse -File -Force | ForEach-Object {
+    if (-not $keep.ContainsKey($_.FullName.ToLowerInvariant())) {
+        Remove-Item -LiteralPath $_.FullName -Force -Confirm:$false
+        $removed++
+    }
+}
+Get-ChildItem -LiteralPath $Destination -Recurse -Directory -Force |
+    Sort-Object { $_.FullName.Length } -Descending |
+    Where-Object { -not (Get-ChildItem -LiteralPath $_.FullName -Force) } |
+    ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force -Confirm:$false }
+
+Write-Host "Deployed $($files.Count) files to $Destination (removed $removed other file(s))"
+Write-Host "Ready to zip for ESOUI: zip the WritCrafter folder itself, so the zip holds one WritCrafter folder."

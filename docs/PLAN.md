@@ -489,8 +489,8 @@ Testing: pure logic (solver, rules, link parsing, price defaults) gets offline L
 From the ESOUI upload rules and the guidelines review (2026-11-21; notes in BookStack, "ESO Addon Development"):
 - **AI disclosure at the very top of the ESOUI description:** most of the code was written by Claude (Anthropic) under the author's direction and tested in game. Required by ESOUI since the author can't personally verify every line. The README already says so.
 - **Required libraries listed at the top of the description**, each with its minimum version (the `DependsOn` list in `WritCrafter.txt`).
-- **Credit sources:** Dolgubon's Lazy Writ Crafter, LibLazyCrafting, WritWorthy, DailyAlchemy, DailyProvisioning and UESP were read as API references; no code copied.
-- **Zip:** one `WritCrafter` folder, made by Deploy.ps1's exclusions (no `.git`, `docs`, `scripts`, Markdown or notes files), no zips inside, no executables. Plus at least one screenshot.
+- **Credit sources:** Dolgubon's Lazy Writ Crafter, LibLazyCrafting, WritWorthy, DailyAlchemy, DailyProvisioning, LibAlchemy and UESP were read as API references; no code copied. Listed with their authors in README's Credits section (added 2026-11-22; keep it current).
+- **Zip:** the installed `AddOns\WritCrafter` folder after `Deploy.ps1`, which since 2026-11-22 holds exactly the manifest, the files it loads and `README.md` (the player guide) and removes anything else. No zips inside, no executables, no images. Screenshots go on the ESOUI page, never in the zip (a `.png` was flagged on Character Homes). Full checklist: `docs/RELEASING.md`.
 - **Changelog** in ESOUI's Changelog tab, newest first, not in the description.
 - **Version bump:** `## Version:` and `WC.version` together, `## AddOnVersion:` up by one; `## APIVersion:` set to live (and PTS when there is one), at most two values.
 - **Before each release, bump the `DependsOn` minimums** to the library versions actually tested.

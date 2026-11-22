@@ -113,6 +113,11 @@ function Requests.Pump()
         else
             current = { request = request, uid = uid, count = count, sentMs = GetFrameTimeMilliseconds() }
             EVENT_MANAGER:RegisterForEvent(REQUEST_NAME, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, OnRequestSlotUpdate)
+            -- Only the bag the request is about, ordinary changes only (Finish unregisters, which
+            -- also drops this filter, so each request gets its own).
+            EVENT_MANAGER:AddFilterForEvent(REQUEST_NAME, EVENT_INVENTORY_SINGLE_SLOT_UPDATE,
+                REGISTER_FILTER_BAG_ID, request.bagId,
+                REGISTER_FILTER_INVENTORY_UPDATE_REASON, INVENTORY_UPDATE_REASON_DEFAULT)
             EVENT_MANAGER:RegisterForUpdate(REQUEST_NAME .. "Timeout", REQUEST_TIMEOUT_MS, function()
                 if current then
                     Finish(false)

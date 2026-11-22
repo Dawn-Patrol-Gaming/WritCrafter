@@ -8,7 +8,8 @@ local WC = WritCrafter
 -- same check as the queue window, and if that check would reject or cannot-craft it, the offer is
 -- turned away before it's accepted, with a dialog asking whether to take it anyway.
 --
--- Which writ: UseItem is private (it can't be hooked, even after the call), and the offer's text
+-- Which writ: UseItem is a protected function, and hooking it (even after the call) would put
+-- add-on code in the game's own secure call to it, so it's left alone. The offer's text
 -- only names the craft. But however the game's inventory uses an item (double-click, the Use key,
 -- right-click -> Use, gamepad), it first asks IsItemUsable(bag, slot) about that exact item, then
 -- calls ClearCursor, then UseItem, all in one go. So the item IsItemUsable was last asked about,

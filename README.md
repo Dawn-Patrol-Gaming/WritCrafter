@@ -1,5 +1,12 @@
 # WritCrafter
 
+> **Made with AI:** most of WritCrafter's code was written by Claude (Anthropic's AI) under the
+> author's direction. Every feature is tested in game by the author, but not every line has been
+> reviewed by hand.
+
+> **Required libraries:** LibAddonMenu-2.0, LibCustomMenu, LibPrice, LibSets and
+> LibCharacterKnowledge (versions below). Install them from ESOUI or with Minion.
+
 An Elder Scrolls Online add-on that crafts everything your daily and master writs need, skips
 writs you don't want, and spends the materials you have the most of.
 
@@ -9,9 +16,25 @@ Rolis Hlaalu are handled for you, and the boxes you get back are opened and sort
 > **Status:** pre-release (0.1.0), in active development and tested on one account. Built for
 > Update 51 (API 101051 / 101052), PC/Mac, English client.
 
-> **Made with AI:** most of WritCrafter's code was written by Claude (Anthropic's AI) under the
-> author's direction. Every feature is tested in game by the author, but not every line has been
-> reviewed by hand.
+## Requirements
+
+Required libraries:
+
+| Library | Minimum version |
+|---|---|
+| LibAddonMenu-2.0 | 43 |
+| LibCustomMenu | 730 |
+| LibPrice | 70550 |
+| LibSets | 9040 |
+| LibCharacterKnowledge | 301040 |
+
+Optional, used when installed:
+
+- **LibEsoHubPrices**: ESO Hub prices (the default price source when present)
+- **Master Merchant**, **Arkadius' Trade Tools**, **Tamriel Trade Centre**: prices, through LibPrice
+- **FCO ItemSaver**: items you've marked are never used, moved, sold or taken apart
+- **AwesomeGuildStore**: WritCrafter's lines still show on guild store tooltips
+- **LibDebugLogger**: keeps WritCrafter's chat lines in its saved file
 
 ## It replaces
 
@@ -25,33 +48,13 @@ other's way.
 - WritWorthy
 - LibMarify, LibRecipe (no longer needed)
 
-## Requirements
-
-Required libraries (install them from ESOUI or Minion):
-
-| Library | Minimum version |
-|---|---|
-| LibAddonMenu-2.0 | 43 |
-| LibCustomMenu | 730 |
-| LibPrice | 70530 |
-| LibSets | 9040 |
-| LibCharacterKnowledge | 301020 |
-
-Optional, used when installed:
-
-- **LibEsoHubPrices**: ESO Hub prices (the default price source when present)
-- **Master Merchant**, **Arkadius' Trade Tools**, **Tamriel Trade Centre**: prices, through LibPrice
-- **FCO ItemSaver**: items you've marked are never used, moved, sold or taken apart
-- **LibDebugLogger**: keeps WritCrafter's chat lines in its saved file
-
 ## Installing
 
-1. Download this repository (Code → Download ZIP) or clone it.
-2. Put the folder in your AddOns folder and make sure it's named exactly **`WritCrafter`**:
+1. Install the required libraries above.
+2. Put the `WritCrafter` folder in your AddOns folder, named exactly **`WritCrafter`**:
    `Documents\Elder Scrolls Online\live\AddOns\WritCrafter\WritCrafter.txt`
    (If your Documents folder lives elsewhere, use that one.)
-3. Install the required libraries above.
-4. In game, enable WritCrafter under Add-ons, disable the add-ons it replaces, and log in.
+3. In game, enable WritCrafter under Add-ons, disable the add-ons it replaces, and log in.
 
 Settings: **Settings → Add-ons → WritCrafter**, or type `/wc settings`.
 
@@ -77,12 +80,13 @@ Settings: **Settings → Add-ons → WritCrafter**, or type `/wc settings`.
   Crafting Stations** (WritCrafter learns which sets yours have each time you use one).
 - **Mimic stones:** used when a style material is excluded or you have none (setting, with a
   per-writ override in the queue window).
-- **Accept and turn in:** the *Accept crafted master writs* button or keybind accepts the writs
-  whose items are already crafted. Talking to Rolis Hlaalu then hands them all in, ends the
-  conversation and accepts the next batch.
+- **Accept and turn in:** the *Accept crafted master writs* button, keybind or `/wc accept` accepts
+  the writs whose items are already crafted. Talking to Rolis Hlaalu then hands them all in, ends
+  the conversation and accepts the next batch.
 - **Accept guard:** using a sealed writ your settings reject, or one this character can't craft
   (unknown motif, recipe or trait), asks first instead of adding a quest you can't finish.
-- **Station markers:** in houses, a marker over each station that can craft your queued writs.
+- **Station markers:** in houses, a marker over each station that can craft your queued writs. A
+  station the game already marks for a writ you've accepted keeps only the game's marker.
 - **Never twice:** items already crafted for a writ (in your bag or bank) are set aside for it and
   never crafted again.
 
@@ -113,13 +117,21 @@ Locked items, FCO ItemSaver-marked items and items set aside for writs are never
 
 ## Commands
 
-`/wc` and `/writcrafter` work the same. `/wc` alone shows this list in chat.
+`/wc` and `/writcrafter` work the same: every command below also works as `/writcrafter settings`,
+`/writcrafter queue` and so on, and the replies use whichever you typed. If another add-on already
+uses `/wc`, WritCrafter leaves it alone and only `/writcrafter` works. `/wc` alone shows this list
+in chat.
 
 | Command | What it does |
 |---|---|
 | `/wc settings` | Open the settings |
 | `/wc queue` | Show or hide the master writ queue window |
+| `/wc queue all` | Queue every writ you can craft, in your backpack and bank |
+| `/wc queue none` | Empty the queue (`/wc queue clear` does the same) |
+| `/wc accept` | Accept the crafted master writs in your backpack |
 | `/wc exclusions` | Choose which materials writs may not use |
+| `/wc markers none\|all\|queued` | Station markers: none, every writ in your bag, or queued writs only (`off` works the same as `none`, and `queue` as `queued`) |
+| `/wc guard on\|off` | Turn the accept guard (Ask Before Accepting Writs You Can't Craft) on or off |
 | `/wc stock <item link>` | How many of an item you have, and how many WritCrafter can use |
 | `/wc price <item link>` | The price WritCrafter uses for an item, and its source |
 | `/wc reagents` | The solvents and reagents your alchemy daily can use |
@@ -129,8 +141,10 @@ Locked items, FCO ItemSaver-marked items and items set aside for writs are never
 | `/wc selftest` | Check WritCrafter's stack counts against the game's own |
 | `/wc perf` | Time the work behind the bag and bank windows |
 | `/wc checkdata` | Compare WritCrafter's built-in data with the game (after game updates) |
+| `/wc reset` | Clear everything WritCrafter has saved on this server (asks first, then reloads). See below |
 
-Shift-click an item into chat to get its link for `stock` and `price`.
+`markers` and `guard` without a word say what they're set to now. Shift-click an item into chat to
+get its link for `stock` and `price`.
 
 **Keybinds** (Controls → Keybindings → WritCrafter, none set by default): show or hide the master
 writ queue, accept crafted master writs.
@@ -149,6 +163,45 @@ switch to **This Character Only** under General; it starts from a copy of the sh
 | Inventory Icons | Each badge on or off, and their position |
 | General | Settings scope, price source, chat detail |
 
+WritCrafter keeps its data separately for each megaserver (NA, EU, PTS), so one never overwrites
+the other.
+
+## Resetting WritCrafter
+
+`/wc reset` asks first, then clears everything WritCrafter has saved for your account **on the
+server you're on** and reloads the UI. Your other megaservers, other add-ons, the game's own
+settings and your items are not touched. It can't be undone, so to keep a way back, first copy
+`Documents\Elder Scrolls Online\live\SavedVariables\WritCrafter.lua` somewhere safe. To restore
+it, quit the game fully, copy it back, then start the game.
+
+What a reset clears:
+
+1. **Every setting goes back to its default,** for the shared settings and every character's own:
+   material exclusions (too-expensive marks, reagent choices, gold writs per craft, price
+   ceilings), reward actions, daily writ boards and crates per craft, station markers, mimic
+   stones, max gold per voucher, sounds, badges, the status strip's position, price source and
+   chat detail. Every character goes back to Account Wide.
+2. **Work in progress is forgotten:**
+   - every character's master writ queue, and any per-writ mimic choices;
+   - reward items waiting for the bank or a merchant (they stay in your backpack and are no
+     longer deposited or sold for you), reward boxes waiting to be opened, and Keep a Stack counts;
+   - daily writs in progress: items already crafted for a daily lose their badge, an alchemy
+     reagent waiting to be handed over may not be, and the status strip may be wrong until the
+     next daily reset;
+   - accepted master writs are mostly found again in your quest journal, but one whose crafting
+     step is already done may lose its details (and its items' badges) until it's turned in.
+3. **What WritCrafter has learned comes back as you play:**
+   - which sets your Grand Master stations hold: until you use each one once, the queue window
+     and the markers point to each set's own station;
+   - house stations: those found from the game's furniture list or by name come back at once; a
+     station WritCrafter only knew because you'd used it needs using once more;
+   - daily writ quest names (English is built in; other languages are relearned at the next
+     station);
+   - item links used for prices: some items may show no price until they've been in your bags.
+
+The best time to reset is right after a full turn-in, with nothing queued, no daily writs in
+progress and no reward items waiting: then only points 1 and 3 apply.
+
 ## Known limitations
 
 - English client only for now. Daily writ names are learned in your language as you craft them,
@@ -158,72 +211,30 @@ switch to **This Character Only** under General; it starts from a copy of the sh
 - Station markers are shown in houses only.
 - There's no warning yet if one of the replaced add-ons is still enabled.
 
-## For developers
+## Credits
 
-```
-Core/      start-up, saved variables, inventory and prices, exclusion policy, slash commands
-Data/      built-in game data: alchemy, smithing, enchanting, station furniture, default prices
-Writs/     reading daily and master writs; boards, crates, Rolis, bank, accept guard
-Engine/    the crafting engine and one crafter per station type, plus the master writ queue
-Solver/    alchemy reagent search
-Rules/     whether a master writ is accepted, and why not
-Rewards/   writ reward boxes and what happens to their contents
-UI/        settings, windows, tooltips, inventory icons, notices, status strip, markers
-Strings/   all player-facing text (en.lua)
-docs/      design plan, in-game test list, saved variables reference
-scripts/   deploy and offline checks
-```
+No code was copied from other add-ons. These were read as references for how the game behaves,
+and ideas came from them; thank you to their authors:
 
-- [docs/PLAN.md](docs/PLAN.md): design, decisions and milestones
-- [docs/TESTING.md](docs/TESTING.md): in-game tests still to run
-- [docs/SAVEDVARS.md](docs/SAVEDVARS.md): every saved setting and table, and how they work
-
-### Deploying
-
-`scripts\Deploy.ps1` checks the code, then copies the add-on into your AddOns folder as
-`AddOns\WritCrafter`, leaving out `docs`, `scripts`, `.git` and Markdown files. From the repository
-folder in PowerShell:
-
-```powershell
-.\scripts\Deploy.ps1
-```
-
-It deploys to `Documents\Elder Scrolls Online\live\AddOns\WritCrafter` (your Windows Documents
-folder, wherever it is). To deploy somewhere else, pass the destination; it must end in a folder
-named `WritCrafter`:
-
-```powershell
-.\scripts\Deploy.ps1 -Destination "E:\Games\Elder Scrolls Online\live\AddOns\WritCrafter"
-```
-
-The destination is mirrored, so files deleted from the repository are deleted there too. Saved
-variables are never touched. If PowerShell refuses to run scripts, use
-`powershell -ExecutionPolicy Bypass -File scripts\Deploy.ps1`.
-
-Then `/reloadui` in game, or log out and back in when files were added or removed (the game only
-reads the file list at login).
-
-### Offline checks
-
-Deploy.ps1 runs both checkers when it finds them and refuses to deploy if either reports a problem:
-
-- `scripts/check.lua`, with **LuaJIT** (Lua 5.1, like the game): every file in the manifest exists
-  and compiles, and no accidental globals. Install with `winget install DEVCOM.LuaJIT`.
-- `scripts/check_lua.py`, with **Python 3**: local functions called before they're defined,
-  `a, b = x and f()`, `tonumber` of a function call, and other mistakes that only fail in game.
-
-Run them by hand from the repository folder:
-
-```powershell
-luajit scripts\check.lua
-python -I scripts\check_lua.py
-```
-
-New Lua files must be added to `WritCrafter.txt` in load order.
+- **Dolgubon's Lazy Writ Crafter** and **LibLazyCrafting** (Dolgubon): how daily writs are matched
+  to crafts, the item IDs of writ reward containers, opening reward containers, hiding the loot
+  window while boxes are opened, provisioning quantities, and alchemy reagent data to cross-check.
+- **WritWorthy** (ziggr, Sharlikran): the Accept & Turn In design for master writs (accept with a
+  button, then hand in at Rolis Hlaalu), how long to wait before accepting a writ's quest,
+  provisioning quantities, and alchemy reagent data to cross-check.
+- **DailyAlchemy** and **DailyProvisioning** (Marify): how daily alchemy and provisioning writs
+  are read and crafted.
+- **LibAlchemy** (Hyperioxes): alchemy reagent data to cross-check.
+- **UESP**: the list of crafting station furnishings, and the Update 51 alchemy changes.
+- Prices come from **LibPrice** (Master Merchant, Arkadius' Trade Tools, Tamriel Trade Centre) and
+  **LibEsoHubPrices** (ESO Hub), read while you play.
 
 ## Author
 
 @g0thiCiCecReaM (NA)
+
+Developer notes, the design plan and the test list are in the repository's `docs` folder:
+https://github.com/Dawn-Patrol-Gaming/WritCrafter
 
 This Add-on is not created by, affiliated with or sponsored by ZeniMax Media Inc. or its
 affiliates. The Elder Scrolls® and related logos are registered trademarks or trademarks of
