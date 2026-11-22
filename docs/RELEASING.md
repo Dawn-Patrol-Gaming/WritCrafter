@@ -41,6 +41,8 @@ BookStack notes "ESO Addon Development".
 - [ ] Event filters on inventory, combat and effect events.
 - [ ] SavedVariables split by server (`GetWorldName()`), characters by character ID. A change to
       the layout carries old data over instead of wiping it (docs/SAVEDVARS.md).
+- [ ] No code from other add-ons. Run `scripts\check_origin.py` against the replaced add-ons'
+      folders (see docs/DEVELOPING.md) and look at every match; credit any game data taken.
 - [ ] Nothing from the "must not do" list: no private functions, no starting interactions for the
       player, no server request floods (bank moves and sales go one at a time).
 

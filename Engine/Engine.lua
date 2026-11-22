@@ -41,6 +41,23 @@ end
 -- Job sources: function(craftSkill) -> list of jobs for this station.
 local sources = {}
 
+-- Shared by the daily and accepted master writ jobs.
+-- A quest task's state from a fresh read of it (nil once turned in or the step moved on).
+function Engine.TaskState(task)
+    if not task or task.current >= task.max then
+        return "done"
+    end
+    return "active"
+end
+
+-- A job's Check result when items for it sit in storage: wait for the bank, don't craft more.
+function Engine.StoredCheck(stored, name)
+    if stored > 0 then
+        return false, zo_strformat(WRITCRAFTER_DAILY_IN_STORAGE, stored, name)
+    end
+    return true
+end
+
 function Engine.AddJobSource(source)
     sources[#sources + 1] = source
 end
@@ -488,11 +505,7 @@ local function AcceptedJobs(skill)
             source = "master",
             label = quest,
             State = function()
-                local now = Now()
-                if not now then
-                    return "done"   -- turned in, or the step moved on
-                end
-                return now.current >= now.max and "done" or "active"
+                return Engine.TaskState(Now())
             end,
             Progress = function()
                 local status = Status()
@@ -511,10 +524,7 @@ local function AcceptedJobs(skill)
                         name = name or zo_strformat("<<t:1>>", GetItemName(item.bagId, item.slotIndex))
                     end
                 end
-                if stored > 0 then
-                    return false, zo_strformat(WRITCRAFTER_DAILY_IN_STORAGE, stored, name)
-                end
-                return true
+                return Engine.StoredCheck(stored, name)
             end,
             Craft = function()
                 return CraftWrit(writ, Status(), skill)

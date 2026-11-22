@@ -36,17 +36,81 @@ Optional, used when installed:
 - **AwesomeGuildStore**: WritCrafter's lines still show on guild store tooltips
 - **LibDebugLogger**: keeps WritCrafter's chat lines in its saved file
 
-## It replaces
+## WritCrafter and the add-ons it learned from
 
-WritCrafter does the job of all of these. **Disable them** before using it: they answer the same
-dialogs and craft at the same stations, and two add-ons doing that at once will get in each
-other's way.
+WritCrafter is one player's take on writ crafting: the parts of **Dolgubon's Lazy Writ
+Crafter**, **WritWorthy**, **DailyAlchemy** and **DailyProvisioning** that I actually use, put
+together in one add-on and tuned to how I play. It's deliberately smaller than they are, and
+it isn't as robust: they've been tested by many players across years of game updates, and
+WritCrafter hasn't.
 
-- Dolgubon's Lazy Writ Crafter (and LibLazyCrafting; WritCrafter has its own crafting engine)
+Those add-ons are mature, full-featured and translated into many languages, and their authors
+have kept them going for years. WritCrafter wouldn't exist without them (see Credits). If you
+use and like what they offer, they may well be the better choice for you.
+
+### What the others offer
+
+**Dolgubon's Lazy Writ Crafter** (Dolgubon) is the long-standing all-in-one writ crafter,
+translated into 7 languages and available on console too. Beyond what WritCrafter covers, it
+offers:
+- a craft multiplier, to make several days' worth of daily writ items at once;
+- writ and reward statistics;
+- more ways to handle rewards: Destroy, event boxes (anniversary, Zenithar), and an alert for
+  valuable rewards;
+- mimic stones by price (when the style material costs over 1,000 or 3,000 gold);
+- plenty of extras around writs: a status bar, reticle colours at stations, a daily reset
+  warning, stealing protection, hireling mail handling, and travel to a crafting house.
+
+**WritWorthy** (ziggr, Sharlikran) is the master writ specialist, translated into 6 languages.
+Beyond what WritCrafter covers, it offers:
+- a material shopping list for your queued writs, in a window or in chat;
+- an AwesomeGuildStore filter on what a master writ really costs per voucher, purchase price
+  included;
+- HomeStationMarker support for marking house stations.
+
+**DailyAlchemy** and **DailyProvisioning** (Marify) each do one craft's daily writs with a lot
+of control, translated into 9 languages. Beyond what WritCrafter covers, they offer:
+- a choice of how reagents are picked: by stock, by price (Master Merchant, TTC or ATT), or in
+  your own order;
+- crafting extra potions or food in bulk while you're at the station;
+- Witches Festival writs (WritCrafter hasn't been tested with event writs yet).
+
+All four have been used by many players for years. WritCrafter is a new pre-release, tested on
+one account, English only, and PC/Mac only.
+
+### What's in WritCrafter
+
+The parts I use, in one place, plus a few ideas of my own:
+- **Daily and master writs for all seven crafts,** writ boards, delivery crates, Rolis Hlaalu,
+  reward boxes and a master writ queue, all in one add-on.
+- **Uses what you have the most of:** reagents, style materials, runes and trait stones are
+  picked by your stock across backpack, craft bag and bank.
+- **Material exclusions:** expensive or hard-to-get materials are never used, and writs that
+  would need them are marked as rejected.
+- **Accept guard:** using a sealed master writ you can't or don't want to craft asks first.
+- **Never crafts twice:** items already made for a writ, in your bag or bank, are set aside for
+  it with a padlock.
+- **Grand Master Crafting Stations:** every queued set the station has is crafted in one visit.
+- **Reward actions per kind of item,** including deconstructing gear and glyphs in one batch and
+  keeping one stack while selling the rest.
+- **Station markers in houses** and a **daily writ status strip.**
+
+### If you switch
+
+Disable the add-ons above before using WritCrafter: they answer the same dialogs and craft at
+the same stations, and two add-ons doing that at once will get in each other's way. If any of
+them is still running, WritCrafter says so in a dialog when the UI loads (you can turn this off
+under Settings, General).
+
+- Dolgubon's Lazy Writ Crafter, and LibLazyCrafting unless another add-on needs it
+  (WritCrafter has its own crafting engine)
+- WritWorthy
 - DailyAlchemy
 - DailyProvisioning
-- WritWorthy
-- LibMarify, LibRecipe (no longer needed)
+- LibMarify and LibRecipe are no longer needed, unless another add-on uses them
+
+**Keep PotionMaker:** WritCrafter doesn't replace it. It searches for potions, which WritCrafter
+doesn't do, and the two don't get in each other's way.
 
 ## Installing
 
@@ -161,10 +225,74 @@ switch to **This Character Only** under General; it starts from a copy of the sh
 | Master Writs | Crafting, taking items out of storage, Rolis turn-ins, the accept guard, station markers, writ tooltips, mimic stones, max gold per voucher, gold writs, material exclusions, price ceilings |
 | Writ Rewards | Opening boxes, the chat summary, and an action for each kind of reward |
 | Inventory Icons | Each badge on or off, and their position |
-| General | Settings scope, price source, chat detail |
+| General | Settings scope, the replaced add-ons warning, price source, chat detail |
 
 WritCrafter keeps its data separately for each megaserver (NA, EU, PTS), so one never overwrites
 the other.
+
+### Settings in detail
+
+The settings themselves keep their explanations short; the details are here.
+
+**Settings scope**
+- Switching a character back to Account Wide picks up the shared settings as they were. The
+  character's own are kept for next time and never copied over the shared ones.
+
+**Taking items out of storage**
+- **Daily writs** (off by default): finished potions, food, drinks, glyphs and plain gear (no
+  trait, normal quality) in your bank or a house storage chest are taken out when you open it,
+  and stations don't craft another meanwhile.
+- Never taken for a daily writ: excluded materials, locked or FCO ItemSaver-marked items, and
+  items set aside for sealed master writs.
+- Reagents an alchemy writ asks you to *acquire* are taken out of the bank either way, since
+  they can't be crafted.
+- **Master writs** (on by default): the crafted items for writs you've accepted, and for sealed
+  writs in your backpack, are taken out ready to turn in. Stations don't craft another for an
+  accepted writ whose item is in storage. Writs left in the bank keep their items there.
+
+**Hand Over Excluded Reagents** (alchemy dailies)
+- Exclusions still decide which reagents potions are crafted with; this only covers a reagent
+  the writ asks you to acquire.
+- Off: a writ that would hand over an excluded reagent is left at the crate for you.
+
+**Mimic stones**
+- When Needed: when the style material is excluded, or you have none of it.
+- Never: writs whose style material is excluded are rejected.
+- Always: on every master writ that has a style. You still need to know the motif either way.
+  Mimic stones are never used for daily writs.
+
+**Accept guard**: covers writs your settings reject, and writs this character can't craft
+(unknown recipe, motif or trait, or the Update 51 game bug).
+
+**Writ rewards**
+- **Opening boxes:** out of combat, with at least 4 free backpack slots. Otherwise as soon as
+  that's true, also after a relog. With opening off, boxes are left for you.
+- **Deconstruct** (ornate and intricate gear, glyphs): taken apart all at once, after any writ
+  crafting at that station, or at a deconstruction assistant.
+- **Keep a Stack, Sell the Rest** (repair kits, soul gems): at each merchant, what the boxes gave
+  is sold once you have more than one full stack in your backpack. What you had before is
+  never sold.
+- **Extra Crafted Potions, Poisons & Food:** what a writ craft makes beyond what the writ needs
+  (skills make several per craft). Only that amount is deposited or sold, never the writ's own.
+- **Containers:** other containers (e.g. a shipment of ingots) are opened by default. Master
+  writ and survey containers stay closed unless you choose Open; what they hold then follows
+  its own setting.
+- Materials that go to the craft bag stay there.
+
+**Station markers**
+- Found from your house's furniture, without opening anything. Houses only.
+- Greyed out while Essential Housing Tools shows its own master writ markers; turn those off to
+  use WritCrafter's.
+
+**Status strip**: faded icons are writs not picked up yet. The strip goes away once the last
+daily writ is turned in, and remembers where you dragged it.
+
+**Notices**: a short message in the top-right corner when writ crafting starts and finishes at a
+station, and a large one in the middle of the screen when something can't be crafted. Sounds
+have their own settings.
+
+**Padlocks**: gold for items assigned to a master writ (sealed, or accepted and not yet turned
+in); blue for items made for a daily writ, until it's turned in.
 
 ## Resetting WritCrafter
 
@@ -209,19 +337,22 @@ progress and no reward items waiting: then only points 1 and 3 apply.
 - Daily alchemy writs that need an excluded reagent are not abandoned for you: WritCrafter won't
   hand the reagent over (unless you allow it) and leaves the writ at the crate.
 - Station markers are shown in houses only.
-- There's no warning yet if one of the replaced add-ons is still enabled.
 
 ## Credits
 
 No code was copied from other add-ons. These were read as references for how the game behaves,
-and ideas came from them; thank you to their authors:
+and ideas and game data came from them; thank you to their authors:
 
 - **Dolgubon's Lazy Writ Crafter** and **LibLazyCrafting** (Dolgubon): how daily writs are matched
-  to crafts, the item IDs of writ reward containers, opening reward containers, hiding the loot
-  window while boxes are opened, provisioning quantities, and alchemy reagent data to cross-check.
+  to crafts, telling master writ crafts apart by the sealed writ's icon, the item IDs of writ
+  reward containers, opening reward containers, hiding the loot window while boxes are opened,
+  provisioning quantities, and alchemy reagent data to cross-check.
 - **WritWorthy** (ziggr, Sharlikran): the Accept & Turn In design for master writs (accept with a
   button, then hand in at Rolis Hlaalu), how long to wait before accepting a writ's quest,
-  provisioning quantities, and alchemy reagent data to cross-check.
+  provisioning quantities, alchemy reagent data to cross-check, and the game data behind
+  WritCrafter's master writ tables: the smithing items (template numbers, sample items,
+  material counts) and the enchanting glyphs and runes. WritCrafter's tables are written in its
+  own format and checked against the game itself (`/wc checkdata`).
 - **DailyAlchemy** and **DailyProvisioning** (Marify): how daily alchemy and provisioning writs
   are read and crafted.
 - **LibAlchemy** (Hyperioxes): alchemy reagent data to cross-check.

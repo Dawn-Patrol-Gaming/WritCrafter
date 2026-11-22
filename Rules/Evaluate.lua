@@ -240,7 +240,7 @@ function Rules.Shortages(writ)
         EVALUATORS[writ.kind](verdict, writ, false)
         hit = {}
         for _, mat in ipairs(verdict.materials) do
-            local have = WC.Inventory.GetStock(mat.itemId).usable
+            local have = WC.Inventory.Usable(mat.itemId)
             if have < mat.count then
                 hit[#hit + 1] = { itemId = mat.itemId, need = mat.count, have = have }
             end

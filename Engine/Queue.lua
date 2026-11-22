@@ -33,6 +33,38 @@ function Queue.Remove(uid)
     Changed()
 end
 
+-- Several writs at once ({ { uid, link }, ... }), with one change notice for the lot: each
+-- notice re-matches items and redraws badges, so a bulk action shouldn't send one per writ.
+-- Writs already queued are left as they are. Returns how many were added.
+function Queue.AddAll(list)
+    local count = 0
+    for _, writ in ipairs(list) do
+        if not entries[writ.uid] then
+            entries[writ.uid] = { link = writ.link }
+            count = count + 1
+        end
+    end
+    if count > 0 then
+        Changed()
+    end
+    return count
+end
+
+-- Several unique IDs at once, one change notice. Returns how many were queued.
+function Queue.RemoveAll(uids)
+    local count = 0
+    for _, uid in ipairs(uids) do
+        if entries[uid] then
+            entries[uid] = nil
+            count = count + 1
+        end
+    end
+    if count > 0 then
+        Changed()
+    end
+    return count
+end
+
 -- Empties the queue; returns how many writs were in it.
 function Queue.Clear()
     local count = NonContiguousCount(entries)

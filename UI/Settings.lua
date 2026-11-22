@@ -365,6 +365,7 @@ function Settings.Init()
             end,
             default       = WC.SavedVars.SCOPE_SERVER,
         },
+        Checkbox("warnReplaced", WRITCRAFTER_WARN_REPLACED, WRITCRAFTER_WARN_REPLACED_TOOLTIP),
         {
             type          = "dropdown",
             name          = GetString(WRITCRAFTER_PRICE_SOURCE),

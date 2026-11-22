@@ -204,7 +204,7 @@ end
 -- Value of a sortable column for one entry. Unpriced items sort as nil and always go last.
 local SORT_VALUES = {
     name  = function(entry) return entry.lower end,
-    count = function(entry) return WC.Inventory.GetStock(entry.itemId).total end,
+    count = function(entry) return (WC.Inventory.Count(entry.itemId)) end,
     price = function(entry) return WC.Price.Get(WC.Inventory.GetLink(entry.itemId)) end,
 }
 
@@ -229,7 +229,7 @@ local function FillList()
         elseif filter == FILTER_NOT_EXCLUDED then
             show = not WC.Policy.IsExcluded(entry.itemId)
         elseif filter == FILTER_OWNED then
-            show = WC.Inventory.GetStock(entry.itemId).total > 0
+            show = (WC.Inventory.Count(entry.itemId)) > 0
         end
         if show and search ~= "" then
             show = entry.lower:find(search, 1, true) ~= nil
@@ -255,7 +255,7 @@ local function SetupRow(row, entry)
         name = name .. "|cFF9933" .. zo_strformat(WRITCRAFTER_TT_UNDISCOVERED, unknown) .. "|r"
     end
     row:GetNamedChild("Name"):SetText(name)
-    row:GetNamedChild("Count"):SetText(ZO_CommaDelimitNumber(WC.Inventory.GetStock(entry.itemId).total))
+    row:GetNamedChild("Count"):SetText(ZO_CommaDelimitNumber((WC.Inventory.Count(entry.itemId))))
     local gold = WC.Price.Get(link)
     row:GetNamedChild("Price"):SetText(gold and WC.Price.Format(gold) or "-")
 end

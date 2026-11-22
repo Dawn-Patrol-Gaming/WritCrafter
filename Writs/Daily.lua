@@ -267,11 +267,7 @@ local function DailyJobs(skill)
                 label = text,
                 quest = condition.quest,
                 State = function()
-                    local now = Reread(text)
-                    if not now then
-                        return "done"   -- the step moved on (e.g. to "deliver")
-                    end
-                    return now.current >= now.max and "done" or "active"
+                    return WC.Engine.TaskState(Reread(text))
                 end,
                 Progress = function()
                     local now = Reread(text)
@@ -288,10 +284,7 @@ local function DailyJobs(skill)
                     if now then
                         stored, name = WC.Bank.Stored(now)
                     end
-                    if stored > 0 then
-                        return false, zo_strformat(WRITCRAFTER_DAILY_IN_STORAGE, stored, name)
-                    end
-                    return true
+                    return WC.Engine.StoredCheck(stored, name)
                 end,
                 Craft = function()
                     local now = Reread(text)

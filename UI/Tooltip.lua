@@ -81,7 +81,7 @@ local function AddWritLines(control, link, uid)
     if WC.settings.tooltipMaterials and #verdict.materials > 0 then
         local lines = {}
         for _, mat in ipairs(verdict.materials) do
-            local have = WC.Inventory.GetStock(mat.itemId).usable
+            local have = WC.Inventory.Usable(mat.itemId)
             local color = have >= mat.count and GREY or ORANGE
             local line = Color(color, zo_strformat(WRITCRAFTER_TT_MATERIAL, mat.count, ItemName(mat.itemId), have))
             local unknown = WC.Data.Alchemy.UndiscoveredTraits(mat.itemId)

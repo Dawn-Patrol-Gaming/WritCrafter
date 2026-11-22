@@ -149,25 +149,38 @@ function Inventory.Invalidate()
     dirty = true
 end
 
--- Returns { backpack, bank, craftBag, locked, total, usable } for one item ID.
--- "locked" counts protected items (see IsProtected) and is never part of "usable".
-function Inventory.GetStock(itemId)
+-- How many of an item you have in all (backpack, bank, craft bag), and how many of those
+-- WritCrafter may use (protected ones left out, see IsProtected). Two numbers and no table,
+-- since searches and sorts ask this for every material.
+function Inventory.Count(itemId)
     if dirty then
         Rebuild()
     end
     local entry = stock[itemId]
-    local backpack = entry and entry.backpack or 0
-    local bank     = entry and entry.bank or 0
-    local craftBag = entry and entry.craftBag or 0
-    local locked   = entry and entry.locked or 0
-    local total    = backpack + bank + craftBag
+    if not entry then
+        return 0, 0
+    end
+    local total = entry.backpack + entry.bank + entry.craftBag
+    return total, zo_max(total - entry.locked, 0)
+end
+
+-- How many of an item WritCrafter may use.
+function Inventory.Usable(itemId)
+    local _, usable = Inventory.Count(itemId)
+    return usable
+end
+
+-- The full breakdown, for /wc stock: { backpack, bank, craftBag, locked, total, usable }.
+function Inventory.GetStock(itemId)
+    local total, usable = Inventory.Count(itemId)
+    local entry = stock[itemId]
     return {
-        backpack = backpack,
-        bank     = bank,
-        craftBag = craftBag,
-        locked   = locked,
+        backpack = entry and entry.backpack or 0,
+        bank     = entry and entry.bank or 0,
+        craftBag = entry and entry.craftBag or 0,
+        locked   = entry and entry.locked or 0,
         total    = total,
-        usable   = zo_max(total - locked, 0),
+        usable   = usable,
     }
 end
 

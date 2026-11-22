@@ -30,6 +30,7 @@ local function OnAddOnLoaded(_, addonName)
     WC.Tooltip.Init()
     WC.InventoryIcons.Init()
     WC.ContextMenu.Init()
+    WC.Replaced.Init()
     WC.Slash.Init()
 end
 

@@ -28,23 +28,31 @@ function Policy.IsExpensiveByDefault(itemId)
     return WC.Data.PriceDefaults.EXPENSIVE[itemId] == true
 end
 
--- The player's own mark wins over the default.
-function Policy.IsExpensive(itemId)
-    local override = WC.settings.expensive[itemId]
+-- A player's own mark (in settings table `key`) wins over the default.
+local function Marked(key, itemId, Default)
+    local override = WC.settings[key][itemId]
     if override ~= nil then
         return override
     end
-    return Policy.IsExpensiveByDefault(itemId)
+    return Default(itemId)
 end
 
 -- Stores a mark only when it differs from the default, so later default changes still
 -- reach items the player never touched.
-function Policy.SetExpensive(itemId, value)
-    if value == Policy.IsExpensiveByDefault(itemId) then
-        WC.settings.expensive[itemId] = nil
+local function Mark(key, itemId, value, Default)
+    if value == Default(itemId) then
+        WC.settings[key][itemId] = nil
     else
-        WC.settings.expensive[itemId] = value
+        WC.settings[key][itemId] = value
     end
+end
+
+function Policy.IsExpensive(itemId)
+    return Marked("expensive", itemId, Policy.IsExpensiveByDefault)
+end
+
+function Policy.SetExpensive(itemId, value)
+    Mark("expensive", itemId, value, Policy.IsExpensiveByDefault)
 end
 
 -- By default only overland plants that aren't expensive are allowed. Reagents have one
@@ -58,19 +66,11 @@ end
 
 -- A reagent's own checkbox has the final say.
 function Policy.IsReagentAllowed(itemId)
-    local override = WC.settings.reagents[itemId]
-    if override ~= nil then
-        return override
-    end
-    return Policy.IsReagentAllowedByDefault(itemId)
+    return Marked("reagents", itemId, Policy.IsReagentAllowedByDefault)
 end
 
 function Policy.SetReagentAllowed(itemId, value)
-    if value == Policy.IsReagentAllowedByDefault(itemId) then
-        WC.settings.reagents[itemId] = nil
-    else
-        WC.settings.reagents[itemId] = value
-    end
+    Mark("reagents", itemId, value, Policy.IsReagentAllowedByDefault)
 end
 
 -- "Excluded from writs", the single switch the settings and right-click menu show for every
@@ -166,7 +166,7 @@ function Policy.UseMimic(styleMaterialId, ignoreStock)
         return true
     elseif mode == Policy.MIMIC_NEEDED then
         return Policy.IsExpensive(styleMaterialId)
-            or (not ignoreStock and WC.Inventory.GetStock(styleMaterialId).usable == 0)
+            or (not ignoreStock and WC.Inventory.Usable(styleMaterialId) == 0)
     end
     return false
 end

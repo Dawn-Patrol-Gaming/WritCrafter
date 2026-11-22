@@ -526,6 +526,16 @@ local function EmptyBankSlots()
     return slots
 end
 
+-- For a queued bank move or sale: forget the item once the server has done it. Until then it
+-- stays on the list, so one cut short by closing the bank or merchant is tried next visit.
+local function ForgetWhenDone(todo, uid)
+    return function(ok)
+        if ok then
+            todo[uid] = nil
+        end
+    end
+end
+
 -- Moves the remembered Deposit items into the bank (only what the boxes gave).
 local function OnOpenBank(_, bankBag)
     if bankBag ~= BAG_BANK then
@@ -550,14 +560,7 @@ local function OnOpenBank(_, bankBag)
                 nextEmpty = nextEmpty + 1
                 local destBag, destSlot = dest[1], dest[2]
                 local quantity = Takeable(slotIndex, entry)
-                -- Sent one at a time (Util.QueueMove); kept on the list until the server has
-                -- moved it, so a move cut short by closing the bank is tried at the next visit.
-                local doneUid = uid
-                WC.Util.QueueMove(BAG_BACKPACK, slotIndex, destBag, destSlot, quantity, function(ok)
-                    if ok then
-                        todo[doneUid] = nil
-                    end
-                end)
+                WC.Util.QueueMove(BAG_BACKPACK, slotIndex, destBag, destSlot, quantity, ForgetWhenDone(todo, uid))
                 moved = moved + 1
             else
                 todo[uid] = nil   -- locked or set aside since: leave it
@@ -579,14 +582,7 @@ local function OnOpenStore()
             local slotIndex = slots[uid]
             local quantity = slotIndex and Takeable(slotIndex, entry) or 0
             if quantity > 0 then
-                -- Sent one at a time (Util.QueueSell); kept on the list until it's sold, so a
-                -- sale cut short by leaving the merchant is tried at the next one.
-                local doneUid = uid
-                WC.Util.QueueSell(slotIndex, quantity, function(ok)
-                    if ok then
-                        todo[doneUid] = nil
-                    end
-                end)
+                WC.Util.QueueSell(slotIndex, quantity, ForgetWhenDone(todo, uid))
                 sold = sold + 1
             else
                 todo[uid] = nil

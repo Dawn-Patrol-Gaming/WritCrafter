@@ -444,34 +444,35 @@ function Window.OnPolicyChanged()
     end
 end
 
--- Queues every writ the list shows that passes every rule (never rejected or uncraftable ones).
+-- Queues the entries that pass every rule (never rejected or uncraftable ones), all in one go.
+-- Returns how many were added.
+local function QueueOpen(list)
+    local open = {}
+    for _, entry in ipairs(list) do
+        if StateOf(entry) == STATE_OPEN then
+            open[#open + 1] = entry
+        end
+    end
+    return WC.Queue.AddAll(open)
+end
+
+-- Enqueue all: the writs the list shows.
 function Window.EnqueueAll()
-    for _, entry in ipairs(shown) do
-        if StateOf(entry) == STATE_OPEN then
-            WC.Queue.Add(entry.uid, entry.link)
-        end
-    end
+    QueueOpen(shown)
 end
 
--- /wc queue all: every sealed writ in the backpack and bank that could be queued, whatever the
--- window's Show menu says. Returns how many were added.
+-- /wc queue all: every sealed writ in the backpack and bank, whatever the Show menu says.
 function Window.EnqueueAllWrits()
-    local count = 0
-    for _, entry in ipairs(BuildEntries()) do
-        if StateOf(entry) == STATE_OPEN then
-            WC.Queue.Add(entry.uid, entry.link)
-            count = count + 1
-        end
-    end
-    return count
+    return QueueOpen(BuildEntries())
 end
 
+-- Dequeue all: the writs the list shows.
 function Window.DequeueAll()
+    local uids = {}
     for _, entry in ipairs(shown) do
-        if WC.Queue.Has(entry.uid) then
-            WC.Queue.Remove(entry.uid)
-        end
+        uids[#uids + 1] = entry.uid
     end
+    WC.Queue.RemoveAll(uids)
 end
 
 -- Back to station order (the order you'd walk the stations in), clearing any column sort.

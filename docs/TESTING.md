@@ -16,6 +16,7 @@ Turn Debug chat on (`/wc debug`) before starting.
 
 | # | Do | Expect |
 |---|---|---|
+| OP11 | Reward items set to Deposit and Sell: a bank visit, then a merchant | Deposited and sold as before, and gone from the list afterwards (not tried again next visit) |
 | RG2 | A bank visit with reward items to deposit, then a merchant with items to sell (or GR3/GR4 again) | Still one at a time and as quick as before: the request queue now only listens to the bag it's working on |
 
 ### On the next daily run
@@ -31,6 +32,8 @@ Turn Debug chat on (`/wc debug`) before starting.
 | DC7 | A deconstruction batch doesn't go through | Within about 8 seconds: `Writ rewards to deconstruct ... no progress` (or a similar message) and the red banner, with no hang. Say what you saw, with the Debug lines |
 | RW20 | Optional, rare. It only happens when placing the goods frees no slot: a provisioning or alchemy daily whose extras stay in the same stack, or an acquire reagent from the craft bag. Fill the backpack completely after crafting it, then turn it in | Chat: `Can't turn in <writ>: your backpack is full ...`, and the writ stays at Sign the Manifest. Make room and talk to the crate again: it's turned in. (Seen 2026-11-11 with a provisioner writ, with no message then.) Gear writs free their own slots when the goods are placed, so they never hit this |
 | B3 | Optional. A character with **no** sealed writs in the backpack or bank receives one (mail, loot, trade) while the inventory is open | Its badge appears without `/reloadui`, which checks that the idle path wakes up |
+| EV1 | During an event, turn in a daily writ that gives an event box (e.g. Zenithar's Abundance) | Untested so far. Any container arriving right after a crafting quest completes is treated as a reward box, so it should open by itself, list its contents in chat, and apply your reward actions to the kinds WritCrafter knows (anything else stays in the bag). Say what the box was and what happened |
+| EV2 | An event (or other non-daily) quest the game lists as a crafting quest | Untested so far. If its tasks read like a daily writ's (`Craft ...`, `Acquire ...`), the matching station should craft them; if not, nothing should happen, with no error. Writ boards and crates only handle daily writs. Say which quest it was, with `/wc quests` and the Debug lines |
 
 ## Deferred: alt accounts (no ESO Plus, low-level crafters)
 Deferred until the free Epic accounts have characters that can craft. Every crafter on the main account is max level, and without ESO Plus there's no craft bag, so materials live in the backpack and bank.
@@ -49,6 +52,51 @@ Deferred until the free Epic accounts have characters that can craft. Every craf
 ## History
 
 Passed tests and what was learned, newest first.
+
+### Data tables in WritCrafter's own order (2026-11-22)
+
+What changed: the smithing templates and enchanting glyphs, first gathered from WritWorthy's
+data, sorted by their own keys, the essence runes by item ID, and the motif chapter aliases
+replaced by the game's constants (PLAN.md §12, code-origin check).
+
+**DT1 passed 2026-11-22:** `/wc checkdata` at an enchanting station and at an alchemy station:
+enchanting runes and glyphs all 114 checks match, smithing items and materials all 53, solvents
+all 18, reagent effects all 153 (91 skipped for traits not yet discovered). The two enchanting
+master writs (Superb Glyph of Increase Physical Harm, Truly Superb Glyph of Disease Resist) and
+the alchemy one (16 Stealth-Draining Poison IX) crafted as before.
+
+### Replaced add-on warning and shorter settings texts (2026-11-22)
+
+What changed: a dialog when the UI loads if Dolgubon's Lazy Writ Crafter, WritWorthy,
+DailyAlchemy or DailyProvisioning is running (`Core/Replaced.lua`, setting Warn About Replaced
+Add-ons under General); the long settings texts and tooltips shortened, with the details moved to
+README's "Settings in detail".
+
+**RA1–RA4 passed 2026-11-22:** no dialog with none of them installed, and the setting is there,
+ticked; with WritWorthy copied back and enabled, the dialog listed it a few seconds after the UI
+loaded and came back after `/reloadui`; Don't Warn Again stopped it, with the chat line, and
+unticked the setting; with WritWorthy installed but unticked, no dialog.
+
+**ST1 passed 2026-11-22:** the Writ Rewards and Material Exclusions texts and the shortened
+tooltips read cleanly, with the line breaks and dash lists showing as intended.
+
+### Second optimization pass (2026-11-22)
+
+What changed: see PLAN.md, milestone 7, "Second pass": bulk queueing sends one change notice,
+stock lookups no longer build tables, and five duplicated pieces of logic are shared.
+
+**OP7 passed 2026-11-22** with 7 writs: `/wc queue all` queued 7 and `/wc queue none` removed
+the same 7. (Not yet seen with 50+ writs, where the old one-rebuild-per-writ cost showed most.)
+
+**OP9 and OP10 passed 2026-11-22.** The exclusions window sorts and filters by count as before. At the Grand Master stations, with 7 writs queued and a Master Clothier Writ accepted by hand on the way, the Maul of Red Eagle's Fury, the Innate Axiom Hat and the Ancient Dragonguard's Sash were each crafted and improved once, and items were claimed for the right writs, so nothing was made twice. Leaving the blacksmithing station mid-craft and opening it again also worked: the second visit picked the maul up where it stood and made only the one. Deconstructing a queued writ's crafted item, with more writs queued, then visiting the Grand Master Jewelry Crafting station: the writ was no longer counted as crafted, and the Gladiator's Necklace was made again, once, and improved to Epic.
+
+**OP8 passed 2026-11-22.** `/wc perf` on a character with 21 writs, 763 stacks and 695 bag and
+bank slots: matching 2.0 ms (20 candidates), stock scan 6.6 ms, verdicts 3.4 ms first time and
+0.0 ms cached, shortages 3.6 ms, badges 1.4 ms, journal, accepted writs and daily storage check
+0.0 ms (no crafting quests). Compared with 2026-11-08 (54 writs, 833 stacks): verdicts went from
+about 0.25 to 0.16 ms per writ and shortages from about 0.23 to 0.17 ms per writ, as expected now
+that stock lookups don't build a table each; the stock scan itself is unchanged (it wasn't
+touched), and badges are lower mostly because there are fewer writs.
 
 ### ESOUI rules review (2026-11-22)
 

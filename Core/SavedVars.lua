@@ -26,6 +26,7 @@ WC.DEFAULTS = {
     dailyAcquireExcluded = true,    -- daily writs: hand over excluded reagents an acquire task asks for
     bankWithdrawMaster = true,      -- master writs: take their crafted items out of storage
     acceptGuard       = true,       -- ask before accepting a sealed master writ you can't craft
+    warnReplaced      = true,       -- say when an add-on WritCrafter replaces is still running
     craftNotice       = true,       -- on-screen alerts and the failure banner
     soundStart        = false,      -- sound when writ crafting starts at a station
     soundDone         = false,      -- sound when it's done

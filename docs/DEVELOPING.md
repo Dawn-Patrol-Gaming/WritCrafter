@@ -73,3 +73,17 @@ python -I scripts\check_lua.py
 ```
 
 New Lua files must be added to `WritCrafter.txt` in load order.
+
+## Code-origin check
+
+`scripts/check_origin.py` compares WritCrafter's Lua with other add-ons' and lists anything
+shared: identical token runs, the same logic with identifiers renamed, identical lines, and
+item IDs in the same order. Every match needs a look: most are game API idioms or game data,
+and game data taken from another add-on must be credited in the README. Pass the folders of the
+add-ons WritCrafter replaces (they're kept outside `live\AddOns` once disabled):
+
+```powershell
+python -I scripts\check_origin.py . "<path>\WritWorthy" "<path>\DolgubonsLazyWritCreator" "<path>\LibLazyCrafting" "<path>\DailyAlchemy" "<path>\DailyProvisioning"
+```
+
+Last run 2026-11-22: no logic copied; see PLAN.md §12 for what it found.

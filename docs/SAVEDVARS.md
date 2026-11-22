@@ -94,6 +94,7 @@ and which are not pruned key by key.
 | `bankWithdrawMaster` | `true` | Master writs: take their crafted items out of storage. (Before 2026-11-09 one `bankWithdraw` key covered both; `PruneRemoved` carries an old `false` over) |
 | `dailyAcquireExcluded` | `true` | Hand Over Excluded Reagents: an alchemy writ's "acquire" reagent is handed over even if excluded |
 | `acceptGuard` | `true` | Ask before accepting a sealed master writ you can't craft (`Writs/AcceptGuard.lua`) |
+| `warnReplaced` | `true` | When the UI loads, a dialog if Dolgubon's Lazy Writ Crafter, WritWorthy, DailyAlchemy or DailyProvisioning is running (`Core/Replaced.lua`). Its Don't Warn Again button sets this to `false` |
 | `leaveStation` | `true` | Leave the station once writ crafting there is done |
 
 ### Dialogs (Rolis, writ boards, delivery crates)

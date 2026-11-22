@@ -216,6 +216,29 @@ end
 
 local candidateCount = 0
 
+-- Takes items for one writ from its matching candidates (byKey, already in claim order):
+-- calls onTake(candidate, quantity) for each one used, and returns how many are still missing.
+-- Shared by accepted and sealed writs, which only differ in where the claim is recorded.
+local function Claim(byKey, writ, onTake)
+    local need = writ.required
+    local key = WritKey(writ)
+    local candidates = key and byKey[key]
+    if candidates then
+        for _, candidate in ipairs(candidates) do
+            if need == 0 then
+                break
+            end
+            if candidate.remaining > 0 then
+                local take = zo_min(candidate.remaining, need)
+                candidate.remaining = candidate.remaining - take
+                need = need - take
+                onTake(candidate, take)
+            end
+        end
+    end
+    return need
+end
+
 local function Rebuild()
     ZO_ClearTable(statusByUid)
     ZO_ClearTable(reservedBySlot)
@@ -282,23 +305,13 @@ local function Rebuild()
     local accepted = WC.Master.Accepted()
     acceptedCount = #accepted
     for _, entry in ipairs(accepted) do
-        local need = entry.writ.required
-        local key = WritKey(entry.writ)
-        for _, candidate in ipairs(key and byKey[key] or {}) do
-            if need == 0 then
-                break
+        Claim(byKey, entry.writ, function(candidate, take)
+            SetSlot(acceptedBySlot, candidate.bagId, candidate.slotIndex, entry.quest)
+            if candidate.bagId ~= BAG_BACKPACK then
+                acceptedInBank[#acceptedInBank + 1] = { bagId = candidate.bagId, slotIndex = candidate.slotIndex,
+                    quantity = take, quest = entry.quest }
             end
-            if candidate.remaining > 0 then
-                local take = zo_min(candidate.remaining, need)
-                candidate.remaining = candidate.remaining - take
-                need = need - take
-                SetSlot(acceptedBySlot, candidate.bagId, candidate.slotIndex, entry.quest)
-                if candidate.bagId ~= BAG_BACKPACK then
-                    acceptedInBank[#acceptedInBank + 1] = { bagId = candidate.bagId, slotIndex = candidate.slotIndex,
-                        quantity = take, quest = entry.quest }
-                end
-            end
-        end
+        end)
     end
 
     -- Sealed writs: queued ones first, so when two writs ask for the same thing the items go to
@@ -317,28 +330,18 @@ local function Rebuild()
     end)
     for _, entry in ipairs(writs) do
         local writ = entry.writ
-        local need = writ.required
         local inBackpack, inBank = 0, 0
         local assigned = {}
-        local key = WritKey(writ)
-        for _, candidate in ipairs(key and byKey[key] or {}) do
-            if need == 0 then
-                break
+        local need = Claim(byKey, writ, function(candidate, take)
+            SetSlot(reservedBySlot, candidate.bagId, candidate.slotIndex,
+                (GetSlot(reservedBySlot, candidate.bagId, candidate.slotIndex) or 0) + take)
+            assigned[#assigned + 1] = { bagId = candidate.bagId, slotIndex = candidate.slotIndex, quantity = take }
+            if candidate.bagId == BAG_BACKPACK then
+                inBackpack = inBackpack + take
+            else
+                inBank = inBank + take   -- bank and ESO Plus bank together
             end
-            if candidate.remaining > 0 then
-                local take = zo_min(candidate.remaining, need)
-                candidate.remaining = candidate.remaining - take
-                need = need - take
-                SetSlot(reservedBySlot, candidate.bagId, candidate.slotIndex,
-                    (GetSlot(reservedBySlot, candidate.bagId, candidate.slotIndex) or 0) + take)
-                assigned[#assigned + 1] = { bagId = candidate.bagId, slotIndex = candidate.slotIndex, quantity = take }
-                if candidate.bagId == BAG_BACKPACK then
-                    inBackpack = inBackpack + take
-                else
-                    inBank = inBank + take   -- bank and ESO Plus bank together
-                end
-            end
-        end
+        end)
         statusByUid[entry.uid] = {
             required   = writ.required,
             have       = writ.required - need,

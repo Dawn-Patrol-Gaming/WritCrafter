@@ -62,6 +62,7 @@ Engine/Smithing.lua
 
 Core/Perf.lua
 Core/CheckData.lua
+Core/Replaced.lua
 Core/Slash.lua
 Main.lua
 Bindings.xml

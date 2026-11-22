@@ -103,7 +103,7 @@ function Solver.Choose(effects, stockOf)
     local allowed, stock = {}, {}
     for itemId in pairs(WC.Data.Alchemy.REAGENTS) do
         allowed[itemId] = Policy.IsReagentAllowed(itemId)
-        stock[itemId] = stockOf and stockOf(itemId) or Inventory.GetStock(itemId).usable
+        stock[itemId] = stockOf and stockOf(itemId) or Inventory.Usable(itemId)
     end
     -- Prices are only looked up to break ties.
     local best, bestStock, bestPrice
