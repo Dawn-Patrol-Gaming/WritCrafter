@@ -172,6 +172,8 @@ item inside gets the action you choose: leave in bag, deposit at the next bank v
 at the next merchant, deconstruct at the next station or deconstruction assistant, or keep one
 stack and sell the rest. Only what the box gave is moved or sold, never items you already had.
 Locked items, FCO ItemSaver-marked items and items set aside for writs are never touched.
+The gold from turning in writs and from selling their rewards can be banked too, and so can
+the writ vouchers master writs pay.
 
 ### Inventory and tooltips
 
@@ -274,6 +276,16 @@ The settings themselves keep their explanations short; the details are here.
   never sold.
 - **Extra Crafted Potions, Poisons & Food:** what a writ craft makes beyond what the writ needs
   (skills make several per craft). Only that amount is deposited or sold, never the writ's own.
+- **Gold from Turning In Writs** and **Gold from Selling Writ Rewards** (both Deposit by
+  default): the gold the game pays for each writ you turn in (daily or master), and what
+  WritCrafter's own sales of writ rewards bring in, are added up and deposited the next time
+  you open your bank (the bank itself, not house storage). Only that amount, and never more
+  than you're carrying then; gold you had before stays with you. Junk you sell yourself isn't
+  counted.
+- **Writ Vouchers** (Deposit by default): the vouchers each master writ pays when you turn it
+  in are added up and deposited at your next bank visit, like the gold: never more than you're
+  carrying, and vouchers you had before stay with you. Withdraw them again before buying from
+  Rolis Hlaalu.
 - **Containers:** other containers (e.g. a shipment of ingots) are opened by default. Master
   writ and survey containers stay closed unless you choose Open; what they hold then follows
   its own setting.

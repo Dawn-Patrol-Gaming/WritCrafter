@@ -291,11 +291,14 @@ local function RewardControls()
     for _, kind in ipairs(WC.Rewards.KINDS) do
         local names, values = {}, {}
         for _, action in ipairs(kind.actions) do
-            -- For containers, Leave in Bag reads "Leave Closed".
+            -- For containers, Leave in Bag reads "Leave Closed"; for gold, "Keep on Character".
             local nameId = actionNames[action]
             if action == WC.Rewards.LEAVE and (kind.key == "writContainers" or kind.key == "surveyContainers"
                 or kind.key == "containers") then
                 nameId = WRITCRAFTER_REWARD_LEAVE_CLOSED
+            elseif action == WC.Rewards.LEAVE and (kind.key == "gold" or kind.key == "saleGold"
+                or kind.key == "vouchers") then
+                nameId = WRITCRAFTER_REWARD_KEEP_GOLD
             end
             names[#names + 1] = GetString(nameId)
             values[#values + 1] = action

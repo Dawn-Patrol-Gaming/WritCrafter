@@ -226,6 +226,8 @@ or alchemy solvent), `craft`, `quality`, `templateId`, `setId`, `trait`, `style`
 |---|---|---|---|
 | `rewardBoxes` | `[uid] = true` | Reward boxes (and containers set to Open) waiting to be opened: in combat, no backpack room, or several in a row | When opened, or after 3 failed tries (left for you) |
 | `rewardTodo` | `[uid] = { action, quantity, link, extra }` | Items waiting for the bank (`"deposit"`), a merchant (`"sell"`) or a station or assistant (`"deconstruct"`). `quantity` is only what the boxes gave: a stack they merged into keeps the rest. `extra = true` for extra crafted items | When done, or when the item is gone, locked, FCO-marked or set aside for a writ by the time it would be acted on |
+| `rewardGold` | number | Gold from turning in writs and from WritCrafter selling writ rewards, counted while each is set to Deposit, still to be banked | At the next bank visit (the bank itself): no more than you carry is deposited, and the count goes back to 0 |
+| `rewardVouchers` | number | Writ vouchers from turning in master writs, counted while Writ Vouchers is set to Deposit, still to be banked | At the next bank visit (the bank itself): no more than you carry is deposited, and the count goes back to 0 |
 | `rewardStack` | `[itemId] = { quantity, link }` | Keep a Stack: how many of this item writ rewards have given since the last merchant. Only that many, and only above one full stack, can be sold | After each merchant visit |
 
 The `(to deposit)`, `(to sell)` and `(to deconstruct)` tooltip notes come from `rewardTodo`.
@@ -273,7 +275,7 @@ WritCrafter". In short:
 |---|---|
 | `settings`, characters' `settings`, `scope` | Defaults; every character back to Account Wide |
 | `queue`, `mimic` | Empty: queued writs must be queued again |
-| `rewardBoxes`, `rewardTodo`, `rewardStack` | Empty: pending deposits, sales and box openings are not done |
+| `rewardBoxes`, `rewardTodo`, `rewardStack`, `rewardGold`, `rewardVouchers` | Empty: pending deposits (gold included), sales and box openings are not done |
 | `dailyItems`, `dailyAcquire`, `writReady`, `writTurnedIn` | Empty: today's daily items lose their padlock, the status strip may be wrong until the next reset |
 | `acceptedWrits` | Rebuilt from the journal; a quest past its craft step may not be found until turned in |
 | `grandMaster` | Relearned as each Grand Master station is used |

@@ -47,6 +47,14 @@ Rewards.KINDS = {
     -- Not from boxes: what a writ craft makes beyond what the writ needs (potions, poisons, food,
     -- drink; skills make several per craft). They share a stack with the writ's items, so no Junk.
     { key = "extras",      actions = { L, D, S }, default = S },
+    -- Not an item: the gold the game pays for turning in a writ (daily or master). Deposit banks
+    -- that much at the next bank visit, never gold you had before.
+    { key = "gold",        actions = { L, D }, default = D },
+    -- The gold WritCrafter's own sales of writ rewards bring in (Sell, Keep a Stack, extras).
+    -- Junk you sell yourself isn't counted.
+    { key = "saleGold",    actions = { L, D }, default = D },
+    -- The writ vouchers master writs pay when turned in (not vouchers you had before).
+    { key = "vouchers",    actions = { L, D }, default = D },
 }
 
 local BOX_WINDOW_MS   = 8000    -- a container this soon after a crafting quest completes is its reward
@@ -66,6 +74,8 @@ local function State()
     character.rewardBoxes = character.rewardBoxes or {}   -- [uid] = true
     character.rewardTodo = character.rewardTodo or {}     -- [uid] = { action, quantity, link }
     character.rewardStack = character.rewardStack or {}   -- [itemId] = { quantity, link }: Keep a Stack
+    character.rewardGold = character.rewardGold or 0      -- writ gold still to deposit
+    character.rewardVouchers = character.rewardVouchers or 0   -- writ vouchers still to deposit
     return character
 end
 
@@ -499,9 +509,130 @@ local function OnSlotUpdate(_, bagId, slotIndex, isNewItem, _, _, stackCountChan
     end
 end
 
+-- Writ gold and vouchers: what a crafting quest pays when it's turned in. The game reports the
+-- quest and each payment as separate events, in no promised order, so each is held briefly until
+-- the other arrives: a crafting quest still waiting for its payment, or a quest payment still
+-- waiting for its quest. Several writs handed in at once (Rolis) pair up in order; a daily writ,
+-- which pays no vouchers, leaves a voucher wait that simply runs out. Only counted while that
+-- kind is set to Deposit, the same as reward items, whose action is decided as they arrive.
+local PAY_WINDOW_MS = 3000
+local QUEST_REWARD_REASON = CURRENCY_CHANGE_REASON_QUEST_REWARD   -- if ever missing, any gain counts
+
+local function DropStale(list, now, timeOf)
+    while list[1] and now - timeOf(list[1]) > PAY_WINDOW_MS do
+        table.remove(list, 1)
+    end
+end
+
+local function EntryTime(entry) return entry.at end
+local function QuestTime(at) return at end
+
+-- Pairs crafting quests with one kind of quest payment; onPaid(amount) counts it.
+local function NewPairing(onPaid)
+    local pairing = { unpaid = {}, unclaimed = {} }   -- quest completion times; { amount, at }
+    function pairing.Paid(amount)
+        local now = GetFrameTimeMilliseconds()
+        DropStale(pairing.unpaid, now, QuestTime)
+        if pairing.unpaid[1] then
+            table.remove(pairing.unpaid, 1)
+            onPaid(amount)
+        else
+            pairing.unclaimed[#pairing.unclaimed + 1] = { amount = amount, at = now }
+        end
+    end
+    function pairing.QuestDone(crafting)
+        local now = GetFrameTimeMilliseconds()
+        DropStale(pairing.unclaimed, now, EntryTime)
+        if not crafting then
+            pairing.unclaimed = {}   -- that payment was this quest's
+        elseif pairing.unclaimed[1] then
+            onPaid(table.remove(pairing.unclaimed, 1).amount)
+        else
+            pairing.unpaid[#pairing.unpaid + 1] = now
+        end
+    end
+    return pairing
+end
+
+-- Adds to what the next bank visit deposits, when that kind is set to Deposit: "gold" (turning in
+-- writs), "saleGold" (WritCrafter selling writ rewards) or "vouchers" (turning in master writs).
+local LOG_NAMES = { gold = "Writ turn-in", saleGold = "Reward sale", vouchers = "Writ vouchers" }
+
+local function AddToDeposit(kind, amount)
+    if amount <= 0 or Rewards.ActionFor(kind) ~= Rewards.DEPOSIT then
+        return
+    end
+    local character = State()
+    if kind == "vouchers" then
+        character.rewardVouchers = character.rewardVouchers + amount
+        WC.Log.Debug("%s: %d, %d to deposit at the next bank visit", LOG_NAMES[kind], amount,
+            character.rewardVouchers)
+    else
+        character.rewardGold = character.rewardGold + amount
+        WC.Log.Debug("%s: %d gold, %d to deposit at the next bank visit", LOG_NAMES[kind], amount,
+            character.rewardGold)
+    end
+end
+
+local goldPairing = NewPairing(function(amount) AddToDeposit("gold", amount) end)
+local voucherPairing = NewPairing(function(amount) AddToDeposit("vouchers", amount) end)
+
+-- Sells a reward at the open merchant and, once the server has taken it, counts what it paid
+-- (the merchant price the game shows for the stack, read before the sale).
+local function SellReward(slotIndex, quantity, onDone)
+    local _, _, unitPrice = GetItemInfo(BAG_BACKPACK, slotIndex)
+    local gold = (unitPrice or 0) * quantity
+    WC.Util.QueueSell(slotIndex, quantity, function(ok)
+        if ok then
+            AddToDeposit("saleGold", gold)
+        end
+        if onDone then
+            onDone(ok)
+        end
+    end)
+end
+
+local function IsQuestPayment(amount, reason)
+    return amount > 0 and (not QUEST_REWARD_REASON or reason == QUEST_REWARD_REASON)
+end
+
+local function OnMoneyUpdate(_, newMoney, oldMoney, reason)
+    if IsQuestPayment(newMoney - oldMoney, reason) then
+        goldPairing.Paid(newMoney - oldMoney)
+    end
+end
+
+local function OnCurrencyUpdate(_, currencyType, currencyLocation, newAmount, oldAmount, reason)
+    if currencyType == CURT_WRIT_VOUCHERS and currencyLocation == CURRENCY_LOCATION_CHARACTER
+        and IsQuestPayment(newAmount - oldAmount, reason) then
+        voucherPairing.Paid(newAmount - oldAmount)
+    end
+end
+
 local function OnQuestComplete(_, _, _, _, _, _, questType)
-    if questType == QUEST_TYPE_CRAFTING then
+    local crafting = questType == QUEST_TYPE_CRAFTING
+    if crafting then
         completedAt = GetFrameTimeMilliseconds()
+    end
+    goldPairing.QuestDone(crafting)
+    voucherPairing.QuestDone(crafting)
+end
+
+-- Banks the gold and vouchers counted since the last visit: no more than you carry now (anything
+-- spent since was spent), and the counts start again from zero. What you had before stays with you.
+local function DepositWritCurrency()
+    local character = State()
+    local gold = zo_min(character.rewardGold, GetCurrentMoney())
+    local vouchers = zo_min(character.rewardVouchers,
+        GetCurrencyAmount(CURT_WRIT_VOUCHERS, CURRENCY_LOCATION_CHARACTER))
+    character.rewardGold, character.rewardVouchers = 0, 0
+    if gold > 0 then
+        TransferCurrency(CURT_MONEY, gold, CURRENCY_LOCATION_CHARACTER, CURRENCY_LOCATION_BANK)
+        Say(WRITCRAFTER_REWARD_GOLD_DEPOSITED, ZO_CommaDelimitNumber(gold))
+    end
+    if vouchers > 0 then
+        TransferCurrency(CURT_WRIT_VOUCHERS, vouchers, CURRENCY_LOCATION_CHARACTER, CURRENCY_LOCATION_BANK)
+        Say(WRITCRAFTER_REWARD_VOUCHERS_DEPOSITED, ZO_CommaDelimitNumber(vouchers))
     end
 end
 
@@ -541,6 +672,7 @@ local function OnOpenBank(_, bankBag)
     if bankBag ~= BAG_BANK then
         return
     end
+    DepositWritCurrency()
     local todo = State().rewardTodo
     local moved = 0
     local empties, nextEmpty = nil, 1
@@ -582,7 +714,7 @@ local function OnOpenStore()
             local slotIndex = slots[uid]
             local quantity = slotIndex and Takeable(slotIndex, entry) or 0
             if quantity > 0 then
-                WC.Util.QueueSell(slotIndex, quantity, ForgetWhenDone(todo, uid))
+                SellReward(slotIndex, quantity, ForgetWhenDone(todo, uid))
                 sold = sold + 1
             else
                 todo[uid] = nil
@@ -631,7 +763,7 @@ function Rewards.SellBeyondStack()
                     break
                 end
                 local quantity = zo_min(slot.count, excess)
-                WC.Util.QueueSell(slot.slotIndex, quantity)
+                SellReward(slot.slotIndex, quantity)
                 excess = excess - quantity
                 soldCount = soldCount + quantity
             end
@@ -730,6 +862,8 @@ function Rewards.Init()
     WC.Engine.AddJobSource(DeconstructJobs)
     local namespace = WC.name .. "Rewards"
     EVENT_MANAGER:RegisterForEvent(namespace, EVENT_QUEST_COMPLETE, OnQuestComplete)
+    EVENT_MANAGER:RegisterForEvent(namespace, EVENT_MONEY_UPDATE, OnMoneyUpdate)
+    EVENT_MANAGER:RegisterForEvent(namespace, EVENT_CURRENCY_UPDATE, OnCurrencyUpdate)
     -- Bag changes in the backpack and craft bag only, ordinary changes only (not gear wearing
     -- down). One filter value per registration, so one registration per bag.
     for _, bagId in ipairs({ BAG_BACKPACK, BAG_VIRTUAL }) do

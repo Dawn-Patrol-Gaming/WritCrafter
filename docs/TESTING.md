@@ -14,10 +14,20 @@ Turn Debug chat on (`/wc debug`) before starting.
 
 ### Any time
 
+Writ gold (2026-11-23): the gold from turning in writs and from WritCrafter's reward sales is
+counted and banked at the next bank visit. Settings → Writ Rewards → **Gold from Turning In
+Writs** and **Gold from Selling Writ Rewards**, both Deposit by default. Debug chat on.
+Writ vouchers (2026-11-23, changed the same day): **Writ Vouchers**, Deposit by default, now banks
+only the vouchers master writs pay (counted like turn-in gold), not every voucher you carry.
+
 | # | Do | Expect |
 |---|---|---|
-| OP11 | Reward items set to Deposit and Sell: a bank visit, then a merchant | Deposited and sold as before, and gone from the list afterwards (not tried again next visit) |
-| RG2 | A bank visit with reward items to deposit, then a merchant with items to sell (or GR3/GR4 again) | Still one at a time and as quick as before: the request queue now only listens to the bag it's working on |
+| WG6 | Turn in an ordinary (non-crafting) quest that pays gold | Not counted: no Debug gold line |
+| WV4 | Carrying some vouchers already, turn in master writs at Rolis | A `Writ vouchers: N, M to deposit at the next bank visit` Debug line per writ, N being the vouchers it paid |
+| WV5 | Then open the bank itself | `Deposited M writ vouchers.`: only the counted vouchers go in; the ones you had before stay on the character |
+| WV6 | Withdraw vouchers from the bank, then open it again | No voucher Debug line on the withdrawal, nothing deposited back |
+| WV2 | Writ Vouchers set to Keep on Character, turn in a master writ, open the bank | No voucher Debug line, nothing deposited |
+| WV3 | Open a house storage chest with vouchers counted | Nothing deposited (only the bank itself takes currency); they go in at the next real bank visit |
 
 ### On the next daily run
 
@@ -52,6 +62,19 @@ Deferred until the free Epic accounts have characters that can craft. Every craf
 ## History
 
 Passed tests and what was learned, newest first.
+
+### Writ gold (2026-11-23)
+
+**WG2, WG3, WG5 and WG7 passed 2026-11-23** with daily writs, in every combination of the two
+settings: turn-in gold on and sale gold off, the other way round, both on and both off. Each
+time only the kinds set to Deposit were counted and banked at the next bank visit.
+
+**WG1 and WV1 passed 2026-11-23:** master writs turned in at Rolis each gave a turn-in Debug
+line with the gold they paid, and the next bank visit deposited every writ voucher carried (the
+first version, which banked all vouchers; now only the vouchers writs pay are banked: WV4-WV6).
+
+**WG4 passed 2026-11-23:** carrying less gold than the count, the bank visit deposited only
+what was carried, with no error.
 
 ### Data tables in WritCrafter's own order (2026-11-22)
 
@@ -98,6 +121,9 @@ about 0.25 to 0.16 ms per writ and shortages from about 0.23 to 0.17 ms per writ
 that stock lookups don't build a table each; the stock scan itself is unchanged (it wasn't
 touched), and badges are lower mostly because there are fewer writs.
 
+**OP11 passed 2026-11-23:** reward items set to Deposit and Sell were deposited at the bank
+and sold at the merchant, and weren't tried again on the next visit.
+
 ### ESOUI rules review (2026-11-22)
 
 What changed: README reworked as the ESOUI description and player guide (AI disclosure first,
@@ -111,6 +137,10 @@ warning, and `/writcrafter` and `/wc` both showed the command list. RG3 led to a
 now repeat the command you typed (RG4).
 
 **RG4 passed 2026-11-22:** `/writcrafter` lists every command as `/writcrafter ...` with `Commands (/wc works the same):`, its unknown-command and usage replies say `/writcrafter`, `/wc` does the same the other way round, and the settings texts say `/wc`.
+
+**RG2 passed 2026-11-23:** a bank visit with reward items to deposit, then a merchant with
+items to sell: still one at a time and as quick as before, with the request queue listening
+only to the bag it's working on.
 
 ### Slash commands (2026-11-22)
 
